@@ -1,0 +1,15 @@
+# Dependencies and build output
+node_modules
+.next
+dist
+out
+
+# OS or editor specific files
+.DS_Store
+.vscode
+.idea
+*.log
+
+# Git repository files
+.git
+.gitignore

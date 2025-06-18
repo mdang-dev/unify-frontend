@@ -1,0 +1,18 @@
+{
+  "extends": ["next/core-web-vitals", "prettier"],
+  "plugins": ["import"],
+  "settings": {
+    "import/resolver": {
+      "alias": {
+        "map": [
+          ["@", "./"],
+          ["@modules", "./modules"],
+          ["@hooks", "./hooks"],
+          ["@apis", "./apis"],
+          ["@components", "./components"]
+        ],
+        "extensions": [".js", ".jsx"]
+      }
+    }
+  }
+}
