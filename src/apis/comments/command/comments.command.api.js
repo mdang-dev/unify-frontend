@@ -7,4 +7,8 @@ export const commentsCommandApi = {
     const res = await httpClient.post(url, data);
     return res.data;
   },
+  deleteComment: async (commentId) => {
+    const res = await httpClient.delete(`${url}/${commentId}`);
+    return res.data;
+  },
 };

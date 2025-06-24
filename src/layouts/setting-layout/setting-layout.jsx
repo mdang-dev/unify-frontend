@@ -2,9 +2,12 @@
 import { useAuthStore } from '@/src/stores/auth.store';
 import Title from './_components/title';
 import NavButton from './_components/nav-button';
+import { useTranslations } from 'next-intl';
 
 const SettingsLayout = ({ children }) => {
   const user = useAuthStore((s) => s.user);
+
+  const t = useTranslations('Common');
   return (
     <div className="flex min-h-[calc(100vh-64px)] w-full bg-white dark:bg-neutral-900">
       <div className="flex w-[320px] basis-1/4 flex-col border-r border-neutral-200 px-6 py-8 dark:border-neutral-800">
@@ -54,7 +57,7 @@ const SettingsLayout = ({ children }) => {
                     <NavButton
                       href={user ? `/settings/support/${user.username}` : '/login'}
                       iconClass="fa-solid fa-info-circle"
-                      content="Support"
+                      content={t('Support')}
                     />
                   </li>
                 </ul>

@@ -10,6 +10,7 @@ import { reportsCommandApi } from '@/src/apis/reports/command/report.command.api
 import ConfirmModal from './_components/confirm-modal';
 import { useMutation } from '@tanstack/react-query';
 import { useMemo } from 'react';
+import AdminReasonModal from '../../_components/admin-reason-modal';
 
 const ReportUsers = () => {
   const {
@@ -27,10 +28,18 @@ const ReportUsers = () => {
   const itemsPerPage = 20;
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [dateFilter, setDateFilter] = useState('all');
+  const [isAdminReasonOpen, setIsAdminReasonOpen] = useState(false);
+  const [adminReasonAction, setAdminReasonAction] = useState(null);
+  const [isButtonLoading, setIsButtonLoading] = useState(false);
 
   const { mutate: updateReport } = useMutation({
     mutationFn: ({ reportId, status, reason }) =>
       reportsCommandApi.updateReportWithReason(reportId, status, reason),
+  });
+
+  const { mutate: adminReason } = useMutation({
+    mutationFn: ({ reportId, status, adminReason }) =>
+      reportsCommandApi.updateReportWithAdminReason(reportId, status, adminReason),
   });
 
   const filteredReports = useMemo(() => {
@@ -69,6 +78,7 @@ const ReportUsers = () => {
   }, [search, dateFilter]);
 
   const handleUpdateStatus = async (reportId, status, reason) => {
+    setIsButtonLoading(true);
     updateReport(
       { reportId, status, reason },
       {
@@ -78,7 +88,6 @@ const ReportUsers = () => {
             title: 'Success',
             description: 'Report status updated successfully.',
             timeout: 3000,
-
             color: 'success',
           });
         },
@@ -89,6 +98,29 @@ const ReportUsers = () => {
 
             color: 'warning',
           });
+        },
+        onSettled: () => setIsButtonLoading(false),
+      }
+    );
+  };
+
+  const openAdminReasonModal = (reportId, action) => {
+    setSelectedReportId(reportId);
+    setAdminReasonAction(action);
+    setIsAdminReasonOpen(true);
+  };
+
+  const handleAdminReasonConfirm = async (reason) => {
+    setIsButtonLoading(true);
+    const status = adminReasonAction === 'approve' ? 1 : 2;
+    adminReason(
+      { reportId: selectedReportId, status, adminReason: reason },
+      {
+        onSuccess: async () => await fetchPendingReports(),
+        onError: (err) => console.error('Failed to update status:', err),
+        onSettled: () => {
+          setIsButtonLoading(false);
+          setIsAdminReasonOpen(false);
         },
       }
     );
@@ -202,20 +234,22 @@ const ReportUsers = () => {
 
                       <td className="rounded-r-xl py-2 text-center">
                         <button
-                          className="mr-2 rounded-md border border-green-500 px-3 py-1 text-green-500 transition-colors hover:bg-green-500 hover:text-white"
+                          className="mr-2 rounded-md border border-green-500 px-3 py-1 text-green-500 hover:bg-green-500 hover:text-white"
                           onClick={(e) => {
                             e.stopPropagation();
-                            openConfirmModal(report.id, 'approve');
+                            openAdminReasonModal(report.id, 'approve');
                           }}
+                          disabled={isButtonLoading}
                         >
                           Approve
                         </button>
                         <button
-                          className="rounded-md border border-red-500 px-3 py-1 text-red-500 transition-colors hover:bg-red-500 hover:text-white"
+                          className="rounded-md border border-red-500 px-3 py-1 text-red-500 hover:bg-red-500 hover:text-white"
                           onClick={(e) => {
                             e.stopPropagation();
-                            openConfirmModal(report.id, 'reject');
+                            openAdminReasonModal(report.id, 'reject');
                           }}
+                          disabled={isButtonLoading}
                         >
                           Reject
                         </button>
@@ -234,11 +268,12 @@ const ReportUsers = () => {
           <ModalUser report={selectedReport} isOpen={isModalOpen} onClose={closeModal} />
         ) : null}
 
-        <ConfirmModal
-          isOpen={isConfirmModalOpen}
-          onClose={closeConfirmModal}
-          onConfirm={handleConfirmAction}
-          action={confirmAction}
+        <AdminReasonModal
+          isOpen={isAdminReasonOpen}
+          onClose={() => setIsAdminReasonOpen(false)}
+          onConfirm={handleAdminReasonConfirm}
+          action={adminReasonAction}
+          isLoading={isButtonLoading}
         />
       </div>
     </>

@@ -15,4 +15,13 @@ export const userQueryApi = {
     const res = await httpClient(`${url}/${userId}`);
     return res.data;
   },
+  searchUsers: async (query) => {
+    if (!query?.trim()) {
+      return [];
+    }
+    const res = await httpClient(`${url}/search`, {
+      params: { query: query.trim() },
+    });
+    return res.data;
+  },
 };

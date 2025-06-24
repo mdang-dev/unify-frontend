@@ -3,14 +3,13 @@
 import { isServer, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import UserHydrator from './modules/user-hydrator';
 import { ToastProvider } from '@heroui/toast';
-import { ThemeProvider as NextThemesProvider } from 'next-themes';
 import { ThemeProvider } from 'next-themes';
 
 function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 60 * 1000,
+        staleTime: 1000 * 60 * 5,
         refetchOnReconnect: true,
         refetchOnWindowFocus: false,
         retry: 2,

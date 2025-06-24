@@ -273,9 +273,8 @@ export default function ReelsPost() {
           onError: (err) => {
             addToast({
               title: 'Fail to report post',
-              description: err?.message,
+              description: err?.response?.data?.message || err?.message,
               timeout: 3000,
-
               color: 'warning',
             });
           },

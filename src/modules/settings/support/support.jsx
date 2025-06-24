@@ -8,6 +8,7 @@ import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
 import { reportsQueryApi } from '@/src/apis/reports/query/report.query.api';
 
 export default function Support() {
+  
   const { username } = useParams();
 
   const { data: sentReports = [] } = useQuery({

@@ -154,8 +154,8 @@ const OthersProfile = () => {
 
             <div className="mt-4 flex space-x-2">
               <FollowButton
-                userId={user.id}
-                followingId={userInfo.id}
+                userId={user?.id}
+                followingId={userInfo?.id}
                 classFollow="bg-red-500 font-bold py-2 px-8 rounded-lg w-full text-white text-md"
                 classFollowing="bg-gray-700 hover:bg-gray-600 font-bold py-2 px-8 rounded-lg w-full text-white text-md"
                 contentFollow="Follow"

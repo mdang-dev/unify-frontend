@@ -35,7 +35,7 @@ const AdminSidebar = () => {
             }}
             description={`Admin`}
             name={`${user?.firstName || ''} ${user?.lastName || ''}`}
-            className="my-3 justify-start"
+            className="my-3 justify-start !opacity-100"
           />
           <div>{/* <Avatar src={account?.avatar?.url} /> */}</div>
           <Link
@@ -89,6 +89,25 @@ const AdminSidebar = () => {
                       iconClass="fa-solid fa-triangle-exclamation"
                       text="Reported Posts"
                       href="/manage/posts/list"
+                    />
+                  </li>
+                </ul>
+              </div>
+            </AccordionItem>
+            <AccordionItem
+              key="3"
+              className="font-bold"
+              aria-label=""
+              title="COMMENTS"
+              startContent={<i className="fa-solid fa-comment"></i>}
+            >
+              <div className="font-light">
+                <ul>
+                  <li>
+                    <NavButton
+                      iconClass="fa-solid fa-comment-slash"
+                      text="Reported Comments"
+                      href="/manage/comments/list"
                     />
                   </li>
                 </ul>

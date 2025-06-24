@@ -5,7 +5,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import PostItem from './post-item/post-item';
 import { useInView } from 'react-intersection-observer';
 import PostLoading from './post-loading';
-import { useDebounce } from '@/src/hooks/use-debouce';
+import { useDebounce } from '@/src/hooks/use-debounce-lodash';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
 import { postsQueryApi } from '@/src/apis/posts/query/posts.query.api';

@@ -3,7 +3,6 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ReportModal, CommentItem, CommentInput, Skeleton } from '@/src/components/base';
-import { NavButton } from '@/src/components/button';
 import { addToast, ToastProvider } from '@heroui/toast';
 import Avatar from '@/public/images/unify_icon_2.svg';
 import iconVideo from '@/public/vds.svg';
@@ -11,6 +10,10 @@ import iconImage from '@/public/imgs.svg';
 import { useAuthStore } from '@/src/stores/auth.store';
 import { useCreateReport } from '@/src/hooks/use-report';
 import { useBookmarks } from '@/src/hooks/use-bookmark';
+import { useQuery } from '@tanstack/react-query';
+import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
+import { commentsQueryApi } from '@/src/apis/comments/query/comments.query.api';
+import NavButton from './nav-button';
 
 const SavedPostDetailModal = ({ post, onClose, onDelete }) => {
   const [openList, setOpenList] = useState(false);
@@ -26,7 +29,7 @@ const SavedPostDetailModal = ({ post, onClose, onDelete }) => {
   const { data: comments = [], isLoading: isCommentsLoading } = useQuery({
     queryKey: [QUERY_KEYS.COMMENTS_BY_POST, post.id],
     queryFn: () => commentsQueryApi.getCommentsByPostId(post?.id),
-    enabled: !!post?.id && isModalOpen,
+    enabled: !!post?.id,
   });
 
   // Xử lý report bài post
@@ -40,7 +43,7 @@ const SavedPostDetailModal = ({ post, onClose, onDelete }) => {
               title: 'Success',
               description: 'Report post successful.',
               timeout: 3000,
-            
+
               color: 'success',
             });
           },
@@ -53,7 +56,7 @@ const SavedPostDetailModal = ({ post, onClose, onDelete }) => {
                   ? 'You have reported this content before.'
                   : 'Error: ' + errorMessage,
               timeout: 3000,
-            
+
               color:
                 errorMessage === 'You have reported this content before.' ? 'warning' : 'danger',
             });

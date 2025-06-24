@@ -1,20 +1,17 @@
 'use client';
 
+import { changeLocale, getLocale } from '@/src/utils/locale.util';
 import { Select, SelectItem } from '@heroui/react';
 import { Avatar } from '@heroui/react';
-import { useLocale, useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
 
 export default function SelectMenu() {
   const [isPending, startTranslation] = useTransition();
-  const router = useRouter();
-  const localeActive = useLocale();
-
+  const localeActive = getLocale();
   const handleChangeLocale = (e) => {
     const nextLocale = e.target?.value;
     startTranslation(() => {
-      router.replace(`/${nextLocale}`);
+      changeLocale(nextLocale);
     });
   };
 

@@ -22,4 +22,8 @@ export const reportsQueryApi = {
     const res = await httpClient(`/reportUser/user-reports?username=${username}`);
     return res.data;
   },
+  getAllReportComments: async () => {
+    const res = await httpClient(`${url}/allComments`);
+    return res.data;
+  },
 };
