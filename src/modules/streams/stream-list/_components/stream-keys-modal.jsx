@@ -20,18 +20,40 @@ import { Input } from '@/src/components/ui/input';
 import { Label } from '@/src/components/ui/label';
 import { Eye, EyeOff, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
+import { useAuthStore } from '@/src/stores/auth.store';
+import { streamsQueryApi } from '@/src/apis/streams/query/streams.query.api';
+import { streamsCommandApi } from '@/src/apis/streams/command/streams.command.api';
 
 export default function StreamKeysModal({ isOpen, onClose }) {
   const [ingressType, setIngressType] = useState('RTMP');
   const [showKey, setShowKey] = useState(false);
   const [copiedField, setCopiedField] = useState('');
-  const [streamUrl, setStreamUrl] = useState('');
-  const [streamKey, setStreamKey] = useState('');
 
-  const handleGenerate = () => {
-    console.log('Generating stream with type:', ingressType);
+  const user = useAuthStore((s) => s.user);
+  const { mutate: createConnection, isPending } = useMutation({
+    mutationFn: (data) => streamsCommandApi.createConnection(data),
+  });
+
+  const { data, refetch } = useQuery({
+    queryKey: [QUERY_KEYS.STREAM_KEYS_INFO, user?.id],
+    queryFn: () => streamsQueryApi.getConnection(user?.id),
+    enabled: !!user?.id,
+  });
+
+  const handleCreateConnection = () => {
+    createConnection(
+      {
+        participantIdentity: user?.id,
+        participantName: user?.username,
+        inputType: ingressType,
+      },
+      {
+        onSuccess: () => refetch(),
+        onError: () => toast.error('Eror when create connection !'),
+      }
+    );
   };
 
   const copyToClipboard = (text, field) => {
@@ -72,7 +94,7 @@ export default function StreamKeysModal({ isOpen, onClose }) {
             <div className="relative">
               <Input
                 id="url"
-                value={streamUrl}
+                value={data?.serverUrl || ''}
                 placeholder="Stream Url"
                 readOnly
                 className="pr-10"
@@ -82,7 +104,7 @@ export default function StreamKeysModal({ isOpen, onClose }) {
               ) : (
                 <Copy
                   className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-primary"
-                  onClick={() => copyToClipboard(streamUrl, 'url')}
+                  onClick={() => copyToClipboard(data?.serverUrl, 'url')}
                 />
               )}
             </div>
@@ -94,7 +116,7 @@ export default function StreamKeysModal({ isOpen, onClose }) {
             <div className="relative">
               <Input
                 id="key"
-                value={streamKey}
+                value={data?.streamKey || ''}
                 placeholder="Stream Key"
                 type={showKey ? 'text' : 'password'}
                 readOnly
@@ -117,7 +139,7 @@ export default function StreamKeysModal({ isOpen, onClose }) {
                 ) : (
                   <Copy
                     className="h-4 w-4 cursor-pointer text-muted-foreground hover:text-primary"
-                    onClick={() => copyToClipboard(streamKey, 'key')}
+                    onClick={() => copyToClipboard(data?.streamKey, 'key')}
                   />
                 )}
               </div>
@@ -129,7 +151,16 @@ export default function StreamKeysModal({ isOpen, onClose }) {
           <ButtonCommon variant="outline" onClick={onClose}>
             Cancel
           </ButtonCommon>
-          <ButtonCommon onClick={handleGenerate}>Generate</ButtonCommon>
+          <ButtonCommon disabled={isPending} onClick={handleCreateConnection}>
+            {isPending ? (
+              <>
+                <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                Generating...
+              </>
+            ) : (
+              'Generate'
+            )}
+          </ButtonCommon>
         </DialogFooter>
       </DialogContent>
     </Dialog>

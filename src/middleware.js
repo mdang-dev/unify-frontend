@@ -40,7 +40,7 @@ export default async function middleware(req) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  // If authenticated, check user role for access control
+  // If authenticated, check user role for access cosntrol
   if (token) {
     const { roles } = await getUser();
     const roleId = roles[0]?.id;

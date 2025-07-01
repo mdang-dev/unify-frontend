@@ -12,4 +12,12 @@ export const streamsQueryApi = {
     const response = await httpClient(`${url}/${roomId}`);
     return response.data;
   },
+  getConnection: async (userId) => {
+    const res = await httpClient(`${url}/${userId}/connection`);
+    return res.data;
+  },
+  getFollowedStreamsByUserId: async (userId) => {
+    const res = await httpClient(`${url}/following?currentUserId=${userId}`);
+    return res.data;
+  },
 };

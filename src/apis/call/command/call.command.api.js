@@ -1,6 +1,6 @@
 import httpClient from '@/src/utils/http-client.util';
 
-const url = '/api/call';
+const url = '/call';
 
 export const callCommandApi = {
   createCall: async (callerId, calleeId, video) => {

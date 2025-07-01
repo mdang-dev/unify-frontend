@@ -17,6 +17,12 @@ import CreateStreamModal from './_components/create-stream-modal';
 import StreamCardSkeleton from './_components/stream-card-skeleton';
 import { ButtonCommon } from '@/src/components/button';
 import { useEffect } from 'react';
+import FollowingLiveList from './_components/following-live-list';
+import { useAuthStore } from '@/src/stores/auth.store';
+import { userSuggestionQueryApi } from '@/src/apis/suggested-users/query/suggested-users.query.api';
+import ChatSettingsModal from './_components/chat-settings-modal';
+import { Settings } from 'lucide-react';
+import SearchBar from './_components/search-bar';
 
 export const mockStreams = [
   {
@@ -151,13 +157,91 @@ export const mockStreams = [
   },
 ];
 
+const streamers = [
+  {
+    id: '1',
+    name: 'Minh Dev',
+    avatarUrl: 'https://randomuser.me/api/portraits/men/75.jpg',
+  },
+  {
+    id: '2',
+    name: 'Alice Le',
+    avatarUrl: 'https://randomuser.me/api/portraits/women/65.jpg',
+  },
+  {
+    id: '3',
+    name: 'John Pham',
+    avatarUrl: 'https://randomuser.me/api/portraits/men/85.jpg',
+  },
+  {
+    id: '4',
+    name: 'Linh Bui',
+    avatarUrl: 'https://randomuser.me/api/portraits/women/22.jpg',
+  },
+  {
+    id: '5',
+    name: 'Huy Tran',
+    avatarUrl: 'https://randomuser.me/api/portraits/men/12.jpg',
+  },
+  {
+    id: '1',
+    name: 'Minh Dev',
+    avatarUrl: 'https://randomuser.me/api/portraits/men/75.jpg',
+  },
+  {
+    id: '2',
+    name: 'Alice Le',
+    avatarUrl: 'https://randomuser.me/api/portraits/women/65.jpg',
+  },
+  {
+    id: '3',
+    name: 'John Pham',
+    avatarUrl: 'https://randomuser.me/api/portraits/men/85.jpg',
+  },
+  {
+    id: '4',
+    name: 'Linh Bui',
+    avatarUrl: 'https://randomuser.me/api/portraits/women/22.jpg',
+  },
+  {
+    id: '5',
+    name: 'Huy Tran',
+    avatarUrl: 'https://randomuser.me/api/portraits/men/12.jpg',
+  },
+  {
+    id: '1',
+    name: 'Minh Dev',
+    avatarUrl: 'https://randomuser.me/api/portraits/men/75.jpg',
+  },
+  {
+    id: '2',
+    name: 'Alice Le',
+    avatarUrl: 'https://randomuser.me/api/portraits/women/65.jpg',
+  },
+  {
+    id: '3',
+    name: 'John Pham',
+    avatarUrl: 'https://randomuser.me/api/portraits/men/85.jpg',
+  },
+  {
+    id: '4',
+    name: 'Linh Bui',
+    avatarUrl: 'https://randomuser.me/api/portraits/women/22.jpg',
+  },
+];
+
 export default function StreamList() {
   const queryClient = useQueryClient();
   const [isKeysModalOpen, setIsKeysModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [streams, setStreams] = useState([]);
   const isError = undefined;
+  const [enabled, setEnabled] = useState(false);
+  const [delayed, setDelayed] = useState(false);
+  const [followersOnly, setFollowersOnly] = useState(false);
+  const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
     setTimeout(() => {
@@ -165,6 +249,12 @@ export default function StreamList() {
       setIsLoading(false);
     }, 5000);
   }, []);
+
+  const { data: following, isLoading: isLoadingStreamer } = useQuery({
+    queryKey: [QUERY_KEYS.FOLLOWING, user?.id],
+    queryFn: () => streamsQueryApi.getFollowedStreamsByUserId(user?.id),
+    enabled: !!user?.id,
+  });
 
   // const {
   //   data: streams = [],
@@ -182,10 +272,11 @@ export default function StreamList() {
 
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors">
-      <main className="container mx-auto px-2 py-8">
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+      <main className="container mx-auto px-10 py-4">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h1 className="text-3xl font-bold">Live Streams</h1>
 
+          <SearchBar />
           <div className="flex gap-2">
             {/* Stream Keys Modal */}
             <Dialog open={isKeysModalOpen} onOpenChange={setIsKeysModalOpen}>
@@ -201,7 +292,6 @@ export default function StreamList() {
                 <StreamKeysModal
                   isOpen={isKeysModalOpen}
                   onClose={() => setIsKeysModalOpen(false)}
-                 
                 />
               </DialogContent>
             </Dialog>
@@ -209,7 +299,9 @@ export default function StreamList() {
             {/* Stream Modal */}
             <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
               <DialogTrigger asChild>
-                <ButtonCommon size="lg">+ Create Stream</ButtonCommon>
+                <ButtonCommon size="lg" variant="secondary">
+                  + Create Stream
+                </ButtonCommon>
               </DialogTrigger>
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
@@ -222,7 +314,31 @@ export default function StreamList() {
                 />
               </DialogContent>
             </Dialog>
+
+            {/* Settings Modal */}
+            <Dialog open={isSettingsModalOpen} onOpenChange={setIsSettingsModalOpen}>
+              <DialogTrigger asChild>
+                <ButtonCommon size="lg" className>
+                  <Settings className="h-4 w-4" />
+                </ButtonCommon>
+              </DialogTrigger>
+              <DialogContent className="bg-[#1e1e1e] text-white sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Chat Settings</DialogTitle>
+                </DialogHeader>
+
+                <ChatSettingsModal
+                  enabled={enabled}
+                  setEnabled={setEnabled}
+                  delayed={delayed}
+                  setDelayed={setDelayed}
+                  followersOnly={followersOnly}
+                  setFollowersOnly={setFollowersOnly}
+                />
+              </DialogContent>
+            </Dialog>
           </div>
+          <FollowingLiveList streamers={following} isLoading={isLoadingStreamer} />
         </div>
 
         {/* Stream list or state */}

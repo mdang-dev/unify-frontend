@@ -17,3 +17,5 @@ export { default as CommentItem } from './comment-item/comment-item';
 export { default as CommentInput } from './comment-input';
 export { default as ModeSwitch } from './mode-switch';
 export { default as TimePicker } from './time-picker';
+export { default as Hint } from './hint';
+export { default as UserAvatar } from './user-avatar';
