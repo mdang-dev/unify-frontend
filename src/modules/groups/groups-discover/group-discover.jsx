@@ -1,6 +1,7 @@
 'use client';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { groupsQueryApi } from '@/src/apis/groups/query/groups.query.api';
+import { useQuery } from '@tanstack/react-query';
 
 const groups = [
   {
@@ -36,12 +37,39 @@ const groups = [
 ];
 
 export default function GroupsDiscover() {
-  const router = useRouter();
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['groups'],
+    queryFn: () => groupsQueryApi.getGroups(),
+  });
+
+  if (isLoading) {
+    return (
+      <div className="p-6">
+        <h2 className="mb-6 text-2xl font-bold text-zinc-800 dark:text-zinc-100">Discover Groups</h2>
+        <div className="text-center text-gray-500">Loading groups...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <h2 className="mb-6 text-2xl font-bold text-zinc-800 dark:text-zinc-100">Discover Groups</h2>
+        <div className="text-center text-red-500">
+          Error loading groups: {error.message}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6">
       <h2 className="mb-6 text-2xl font-bold text-zinc-800 dark:text-zinc-100">Discover Groups</h2>
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {groups.map((group) => (
+      {!data || data.length === 0 ? (
+        <div className="text-center text-gray-500">No groups found</div>
+      ) : (
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {data.map((group) => (
           <div
             key={group.id}
             className="flex flex-col gap-0 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-md transition-shadow hover:shadow-lg dark:border-zinc-800 dark:bg-zinc-900"
@@ -51,7 +79,7 @@ export default function GroupsDiscover() {
               onClick={() => router.push(`/groups/${group.id}?from=discover`)}
             >
               <Image
-                src={group.cover}
+                src={group.coverImageUrl || '/images/unify_icon_lightmode.svg'}
                 alt={group.name}
                 fill
                 className="h-full w-full object-cover"
@@ -66,13 +94,22 @@ export default function GroupsDiscover() {
               >
                 {group.name}
               </div>
-              <button className="mt-auto w-full rounded-lg bg-zinc-800 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:bg-zinc-100 dark:text-neutral-800 dark:hover:bg-zinc-400 dark:hover:text-zinc-50 dark:focus:ring-zinc-600">
+              {group.description && (
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                  {group.description.length > 100 
+                    ? `${group.description.substring(0, 50)}...` 
+                    : group.description
+                  }
+                </p>
+              )}
+              <button className="mt-auto w-full rounded-lg bg-zinc-800 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:ring-zinc-600">
                 Join
               </button>
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
