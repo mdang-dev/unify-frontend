@@ -70,7 +70,7 @@ const managedGroups = [
   },
 ];
 
-export default function GroupsSidebar() {
+export default function Sidebar() {
   const [search, setSearch] = useState('');
   const pathname = usePathname();
   const router = useRouter();

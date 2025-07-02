@@ -1,10 +1,3 @@
-import GroupsSidebar from './sidebar';
+import GroupsLayout from '@/src/layouts/groups-layout';
 
-export default function GroupsLayout({ children }) {
-  return (
-    <div className="flex h-full">
-      <GroupsSidebar />
-      <div className="flex-1">{children}</div>
-    </div>
-  );
-}
+export default GroupsLayout;
