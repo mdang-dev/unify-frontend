@@ -101,7 +101,7 @@ const PostManagement = () => {
           placeholder="Select a status"
           onSelectionChange={handleSelectionChange}
           isRequired
-          defaultSelectedKeys={[filterKey]}
+          selectedKeys={[filterKey]}
         >
           <SelectItem
             key={'0'}

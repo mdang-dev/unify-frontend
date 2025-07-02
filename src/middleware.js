@@ -18,30 +18,39 @@ const publicRoutes = new Set([
 const intlMiddleware = createMiddleware(routing);
 
 export default async function middleware(req) {
+  // Handle i18n first (language middleware)
   const i18nResponse = intlMiddleware(req);
-  if (i18nResponse) return i18nResponse;
 
+  // Auth logic begins here
   const { pathname } = req.nextUrl;
-  const isPublic = [...publicRoutes].some((route) => pathname.startsWith(route));
-  const isProtected = [...protectedRoutes].some((route) => pathname.startsWith(route));
   const token = (await cookies()).get(COOKIE_KEYS.AUTH_TOKEN)?.value;
 
-  if (!isPublic && !token) return NextResponse.redirect(new URL('/login', req.nextUrl));
+  const isPublic = [...publicRoutes].some((route) => pathname.startsWith(route));
+  const isProtected = [...protectedRoutes].some((route) => pathname.startsWith(route));
 
+  // If not authenticated and accessing a protected route, redirect to login
+  if (!isPublic && !token) {
+    return NextResponse.redirect(new URL('/login', req.nextUrl));
+  }
+
+  // If authenticated and accessing a public route, redirect to home
   if (token && isPublic) {
     const redirectUrl = req.nextUrl.clone();
     redirectUrl.pathname = '/';
     return NextResponse.redirect(redirectUrl);
   }
 
+  // If authenticated, check user role for access control
   if (token) {
     const { roles } = await getUser();
     const roleId = roles[0]?.id;
 
+    // If the user is a regular user (roleId === 2) and tries to access protected route, show not found
     if (isProtected && roleId === 2) {
       return NextResponse.rewrite(new URL('/page-not-found', req.nextUrl));
     }
 
+    // If the user is an admin (roleId === 1) and accesses non-admin route, redirect to admin dashboard
     if (roleId === 1 && !isProtected) {
       const redirectUrl = req.nextUrl.clone();
       redirectUrl.pathname = '/manage/users/list';
@@ -49,9 +58,9 @@ export default async function middleware(req) {
     }
   }
 
-  return NextResponse.next();
+  return i18nResponse;
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!_next|api|favicon.ico|robots.txt|.*\\..*).*)'],
 };

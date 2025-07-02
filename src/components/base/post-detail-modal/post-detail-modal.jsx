@@ -11,12 +11,12 @@ import DeletePostModal from './_components/delete-post-modal';
 import ArchivePostModal from './_components/archive-post-modal';
 import RestorePostModal from './_components/restore-post-modal';
 import Slider from '../slider';
-import NavButton from '../../button/nav-button';
 import { useAuthStore } from '@/src/stores/auth.store';
 import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
 import { commentsQueryApi } from '@/src/apis/comments/query/comments.query.api';
 import { postsQueryApi } from '@/src/apis/posts/query/posts.query.api';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import NavButton from './_components/nav-button';
 
 const PostDetailModal = ({ post, onClose, onArchive, onDelete }) => {
   const [openList, setOpenList] = useState(false);

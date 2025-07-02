@@ -25,6 +25,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { reportsQueryApi } from '@/src/apis/reports/query/report.query.api';
 import { reportsCommandApi } from '@/src/apis/reports/command/report.command.api';
 import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
+import AdminReasonModal from '../../_components/admin-reason-modal';
 
 const MyHeading2 = ({ content = 'Heading 2' }) => {
   return <h2 className="my-4 text-2xl font-bold">{content}</h2>;
@@ -40,10 +41,12 @@ const PostDetail = () => {
   const queryClient = useQueryClient();
 
   const {
-    isOpen: isConfirmOpen,
-    onOpen: onOpenConfirm,
-    onOpenChange: onConfirmOpenChange,
+    isOpen: isAdminReasonOpen,
+    onOpen: onOpenAdminReason,
+    onOpenChange: onAdminReasonOpenChange,
   } = useDisclosure();
+
+  const [adminReasonAction, setAdminReasonAction] = useState(null);
 
   const { data: report, isLoading: loading } = useQuery({
     queryKey: [QUERY_KEYS.REPORTS_BY_POST, postId],
@@ -54,7 +57,8 @@ const PostDetail = () => {
   console.log('id', postId);
 
   const { mutate: updateReport } = useMutation({
-    mutationFn: ({ reportId, status }) => reportsCommandApi.updateReport(reportId, status),
+    mutationFn: ({ reportId, status, adminReason }) =>
+      reportsCommandApi.updateReportWithAdminReason(reportId, status, adminReason),
   });
 
   const handleApprove = async () => {
@@ -97,6 +101,20 @@ const PostDetail = () => {
     );
   };
 
+  const openAdminReasonModal = (action) => {
+    setAdminReasonAction(action);
+    onOpenAdminReason();
+  };
+
+  const handleAdminReasonConfirm = (reason) => {
+    if (adminReasonAction === 'approve') {
+      handleApprove(reason);
+    } else if (adminReasonAction === 'reject') {
+      handleReject(reason);
+    }
+    onAdminReasonOpenChange();
+  };
+
   useEffect(() => {
     if (report) {
       setPost(report.reportedEntity);
@@ -120,10 +138,7 @@ const PostDetail = () => {
         {report?.status === 0 && (
           <div className="">
             <button
-              onClick={() => {
-                setConfirmAction(() => handleApprove);
-                onOpenConfirm();
-              }}
+              onClick={() => openAdminReasonModal('approve')}
               disabled={isButtonLoading}
               className="rounded-md border bg-green-500 p-3 font-bold text-white"
             >
@@ -139,10 +154,7 @@ const PostDetail = () => {
               )}
             </button>
             <button
-              onClick={() => {
-                setConfirmAction(() => handleReject);
-                onOpenConfirm();
-              }}
+              onClick={() => openAdminReasonModal('reject')}
               disabled={isButtonLoading}
               className="ml-3 rounded-md border bg-red-500 p-3 font-bold text-white"
             >
@@ -223,6 +235,13 @@ const PostDetail = () => {
                     <span className="font-normal">{report?.reportedId}</span>
                   </p>
                 </li>
+                {report?.adminReason && (
+                  <li>
+                    <p className="font-bold">
+                      Admin Reason: <span className="font-normal">{report?.adminReason}</span>
+                    </p>
+                  </li>
+                )}
               </ul>
             </div>
             <div className="my-4 flex w-3/4 pl-5">
@@ -249,14 +268,14 @@ const PostDetail = () => {
                   <h4 className="text-large font-bold text-red-500">Reported Post Owner</h4>
                 </CardHeader>
                 <CardBody className="overflow-visible">
-                  {post?.user?.firstName && (
-                    <User
-                      avatarProps={{ src: post.user.avatar?.url ?? '' }}
-                      description={post.user.email ?? ''}
-                      name={`${post.user.firstName} ${post.user.lastName}`}
-                      className="my-3 justify-start"
-                    />
-                  )}
+                  <User
+                    avatarProps={{
+                      src: `${post?.user?.avatar?.url}`,
+                    }}
+                    description={`${post?.user?.email}`}
+                    name={`${post?.user?.firstName} ${post?.user?.lastName}`}
+                    className="my-3 justify-start"
+                  />
                 </CardBody>
               </Card>
             </div>
@@ -336,31 +355,13 @@ const PostDetail = () => {
         </ModalContent>
       </Modal>
 
-      <Modal isOpen={isConfirmOpen} onOpenChange={onConfirmOpenChange}>
-        <ModalContent>
-          {(onClose) => (
-            <>
-              <ModalHeader>Are you sure?</ModalHeader>
-              <ModalBody>
-                This action can&apos;t be undone. You will not be able to change this report&apos;s
-                status later on.
-              </ModalBody>
-              <ModalFooter>
-                <Button onPress={onClose}>Cancel</Button>
-                <Button
-                  color="danger"
-                  onPress={() => {
-                    if (confirmAction) confirmAction();
-                    onClose();
-                  }}
-                >
-                  Confirm
-                </Button>
-              </ModalFooter>
-            </>
-          )}
-        </ModalContent>
-      </Modal>
+      <AdminReasonModal
+        isOpen={isAdminReasonOpen}
+        onClose={onAdminReasonOpenChange}
+        onConfirm={handleAdminReasonConfirm}
+        action={adminReasonAction}
+        isLoading={isButtonLoading}
+      />
     </div>
   );
 };

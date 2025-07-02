@@ -1,5 +1,3 @@
 import Profile from '@/src/modules/user/profile';
 
-export default function page() {
-  return <Profile />;
-}
+export default Profile;

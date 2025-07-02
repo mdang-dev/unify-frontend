@@ -48,4 +48,8 @@ export const postsQueryApi = {
     const res = await httpClient(`${url}/myArchive?userId=${userId}&status=0`);
     return await res.data;
   },
+  getPostDetails: async (postId) => {
+    const res = await httpClient(`${url}/post_detail/${postId}`);
+    return  res.data;
+  },
 };

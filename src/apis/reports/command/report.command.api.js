@@ -19,8 +19,18 @@ export const reportsCommandApi = {
     const res = await httpClient.put(`${url}/${reportId}/status?status=${status}`);
     return res.data;
   },
+  updateReportWithAdminReason: async (reportId, status, adminReason) => {
+    const res = await httpClient.put(`${url}/${reportId}/status`, { status, adminReason });
+    return res.data;
+  },
   updateReportWithReason: async (reportId, status, reason) => {
     const res = await httpClient.put(`${url}/${reportId}/status?status=${status}`, { reason });
+    return res.data;
+  },
+  createCommentReport: async (commentId, reason) => {
+    const res = await httpClient.post(
+      `${url}/comment?reportedId=${commentId}&reason=${encodeURIComponent(reason)}`
+    );
     return res.data;
   },
 };

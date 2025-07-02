@@ -79,7 +79,7 @@ const Slider = ({ srcs = [], onImageClick }) => {
   }, []);
 
   const isVideo = useCallback((src) => {
-    return src.url?.toLowerCase().endsWith('.mp4') || src.type === 'video';
+    return src?.url?.toLowerCase().endsWith('.mp4') || src?.type === 'video';
   }, []);
 
   useEffect(() => {
@@ -180,11 +180,11 @@ const Slider = ({ srcs = [], onImageClick }) => {
           className="h-full w-full"
         >
           {isVideo(srcs[currentIndex]) ? (
-            <PostVideo src={srcs[currentIndex].url} />
+            <PostVideo src={srcs[currentIndex]?.url} />
           ) : (
             <div className="relative h-full w-full">
               <img
-                src={srcs[currentIndex].url}
+                src={srcs[currentIndex]?.url}
                 alt={`Post media ${currentIndex + 1}`}
                 className="h-full w-full cursor-pointer object-contain"
                 onClick={onImageClick}

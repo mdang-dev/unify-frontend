@@ -1,5 +1,3 @@
-import LocaleLayout from '@/src/layouts/local-layout';
+import LocaleLayout from '@/src/layouts/locale-layout';
 
-export default function Layout({ children, params }) {
-  return <LocaleLayout params={params}>{children}</LocaleLayout>;
-}
+export default LocaleLayout;

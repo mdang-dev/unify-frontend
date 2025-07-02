@@ -24,12 +24,6 @@ export const useWebSocket = (userId) => {
       onConnect: () => {
         console.log('WebSocket Connected');
         setConnected(true);
-
-        // Update user status
-        stompClient.publish({
-          destination: '/app/user.status',
-          body: JSON.stringify({ userId, online: true }),
-        });
       },
       onDisconnect: () => {
         console.log('WebSocket Disconnected');

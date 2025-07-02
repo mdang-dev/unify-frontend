@@ -4,8 +4,11 @@ import Picture from '@/src/components/base/explore-picture';
 import { postsQueryApi } from '@/src/apis/posts/query/posts.query.api';
 import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
 import { useQuery } from '@tanstack/react-query';
+import { useParams } from 'next/navigation';
 
-const Hashtag = ({ hashtag }) => {
+const Hashtag = () => {
+  const { hashtag } = useParams();
+
   const { data: posts } = useQuery({
     queryKey: [QUERY_KEYS.POSTS_BY_HASHTAG],
     queryFn: () => postsQueryApi.getPostsByHashtag(hashtag),

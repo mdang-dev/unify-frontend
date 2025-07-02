@@ -17,8 +17,10 @@ import { useChat } from '@/src/hooks/use-chat';
 import { useSearchParams } from 'next/navigation';
 import AvatarDefault from '@/public/images/unify_icon_2.svg';
 import { useAuthStore } from '@/src/stores/auth.store';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
+import { callCommandApi } from '@/src/apis/call/command/call.command.api';
+import { addToast } from '@heroui/react';
 
 const Messages = () => {
   const user = useAuthStore((s) => s.user);
@@ -36,6 +38,10 @@ const Messages = () => {
   const [showPicker, setShowPicker] = useState(false);
   const pickerRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const { mutate: createCall } = useMutation({
+    mutationFn: ({ callerId, calleeId, video }) =>
+      callCommandApi.createCall(callerId, calleeId, video),
+  });
 
   const MAX_FILE_SIZE_MB = 50;
   const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
@@ -84,11 +90,11 @@ const Messages = () => {
     }
   }, [searchParams]);
 
-//   useEffect(() => {
-//     if (chatPartner) {
-//       queryClient.invalidateQueries([QUERY_KEYS.MESSAGES, user?.id, chatPartner]);
-//     }
-//   }, [chatPartner]);
+  //   useEffect(() => {
+  //     if (chatPartner) {
+  //       queryClient.invalidateQueries([QUERY_KEYS.MESSAGES, user?.id, chatPartner]);
+  //     }
+  //   }, [chatPartner]);
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -161,6 +167,46 @@ const Messages = () => {
       username: chat?.username,
     });
     setChatPartner(chat?.userId);
+  };
+
+  const handleCall = () => {
+    if (!user || !opChat) return;
+    createCall(
+      { callerId: user?.id, calleeId: opChat?.userId, video: false },
+      {
+        onSuccess: (data) => {
+          window.open(`/call?room=${data.room}`, '_blank');
+        },
+        onError: () => {
+          addToast({
+            title: 'Error',
+            description: 'Error when calling !',
+            timeout: 3000,
+            color: 'danger',
+          });
+        },
+      }
+    );
+  };
+
+  const handleVideoCall = () => {
+    if (!user || !opChat) return;
+    createCall(
+      { callerId: user?.id, calleeId: opChat?.userId, video: true },
+      {
+        onSuccess: (data) => {
+          window.open(`/call?room=${data.room}`, '_blank');
+        },
+        onError: () => {
+          addToast({
+            title: 'Error',
+            description: 'Error when calling !',
+            timeout: 3000,
+            color: 'danger',
+          });
+        },
+      }
+    );
   };
 
   return (
@@ -259,12 +305,14 @@ const Messages = () => {
                 <div className="flex w-1/3 items-center justify-end text-2xl">
                   <button
                     title="Call"
+                    onClick={handleCall}
                     className="mr-2 rounded-md p-2 transition duration-200 ease-in-out hover:bg-gray-300 dark:hover:bg-neutral-700"
                   >
                     <i className="fa-solid fa-phone dark:text-zinc-100"></i>
                   </button>
                   <button
                     title="Video Call"
+                    onClick={handleVideoCall}
                     className="mr-2 rounded-md p-2 transition duration-200 ease-in-out hover:bg-gray-300 dark:hover:bg-neutral-700"
                   >
                     <i className="fa-solid fa-video dark:text-zinc-100"></i>
