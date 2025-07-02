@@ -3,7 +3,7 @@ import { getCookie } from './cookies.util';
 import { COOKIE_KEYS } from '../constants/cookie-keys.constant';
 
 const httpClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || '',
+  baseURL: 'http://localhost:8080',
   timeout: 10000,
 });
 
