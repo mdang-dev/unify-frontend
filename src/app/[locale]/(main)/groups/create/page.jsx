@@ -1,4 +1,6 @@
-import CreateGroup from '@/src/modules/groups/create-group';
+'use client';
+import { useState, useRef } from 'react';
+import Image from 'next/image';
 
 // Placeholder user info (replace with real user data)
 const user = {
