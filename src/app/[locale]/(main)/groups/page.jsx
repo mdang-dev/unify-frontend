@@ -1,3 +1,5 @@
-import GroupsFeed from '@/src/modules/groups/groups-fead';
+
+import { redirect } from 'next/navigation';
+// import GroupsSidebar from './sidebar';
 
 export default GroupsFeed;
