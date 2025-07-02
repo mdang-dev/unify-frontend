@@ -1,4 +1,6 @@
+'use client';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 const groups = [
   {
@@ -34,6 +36,7 @@ const groups = [
 ];
 
 export default function GroupsDiscover() {
+  const router = useRouter();
   return (
     <div className="p-6">
       <h2 className="mb-6 text-2xl font-bold text-zinc-800 dark:text-zinc-100">Discover Groups</h2>
@@ -43,7 +46,10 @@ export default function GroupsDiscover() {
             key={group.id}
             className="flex flex-col gap-0 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-md transition-shadow hover:shadow-lg dark:border-zinc-800 dark:bg-zinc-900"
           >
-            <div className="relative h-32 w-full">
+            <div
+              className="relative h-32 w-full cursor-pointer"
+              onClick={() => router.push(`/groups/${group.id}?from=discover`)}
+            >
               <Image
                 src={group.cover}
                 alt={group.name}
@@ -54,10 +60,13 @@ export default function GroupsDiscover() {
               />
             </div>
             <div className="flex flex-1 flex-col gap-4 p-4">
-              <div className="mb-1 truncate text-lg font-semibold text-zinc-800 dark:text-zinc-100">
+              <div
+                className="mb-1 cursor-pointer truncate text-lg font-semibold text-zinc-800 dark:text-zinc-100"
+                onClick={() => router.push(`/groups/${group.id}?from=discover`)}
+              >
                 {group.name}
               </div>
-              <button className="mt-auto w-full rounded-lg bg-zinc-800 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:ring-zinc-600">
+              <button className="mt-auto w-full rounded-lg bg-zinc-800 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:bg-zinc-100 dark:text-neutral-800 dark:hover:bg-zinc-400 dark:hover:text-zinc-50 dark:focus:ring-zinc-600">
                 Join
               </button>
             </div>

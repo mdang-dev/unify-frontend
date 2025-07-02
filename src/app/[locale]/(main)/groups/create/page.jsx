@@ -109,7 +109,11 @@ export default function CreateGroupPage() {
         </div>
         {/* Create Button */}
         <button
-          className={`mt-2 w-full rounded-lg bg-zinc-800 py-2 font-bold text-white shadow-md transition-colors ${isFormValid ? 'hover:bg-zinc-700 dark:hover:bg-zinc-700' : 'cursor-not-allowed opacity-60'}`}
+          className={`mt-2 w-full rounded-lg bg-zinc-800 py-2 text-base font-bold text-white shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-400 focus:ring-offset-2 dark:bg-zinc-100 dark:text-neutral-800 dark:focus:ring-offset-zinc-900 ${
+            isFormValid
+              ? 'hover:bg-zinc-700 dark:hover:bg-zinc-400 dark:hover:text-zinc-50'
+              : 'cursor-not-allowed opacity-60 hover:bg-zinc-800 dark:hover:bg-zinc-100'
+          }`}
           disabled={!isFormValid}
         >
           Create
