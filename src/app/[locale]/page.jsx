@@ -1,3 +1,5 @@
 import Home from '@/src/modules/home';
 
-export default Home;
+export default function Page() {
+  return <Home />;
+}

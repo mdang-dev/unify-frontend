@@ -1,3 +1,5 @@
-import RootLayout from "../layouts/root-layout";
+import RootLayout from '../layouts/root-layout';
 
-export default RootLayout;
+export default function Layout({ children }) {
+  return <RootLayout>{children}</RootLayout>;
+}

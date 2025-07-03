@@ -1,3 +1,5 @@
 import ReportUsers from '@/src/modules/manage/users/reports';
 
-export default ReportUsers;
+export default function Page() {
+  return <ReportUsers />;
+}

@@ -1,3 +1,5 @@
-import UserManagement from "@/src/modules/manage/users/user-management";
+import UserManagement from '@/src/modules/manage/users/user-management';
 
-export default UserManagement;
+export default function Page() {
+  return <UserManagement />;
+}

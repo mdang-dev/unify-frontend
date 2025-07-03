@@ -1,3 +1,5 @@
 import Profile from '@/src/modules/user/profile';
 
-export default Profile;
+export default function Page() {
+  return <Profile />;
+}

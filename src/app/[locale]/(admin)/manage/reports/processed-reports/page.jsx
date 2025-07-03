@@ -1,3 +1,5 @@
 import ProcessedReports from '@/src/modules/manage/reports/processed-reports';
 
-export default ProcessedReports;
+export default function Page() {
+  return <ProcessedReports />;
+}
