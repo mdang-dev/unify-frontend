@@ -1,3 +1,5 @@
 import Explore from '@/src/modules/explore';
 
-export default Explore;
+export default function Page() {
+  return <Explore />;
+}

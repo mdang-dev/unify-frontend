@@ -1,3 +1,5 @@
 import OtpVerification from '@/src/modules/auth/password/otp-verification';
 
-export default OtpVerification; 
+export default function Page() {
+  return <OtpVerification />;
+}

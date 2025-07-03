@@ -1,3 +1,5 @@
-import { Login } from "@/src/modules/auth/login"
+import { Login } from '@/src/modules/auth/login';
 
-export default Login;
+export default function Page() {
+  return <Login />;
+}

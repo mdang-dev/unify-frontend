@@ -1,3 +1,5 @@
 import Preferences from '@/src/modules/settings/preferences';
 
-export default Preferences;
+export default function Page() {
+  return <Preferences />;
+}

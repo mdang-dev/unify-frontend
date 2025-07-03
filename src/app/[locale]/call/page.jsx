@@ -1,3 +1,5 @@
 import Call from '@/src/modules/call';
 
-export default Call;
+export default function Page() {
+  return <Call />;
+}

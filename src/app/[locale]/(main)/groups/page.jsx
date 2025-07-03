@@ -1,7 +1,5 @@
-import { redirect } from 'next/navigation';
-// import GroupsSidebar from './sidebar';
+import GroupsFeed from '@/src/modules/groups/groups-fead';
 
-export default function GroupsPage() {
-  redirect('/groups/feed');
-  return null;
+export default function Page() {
+  return <GroupsFeed />;
 }

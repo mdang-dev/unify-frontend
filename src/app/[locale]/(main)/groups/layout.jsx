@@ -1,3 +1,5 @@
 import GroupsLayout from '@/src/layouts/groups-layout';
 
-export default GroupsLayout;
+export default function Layout({ children }) {
+  return <GroupsLayout>{children}</GroupsLayout>;
+}

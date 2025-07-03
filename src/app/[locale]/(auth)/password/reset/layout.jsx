@@ -1,3 +1,5 @@
 import ResetPasswordLayout from '@/src/layouts/reset-password-layout';
 
-export default ResetPasswordLayout;
+export default function ResetPasswordLayoutPage({ children }) {
+  return <ResetPasswordLayout>{children}</ResetPasswordLayout>;
+}

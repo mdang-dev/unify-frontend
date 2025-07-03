@@ -1,3 +1,5 @@
 import PostsStatistics from '@/src/modules/statistics/posts-statistics';
 
-export default PostsStatistics;
+export default function Page() {
+  return <PostsStatistics />;
+}
