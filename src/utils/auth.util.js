@@ -1,3 +1,5 @@
+'use server';
+
 import { cookies } from 'next/headers';
 import { COOKIE_KEYS } from '../constants/cookie-keys.constant';
 

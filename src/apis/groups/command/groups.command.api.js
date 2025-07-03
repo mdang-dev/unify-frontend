@@ -4,9 +4,11 @@ const url = '/groups';
 
 export const groupsCommandApi = {
     // Create a new group
-    createGroup: async (groupData) => {
+    createGroup: async (groupData, ownerId) => {
         try {
-            const res = await httpClient.post(url, groupData);
+            const res = await httpClient.post(url, groupData, {
+                params: { ownerId }
+            });
             return res.data;
         } catch (error) {
             console.error('Error creating group:', error);

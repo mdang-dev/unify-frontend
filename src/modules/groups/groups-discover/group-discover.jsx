@@ -2,6 +2,7 @@
 import Image from 'next/image';
 import { groupsQueryApi } from '@/src/apis/groups/query/groups.query.api';
 import { useQuery } from '@tanstack/react-query';
+import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
 
 const groups = [
   {
@@ -38,7 +39,7 @@ const groups = [
 
 export default function GroupsDiscover() {
   const { data, isLoading, error } = useQuery({
-    queryKey: ['groups'],
+    queryKey: [QUERY_KEYS.GROUPS],
     queryFn: () => groupsQueryApi.getGroups(),
   });
 
