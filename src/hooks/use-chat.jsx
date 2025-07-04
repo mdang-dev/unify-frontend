@@ -24,12 +24,12 @@ export const useChat = (user, chatPartner) => {
   // Chat list query
   const { data: chatList, isLoading: isLoadingChatList } = useQuery({
     queryKey: [QUERY_KEYS.CHAT_LIST, user?.id],
-    queryFn: () => chatQueryApi.getChatList(user.id),
+    queryFn: () => chatQueryApi.getChatList(user?.id),
     enabled: !!user?.id,
     keepPreviousData: true,
     onSuccess: (data) => {
       queryClient.setQueryData(
-        [QUERY_KEYS.CHAT_LIST, user.id],
+        [QUERY_KEYS.CHAT_LIST, user?.id],
         [...data].sort((a, b) => new Date(b.lastUpdated) - new Date(a.lastUpdated))
       );
     },
@@ -38,7 +38,7 @@ export const useChat = (user, chatPartner) => {
   // Message list query
   const { data: messages } = useQuery({
     queryKey: [QUERY_KEYS.MESSAGES, user?.id, chatPartner],
-    queryFn: () => chatQueryApi.getMessages(user.id, chatPartner),
+    queryFn: () => chatQueryApi.getMessages(user?.id, chatPartner),
     enabled: !!user?.id && !!chatPartner,
   });
 
@@ -62,8 +62,8 @@ export const useChat = (user, chatPartner) => {
       onConnect: () => {
         console.log('✅ WebSocket connected');
         setIsConnected(true);
-        client.subscribe(`/user/${user.id}/queue/messages`, handleIncomingMessage);
-        client.subscribe(`/user/${user.id}/queue/errors`, (error) =>
+        client.subscribe(`/user/${user?.id}/queue/messages`, handleIncomingMessage);
+        client.subscribe(`/user/${user?.id}/queue/errors`, (error) =>
           console.error('❌ WS error:', error)
         );
       },
@@ -102,8 +102,8 @@ export const useChat = (user, chatPartner) => {
 
   const updateChatListCache = useCallback(
     (newMessage) => {
-      const otherUserId = newMessage.sender === user.id ? newMessage.receiver : newMessage.sender;
-      const oldList = queryClient.getQueryData([QUERY_KEYS.CHAT_LIST, user.id]) || [];
+      const otherUserId = newMessage?.sender === user?.id ? newMessage?.receiver : newMessage?.sender;
+      const oldList = queryClient.getQueryData([QUERY_KEYS.CHAT_LIST, user?.id]) || [];
       const updated = oldList.map((chat) =>
         chat.userId === otherUserId
           ? {
@@ -115,31 +115,33 @@ export const useChat = (user, chatPartner) => {
       );
 
       queryClient.setQueryData(
-        [QUERY_KEYS.CHAT_LIST, user.id],
+        [QUERY_KEYS.CHAT_LIST, user?.id],
         updated.sort((a, b) => new Date(b.lastUpdated) - new Date(a.lastUpdated))
       );
     },
     [queryClient, user?.id]
   );
 
-  const sendMessage = async (content, files) => {
+  const sendMessage = async (content, files, receiverId) => {
+    const target = receiverId || chatPartner;
     if (!isConnected || !stompClientRef.current?.connected) return;
-
+    if (!user?.id || !target) {
+      alert('Thiếu thông tin người gửi hoặc người nhận!');
+      return;
+    }
     const fileUrls = files?.length ? await uploadFiles(files) : [];
-
     const message = {
-      sender: user.id,
-      receiver: chatPartner,
+      sender: user?.id,
+      receiver: target,
       content: content || '',
       timestamp: new Date().toISOString(),
       fileUrls,
     };
-
+    console.log('Send message:', message);
     stompClientRef.current.publish({
       destination: '/app/chat.sendMessage',
       body: JSON.stringify(message),
     });
-
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 100);

@@ -18,13 +18,15 @@ import { postsQueryApi } from '@/src/apis/posts/query/posts.query.api';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import NavButton from './_components/nav-button';
 
-const PostDetailModal = ({ post, onClose, onArchive, onDelete }) => {
+const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete }) => {
   const [openList, setOpenList] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState(post?.media || []);
   const [replyingTo, setReplyingTo] = useState(null);
+  const [fetchedPost, setFetchedPost] = useState(null);
+  const [loading, setLoading] = useState(false);
   const token = Cookies.get('token');
   const commentsContainerRef = useRef(null);
   const { user } = useAuthStore();
@@ -32,10 +34,25 @@ const PostDetailModal = ({ post, onClose, onArchive, onDelete }) => {
   const isOwner = user?.id === post?.user.id;
   const queryClient = useQueryClient();
 
+  // Nếu chỉ có postId, fetch post detail
+  useEffect(() => {
+    if (!post && postId) {
+      setLoading(true);
+      postsQueryApi.getPostsById(postId)
+        .then((data) => {
+          setFetchedPost(data);
+          setSelectedMedia(data?.media || []);
+        })
+        .finally(() => setLoading(false));
+    }
+  }, [post, postId]);
+
+  const postData = post || fetchedPost;
+
   const { data: myPost, isLoading: isPostLoading } = useQuery({
-    queryKey: [QUERY_KEYS.POST_DETAIL, post?.id],
-    queryFn: () => postsQueryApi.getPostsById(post?.id),
-    enabled: !!post?.id,
+    queryKey: [QUERY_KEYS.POST_DETAIL, postData?.id],
+    queryFn: () => postsQueryApi.getPostsById(postData?.id),
+    enabled: !!postData?.id,
   });
 
   const transformHashtags = (text) => {
@@ -61,9 +78,9 @@ const PostDetailModal = ({ post, onClose, onArchive, onDelete }) => {
     isLoading: isCommentsLoading,
     refetch: refetchComments,
   } = useQuery({
-    queryKey: [QUERY_KEYS.COMMENTS_BY_POST, post?.id],
-    queryFn: () => commentsQueryApi.getCommentsByPostId(post.id),
-    enabled: !!post?.id,
+    queryKey: [QUERY_KEYS.COMMENTS_BY_POST, postData?.id],
+    queryFn: () => commentsQueryApi.getCommentsByPostId(postData.id),
+    enabled: !!postData?.id,
   });
 
   useEffect(() => {
@@ -189,14 +206,14 @@ const PostDetailModal = ({ post, onClose, onArchive, onDelete }) => {
     </div>
   );
 
-  if (!post) return null;
+  if (!postData) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="flex h-[600px] w-[900px] flex-row overflow-hidden rounded-xl bg-white dark:bg-neutral-900">
         {/* Media Section */}
         <div className="relative w-1/2 bg-black">
-          <Slider srcs={selectedMedia} onImageClick={() => {}} />
+          <Slider srcs={postData.media || []} onImageClick={() => {}} />
           {/* {selectedMedia ? (
             selectedMedia.mediaType === "VIDEO" ? (
               <video
@@ -225,7 +242,7 @@ const PostDetailModal = ({ post, onClose, onArchive, onDelete }) => {
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 overflow-hidden rounded-full border-2 border-gray-300 dark:border-gray-600">
                 <Image
-                  src={post.user?.avatar?.url || Avatar}
+                  src={postData.user?.avatar?.url || Avatar}
                   alt="User Avatar"
                   width={40}
                   height={40}
@@ -233,7 +250,7 @@ const PostDetailModal = ({ post, onClose, onArchive, onDelete }) => {
                 />
               </div>
               <span className="font-semibold text-gray-900 dark:text-white">
-                {post.user?.username}
+                {postData.user?.username}
               </span>
             </div>
             <NavButton onClick={() => setOpenList(true)} content="•••" className="text-2xl" />
@@ -244,9 +261,9 @@ const PostDetailModal = ({ post, onClose, onArchive, onDelete }) => {
                 onOpenArchiveModal={handleOpenArchiveModal}
                 onOpenRestoreModal={handleOpenRestoreModal}
                 onClose={() => setOpenList(false)}
-                postId={post.id}
+                postId={postData.id}
                 onReport={() => {
-                  onReport(post.id);
+                  onReport(postData.id);
                   setOpenList(false);
                 }}
               />
@@ -255,7 +272,7 @@ const PostDetailModal = ({ post, onClose, onArchive, onDelete }) => {
               isOpen={showDeleteModal}
               onClose={() => setShowDeleteModal(false)}
               onConfirm={() => {
-                onDelete(post.id);
+                onDelete(postData.id);
                 setShowDeleteModal(false);
               }}
             />
@@ -263,7 +280,7 @@ const PostDetailModal = ({ post, onClose, onArchive, onDelete }) => {
               isOpen={showArchiveModal}
               onClose={() => setShowArchiveModal(false)}
               onConfirm={() => {
-                onArchive(post.id);
+                onArchive(postData.id);
                 setShowArchiveModal(false);
               }}
             />
@@ -271,7 +288,7 @@ const PostDetailModal = ({ post, onClose, onArchive, onDelete }) => {
               isOpen={showRestoreModal}
               onClose={() => setShowRestoreModal(false)}
               onConfirm={() => {
-                onArchive(post.id);
+                onArchive(postData.id);
                 setShowRestoreModal(false);
               }}
             />
@@ -280,12 +297,12 @@ const PostDetailModal = ({ post, onClose, onArchive, onDelete }) => {
           {/* Comments Section */}
           <div className="flex flex-1 flex-col">
             {/* Caption */}
-            {post.captions && (
+            {postData.captions && (
               <div className="border-b p-4 dark:border-neutral-800">
                 <div className="flex items-start gap-3">
                   <div className="h-8 w-8 flex-shrink-0 overflow-hidden rounded-full border-2 border-gray-300 dark:border-gray-600">
                     <Image
-                      src={post.user?.avatar?.url || Avatar}
+                      src={postData.user?.avatar?.url || Avatar}
                       width={32}
                       height={32}
                       alt="User Avatar"
@@ -295,14 +312,14 @@ const PostDetailModal = ({ post, onClose, onArchive, onDelete }) => {
                   <div className="min-w-0 flex-1">
                     <div className="mb-1 flex items-center gap-2">
                       <span className="truncate text-sm font-semibold text-gray-900 dark:text-white">
-                        {post.user?.username}
+                        {postData.user?.username}
                       </span>
                       <span className="text-sm text-gray-500 dark:text-gray-400">
-                        {new Date(post.postedAt).toLocaleDateString()}
+                        {new Date(postData.postedAt).toLocaleDateString()}
                       </span>
                     </div>
                     <div className="whitespace-pre-wrap break-words text-sm text-gray-800 dark:text-gray-200">
-                      {transformHashtags(post.captions)}
+                      {transformHashtags(postData.captions)}
                     </div>
                   </div>
                 </div>
@@ -342,7 +359,7 @@ const PostDetailModal = ({ post, onClose, onArchive, onDelete }) => {
             {/* Comment Input */}
             <div className="border-t p-4 dark:border-neutral-800">
               <CommentInput
-                postId={post.id}
+                postId={postData.id}
                 setComments={updateComments}
                 parentComment={replyingTo}
                 onCancelReply={handleCancelReply}

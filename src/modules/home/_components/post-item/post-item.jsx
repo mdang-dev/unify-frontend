@@ -169,7 +169,7 @@ const PostItem = ({ post }) => {
               >
                 <i className="fa-regular fa-comment"></i>
               </CommentButton>
-              <ShareButton className="!text-xl transition-opacity hover:opacity-50" />
+              <ShareButton className="!text-xl transition-opacity hover:opacity-50" post={post} />
             </div>
             <Bookmark
               postId={post.id}
