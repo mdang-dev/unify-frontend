@@ -103,6 +103,10 @@ const Messages = () => {
   }, [chatMessages]);
 
   const handleSendMessage = () => {
+    if (!chatPartner) {
+      alert('Bạn cần chọn người nhận trước khi gửi tin nhắn!');
+      return;
+    }
     if (newMessage || files) {
       sendMessage(newMessage, files, messagesEndRef);
       setNewMessage('');
