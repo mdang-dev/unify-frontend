@@ -7,20 +7,31 @@ import { Accordion, AccordionItem, Avatar, Divider, User } from '@heroui/react';
 import NavButton from './_components/nav-button';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/src/stores/auth.store';
-import { redirect } from 'next/dist/server/api-utils';
+import { useRouter } from 'next/navigation';
 import { authCommandApi } from '@/src/apis/auth/command/auth.command.api';
+import { deleteCookie } from '@/src/utils/cookies.util';
+import { COOKIE_KEYS } from '@/src/constants/cookie-keys.constant';
+import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
 
 const AdminSidebar = () => {
+  const router = useRouter();
   const { user, setUser } = useAuthStore();
   const defaultAvatar = '/images/unify_icon_2.svg';
   const queryClient = useQueryClient();
 
   const logoutUser = async () => {
-    await authCommandApi.logout();
+    try {
+      // Try to call logout API, but don't fail if it doesn't work
+      await authCommandApi.logout();
+    } catch (error) {
+      console.warn('Logout API failed, proceeding with client-side logout:', error);
+    }
+    
+    // Always clear local data and redirect
     deleteCookie(COOKIE_KEYS.AUTH_TOKEN);
     queryClient.removeQueries({ queryKey: [QUERY_KEYS.USER_PROFILE] });
     setUser(null);
-    redirect('/');
+    router.push('/login');
   };
 
   return (

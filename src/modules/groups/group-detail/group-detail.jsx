@@ -1,18 +1,13 @@
 'use client';
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import Image from 'next/image';
-import { useSearchParams } from 'next/navigation';
-
-// Placeholder data for demonstration
-const group = {
-  id: 1,
-  name: 'Tech Enthusiasts',
-  cover: '/images/F1.jpg',
-  members: 1240,
-  privacy: 'Public',
-  description: 'A group for people passionate about technology, gadgets, and innovation.',
-  avatars: ['/images/avatar.png', '/images/avt-exp.jpg'],
-};
+import { useSearchParams, useParams, useRouter } from 'next/navigation';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { groupsQueryApi } from '@/src/apis/groups/query/groups.query.api';
+import { groupsCommandApi } from '@/src/apis/groups/command/groups.command.api';
+import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
+import { addToast } from '@heroui/toast';
+import { getUser } from '@/src/utils/auth.util';
 
 const tabs = [
   { key: 'about', label: 'About' },
@@ -20,32 +15,129 @@ const tabs = [
   { key: 'members', label: 'Members' },
 ];
 
-const admins = [
-  { name: 'John Doe', avatar: '/images/avatar.png', role: 'Admin' },
-  { name: 'Jane Smith', avatar: '/images/avt-exp.jpg', role: 'Moderator' },
-];
-const members = [
-  { name: 'Alice', avatar: '/images/avatar.png' },
-  { name: 'Bob', avatar: '/images/avt-exp.jpg' },
-  { name: 'Charlie', avatar: '/images/avatar.png' },
-  { name: 'David', avatar: '/images/avt-exp.jpg' },
-  { name: 'Eve', avatar: '/images/avatar.png' },
-  { name: 'Frank', avatar: '/images/avt-exp.jpg' },
-  { name: 'Grace', avatar: '/images/avatar.png' },
-  { name: 'Heidi', avatar: '/images/avt-exp.jpg' },
-  { name: 'Ivan', avatar: '/images/avatar.png' },
-  { name: 'Judy', avatar: '/images/avt-exp.jpg' },
-];
-
 export default function GroupDetail() {
-  const [activeTab, setActiveTab] = React.useState('about');
-  const [inviteOpen, setInviteOpen] = React.useState(false);
-  const [dropdownOpen, setDropdownOpen] = React.useState(false);
-  const [joinedDropdownOpen, setJoinedDropdownOpen] = React.useState(false);
+  const [activeTab, setActiveTab] = useState('about');
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [joinedDropdownOpen, setJoinedDropdownOpen] = useState(false);
+  const [isMember, setIsMember] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
   const joinedDropdownRef = useRef(null);
   const searchParams = useSearchParams();
+  const params = useParams();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  
+  const groupId = params.groupId;
   const isManager = searchParams.get('from') === 'manage';
   const isDiscover = searchParams.get('from') === 'discover';
+
+  // Fetch current user data
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: getUser,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Fetch group details
+  const { data: group, isLoading, error } = useQuery({
+    queryKey: [QUERY_KEYS.GROUPS, groupId],
+    queryFn: () => groupsQueryApi.getGroupById(groupId),
+    enabled: !!groupId,
+  });
+
+  // Fetch group members
+  const { data: membersData } = useQuery({
+    queryKey: [QUERY_KEYS.GROUPS, groupId, 'members'],
+    queryFn: () => groupsQueryApi.getGroupMembers(groupId),
+    enabled: !!groupId && activeTab === 'members',
+  });
+
+  // Check if user is member of the group
+  const { data: membershipData } = useQuery({
+    queryKey: [QUERY_KEYS.GROUPS, groupId, 'membership'],
+    queryFn: () => groupsQueryApi.checkGroupMembership(groupId),
+    enabled: !!groupId,
+    retry: false,
+  });
+
+  // Join group mutation
+  const joinGroupMutation = useMutation({
+    mutationFn: (groupId) => {
+      if (!currentUser?.id) {
+        throw new Error('User not authenticated');
+      }
+      return groupsCommandApi.joinGroup(groupId, currentUser.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GROUPS, groupId] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.MY_GROUPS] });
+      addToast({
+        title: 'Success',
+        description: 'You have joined the group successfully.',
+        timeout: 3000,
+        color: 'success',
+      });
+      setIsMember(true);
+    },
+    onError: (error) => {
+      addToast({
+        title: 'Error',
+        description: error.message === 'User not authenticated' 
+          ? 'Please log in to join groups' 
+          : 'Failed to join group. Please try again.',
+        timeout: 3000,
+        color: 'danger',
+      });
+      console.error('Error joining group:', error);
+    },
+  });
+
+  // Leave group mutation
+  const leaveGroupMutation = useMutation({
+    mutationFn: (groupId) => groupsCommandApi.leaveGroup(groupId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GROUPS, groupId] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.MY_GROUPS] });
+      addToast({
+        title: 'Success',
+        description: 'You have left the group successfully.',
+        timeout: 3000,
+        color: 'success',
+      });
+      setIsMember(false);
+      setJoinedDropdownOpen(false);
+      router.push('/groups/your-groups');
+    },
+    onError: (error) => {
+      addToast({
+        title: 'Error',
+        description: 'Failed to leave group. Please try again.',
+        timeout: 3000,
+        color: 'danger',
+      });
+      console.error('Error leaving group:', error);
+    },
+  });
+
+  // Update membership status when data changes
+  useEffect(() => {
+    if (membershipData) {
+      setIsMember(membershipData.isMember || false);
+      setIsOwner(membershipData.isOwner || false);
+    } else {
+      // If membership check is not available, check if user is in memberIds
+      if (group && currentUser && group.memberIds) {
+        const userIsMember = group.memberIds.includes(currentUser.id);
+        setIsMember(userIsMember);
+        // For now, assume not owner if we can't determine from membership data
+        setIsOwner(false);
+      } else {
+        setIsMember(false);
+        setIsOwner(false);
+      }
+    }
+  }, [membershipData, group, currentUser]);
 
   // Close joined dropdown on outside click
   useEffect(() => {
@@ -64,16 +156,70 @@ export default function GroupDetail() {
     };
   }, [joinedDropdownOpen]);
 
+  const handleJoinGroup = () => {
+    if (!currentUser?.id) {
+      addToast({
+        title: 'Authentication Required',
+        description: 'Please log in to join groups.',
+        timeout: 3000,
+        color: 'warning',
+      });
+      return;
+    }
+    joinGroupMutation.mutate(groupId);
+  };
+
+  const handleLeaveGroup = () => {
+    leaveGroupMutation.mutate(groupId);
+  };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="mx-auto mt-6 flex max-w-7xl gap-8 px-2 md:px-6">
+        <div className="min-w-0 flex-1 overflow-hidden rounded-xl bg-white shadow-md dark:bg-zinc-900">
+          <div className="p-6 text-center text-gray-500">Loading group details...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="mx-auto mt-6 flex max-w-7xl gap-8 px-2 md:px-6">
+        <div className="min-w-0 flex-1 overflow-hidden rounded-xl bg-white shadow-md dark:bg-zinc-900">
+          <div className="p-6 text-center text-red-500">
+            Error loading group: {error.message}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // No group data
+  if (!group) {
+    return (
+      <div className="mx-auto mt-6 flex max-w-7xl gap-8 px-2 md:px-6">
+        <div className="min-w-0 flex-1 overflow-hidden rounded-xl bg-white shadow-md dark:bg-zinc-900">
+          <div className="p-6 text-center text-gray-500">Group not found</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate member count - ensure it's at least 1 (the owner)
+  const memberCount = Math.max(group.memberIds ? group.memberIds.length : 1, 1);
+  const members = membersData?.members || [];
+
   return (
     <div className="mx-auto mt-6 flex max-w-7xl gap-8 px-2 md:px-6">
-      {/* Sidebar (sticky) */}
-
       {/* Main Content */}
       <div className="min-w-0 flex-1 overflow-hidden rounded-xl bg-white shadow-md dark:bg-zinc-900">
         {/* Cover Image */}
         <div className="relative h-64 w-full md:h-80 lg:h-96">
           <Image
-            src={group.cover}
+            src={group.coverImageUrl || '/images/unify_icon_lightmode.svg'}
             alt={group.name}
             fill
             className="h-full w-full rounded-lg object-cover shadow-lg"
@@ -86,27 +232,39 @@ export default function GroupDetail() {
             {group.name}
           </h1>
           <div className="mb-4 flex flex-wrap items-center gap-4 text-sm text-neutral-500">
-            <span>{group.members.toLocaleString()} members</span>
+            <span>{memberCount.toLocaleString()} members</span>
             <span className="rounded-full border border-neutral-300 px-2 py-0.5 text-xs font-medium dark:border-zinc-700">
-              {group.privacy}
+              {group.privacyType || 'Public'}
             </span>
+            {group.status && (
+              <span className="rounded-full border border-neutral-300 px-2 py-0.5 text-xs font-medium dark:border-zinc-700">
+                {group.status}
+              </span>
+            )}
           </div>
           {/* Button Row */}
           <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex -space-x-3">
-              {group.avatars.map((avatar, idx) => (
-                <Image
-                  key={idx}
-                  src={avatar}
-                  alt="Member avatar"
-                  width={40}
-                  height={40}
-                  className="rounded-full border-2 border-white shadow-sm dark:border-zinc-900"
-                />
+              {/* Show first few member avatars if available */}
+              {members.slice(0, 5).map((member, idx) => (
+                <div
+                  key={member.id || idx}
+                  className="h-10 w-10 rounded-full border-2 border-white bg-zinc-200 shadow-sm dark:border-zinc-900 dark:bg-zinc-700 overflow-hidden"
+                >
+                  {member.avatarUrl && (
+                    <Image
+                      src={member.avatarUrl}
+                      alt={member.username || `Member ${idx + 1}`}
+                      width={40}
+                      height={40}
+                      className="h-full w-full object-cover"
+                    />
+                  )}
+                </div>
               ))}
             </div>
             <div className="flex items-center gap-2">
-              {isManager ? (
+              {isOwner || isManager ? (
                 <>
                   <button
                     className="rounded-full bg-zinc-800 px-16 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-400 focus:ring-offset-2 dark:bg-zinc-100 dark:text-neutral-800 dark:hover:bg-zinc-400 dark:hover:text-zinc-50 dark:focus:ring-offset-zinc-900"
@@ -138,9 +296,13 @@ export default function GroupDetail() {
                     )}
                   </div>
                 </>
-              ) : isDiscover ? (
-                <button className="flex items-center justify-center gap-2 rounded-full bg-zinc-800 px-16 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-400 focus:ring-offset-2 dark:bg-zinc-100 dark:text-neutral-800 dark:hover:bg-zinc-400 dark:hover:text-zinc-50 dark:focus:ring-offset-zinc-900">
-                  Join
+              ) : !isMember ? (
+                <button 
+                  className="flex items-center justify-center gap-2 rounded-full bg-zinc-800 px-16 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-400 focus:ring-offset-2 dark:bg-zinc-100 dark:text-neutral-800 dark:hover:bg-zinc-400 dark:hover:text-zinc-50 dark:focus:ring-offset-zinc-900"
+                  onClick={handleJoinGroup}
+                  disabled={joinGroupMutation.isPending}
+                >
+                  {joinGroupMutation.isPending ? 'Joining...' : 'Join'}
                 </button>
               ) : (
                 <>
@@ -164,13 +326,11 @@ export default function GroupDetail() {
                       <div className="absolute right-0 z-50 mt-2 w-36 rounded-lg bg-white py-2 shadow-lg ring-1 ring-black/10 dark:bg-zinc-900 dark:ring-zinc-700">
                         <button
                           className="block w-full px-4 py-2 text-left text-sm font-normal text-red-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                          onClick={() => {
-                            setJoinedDropdownOpen(false);
-                            // Add leave group logic here
-                          }}
+                          onClick={handleLeaveGroup}
+                          disabled={leaveGroupMutation.isPending}
                         >
                           <i className="fa-solid fa-right-from-bracket mr-2"></i>
-                          Leave Group
+                          {leaveGroupMutation.isPending ? 'Leaving...' : 'Leave Group'}
                         </button>
                       </div>
                     )}
@@ -237,7 +397,14 @@ export default function GroupDetail() {
           {activeTab === 'about' && (
             <div className="text-base text-zinc-800 dark:text-zinc-100">
               <h2 className="mb-2 font-semibold">About this group</h2>
-              <p className="text-neutral-500 dark:text-neutral-400">{group.description}</p>
+              <p className="text-neutral-500 dark:text-neutral-400">
+                {group.description || 'No description available.'}
+              </p>
+              {group.createdAt && (
+                <div className="mt-4 text-sm text-neutral-500 dark:text-neutral-400">
+                  Created: {new Date(group.createdAt).toLocaleDateString()}
+                </div>
+              )}
             </div>
           )}
           {activeTab === 'discussion' && (
@@ -250,7 +417,7 @@ export default function GroupDetail() {
               {/* Top Section: Heading, Search, HR */}
               <div className="mb-2">
                 <div className="mb-1 text-lg font-semibold text-zinc-800 dark:text-zinc-100">
-                  Members · {group.members.toLocaleString()}
+                  Members · {memberCount.toLocaleString()}
                 </div>
                 <input
                   type="text"
@@ -259,41 +426,41 @@ export default function GroupDetail() {
                 />
                 <hr className="border-neutral-200 dark:border-zinc-700" />
               </div>
-              {/* Admins/Moderators Block */}
-              <div className="mb-2">
-                {admins.map((admin, idx) => (
-                  <div key={idx} className="flex items-center gap-4 py-2">
-                    <img
-                      src={admin.avatar}
-                      className="h-10 w-10 rounded-full shadow"
-                      alt={admin.name}
-                    />
-                    <div>
-                      <p className="font-medium text-zinc-800 dark:text-zinc-100">{admin.name}</p>
-                      <p className="text-sm text-neutral-500">{admin.role}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <hr className="border-neutral-200 dark:border-zinc-700" />
-              {/* Regular Members Section */}
+              {/* Members Section */}
               <div className="mt-4">
                 <div className="mb-2 text-sm font-semibold uppercase text-neutral-500">Members</div>
                 <div className="scrollbar-thin scrollbar-thumb-zinc-400 max-h-72 overflow-y-auto pr-2">
-                  {members.map((member, idx) => (
-                    <div key={idx} className="flex items-center gap-4 py-2">
-                      <img
-                        src={member.avatar}
-                        className="h-10 w-10 rounded-full shadow"
-                        alt={member.name}
-                      />
-                      <div>
-                        <p className="font-medium text-zinc-800 dark:text-zinc-100">
-                          {member.name}
-                        </p>
+                  {members.length > 0 ? (
+                    members.map((member, idx) => (
+                      <div key={member.id || idx} className="flex items-center gap-4 py-2">
+                        <div className="h-10 w-10 rounded-full bg-zinc-200 shadow dark:bg-zinc-700 overflow-hidden">
+                          {member.avatarUrl && (
+                            <Image
+                              src={member.avatarUrl}
+                              alt={member.username || `Member ${idx + 1}`}
+                              width={40}
+                              height={40}
+                              className="h-full w-full object-cover"
+                            />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-zinc-800 dark:text-zinc-100">
+                            {member.username || member.firstName + ' ' + member.lastName || `Member ${idx + 1}`}
+                          </p>
+                          {member.role && (
+                            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                              {member.role}
+                            </p>
+                          )}
+                        </div>
                       </div>
+                    ))
+                  ) : (
+                    <div className="text-center text-neutral-500 dark:text-neutral-400 py-4">
+                      {memberCount > 0 ? 'Loading members...' : 'No members found'}
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             </div>
