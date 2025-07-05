@@ -1,3 +1,5 @@
 import { AuthLayout } from '@/src/layouts/auth-layout';
 
-export default AuthLayout;
+export default function AuthLayoutPage({ children }) {
+  return <AuthLayout>{children}</AuthLayout>;
+}

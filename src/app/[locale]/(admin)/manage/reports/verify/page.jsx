@@ -1,3 +1,5 @@
 import VerifyReports from '@/src/modules/manage/reports/verify-reports';
 
-export default VerifyReports;
+export default function Page() {
+  return <VerifyReports />;
+}

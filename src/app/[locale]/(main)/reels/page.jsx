@@ -1,4 +1,5 @@
 import Reels from '@/src/modules/reels';
 
-
-export default Reels;
+export default function Page() {
+  return <Reels />;
+}

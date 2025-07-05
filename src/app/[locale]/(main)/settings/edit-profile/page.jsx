@@ -1,3 +1,5 @@
 import EditProfile from '@/src/modules/settings/edit-profile';
 
-export default EditProfile;
+export default function Page() {
+  return <EditProfile />;
+}

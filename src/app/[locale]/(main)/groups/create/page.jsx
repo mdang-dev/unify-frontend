@@ -1,3 +1,5 @@
 import CreateGroup from '@/src/modules/groups/create-group';
 
-export default CreateGroup;
+export default function Page() {
+  return <CreateGroup />;
+}

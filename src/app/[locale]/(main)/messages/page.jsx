@@ -1,3 +1,5 @@
 import Messages from '@/src/modules/messages/message';
 
-export default Messages;
+export default function Page() {
+  return <Messages />;
+}

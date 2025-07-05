@@ -1,3 +1,7 @@
+'use client';
+
 import Hashtag from '@/src/modules/hashtag';
 
-export default Hashtag;
+export default function Page() {
+  return <Hashtag />;
+}

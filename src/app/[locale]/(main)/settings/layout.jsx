@@ -1,3 +1,5 @@
 import SettingsLayout from '@/src/layouts/setting-layout';
 
-export default SettingsLayout;
+export default function Layout({ children }) {
+  return <SettingsLayout>{children}</SettingsLayout>;
+}

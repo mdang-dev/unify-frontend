@@ -1,3 +1,5 @@
 import Confirm from '@/src/modules/auth/password/confirm';
 
-export default Confirm;
+export default function Page() {
+  return <Confirm />;
+}

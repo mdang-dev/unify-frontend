@@ -1,3 +1,5 @@
 import Landing from '@/src/modules/landing';
 
-export default Landing;
+export default function Page() {
+  return <Landing />;
+}
