@@ -6,7 +6,7 @@ export const userCommandApi = {
     return res.data;
   },
   updateUser: async (data) => {
-    const res = await httpClient.put(`/users`, data);
+    const res = await httpClient.put(`/users/my-info`, data);
     return res.data;
   },
 };

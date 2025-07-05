@@ -12,7 +12,7 @@ export const authCommandApi = {
     return res.data;
   },
   logout: async () => {
-    const res = await httpClient('/user/logout');
+    const res = await httpClient.post(`${url}/logout`);
     return res.data;
   },
   resetPassword: async (email, newPassword) => {

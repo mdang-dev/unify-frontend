@@ -3,17 +3,18 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { RadioGroup, RadioGroupItem } from '@/src/components/ui/radio-group';
-import { addToast, ToastProvider } from '@heroui/toast';
+import { addToast } from '@heroui/toast';
 import { useAuthStore } from '@/src/stores/auth.store';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { userCommandApi } from '@/src/apis/user/command/user.command.api';
 import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
 import { deleteCookie, setCookie } from '@/src/utils/cookies.util';
 import { COOKIE_KEYS } from '@/src/constants/cookie-keys.constant';
-import { redirect } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { authCommandApi } from '@/src/apis/auth/command/auth.command.api';
 
 const EditProfile = () => {
+  const router = useRouter();
   const defaultAvatar = '/images/unify_icon_2.svg';
   const [avatar, setAvatar] = useState(defaultAvatar);
   const fileInputRef = useRef(null);
@@ -118,11 +119,18 @@ const EditProfile = () => {
   };
 
   const logoutUser = async () => {
-    await authCommandApi.logout();
+    try {
+      // Try to call logout API, but don't fail if it doesn't work
+      await authCommandApi.logout();
+    } catch (error) {
+      console.warn('Logout API failed, proceeding with client-side logout:', error);
+    }
+    
+    // Always clear local data and redirect
     deleteCookie(COOKIE_KEYS.AUTH_TOKEN);
     queryClient.removeQueries({ queryKey: [QUERY_KEYS.USER_PROFILE] });
     setUser(null);
-    redirect('/');
+    router.push('/login');
   };
 
   const validateFormData = (data) => {
@@ -196,10 +204,11 @@ const EditProfile = () => {
     if (!file) return;
 
     if (!allowedTypes.includes(file.type)) {
-      toast({
+      addToast({
         title: 'Invalid file type',
         description: 'Only images (png, jpeg, jpg, gif) are allowed.',
-        variant: 'warning',
+        timeout: 3000,
+        color: 'warning',
       });
       return;
     }
@@ -232,6 +241,7 @@ const EditProfile = () => {
 
     if (!res.ok) {
       const errorText = await res.text();
+      console.error('Avatar upload error:', errorText);
       throw new Error(`Failed to upload avatar: ${errorText}`);
     }
 
@@ -250,37 +260,44 @@ const EditProfile = () => {
     setLoading(true);
 
     let avatarData = null;
-    if (userData.avatar.file instanceof File) {
-      const uploadedFile = await handleUploadAvatar();
-      avatarData = { url: uploadedFile.url };
-    } else if (userData.avatar.url && userData.avatar.url !== defaultAvatar) {
-      avatarData = { url: userData.avatar.url };
+    try {
+      if (userData.avatar.file instanceof File) {
+        const uploadedFile = await handleUploadAvatar();
+        avatarData = { url: uploadedFile.url };
+      } else if (userData.avatar.url && userData.avatar.url !== defaultAvatar) {
+        avatarData = { url: userData.avatar.url };
+      }
+    } catch (error) {
+      console.error('Avatar upload failed:', error);
+      addToast({
+        title: 'Avatar Upload Failed',
+        description: 'Failed to upload avatar. Please try again.',
+        timeout: 3000,
+        color: 'warning',
+      });
+      setLoading(false);
+      return;
     }
 
     const requestData = {
-      id: userData.id,
-      firstName: userData.firstName,
-      lastName: userData.lastName,
-      username: userData.username,
-      email: userData.email,
-      password: userData.password,
-      phone: userData.phone,
-      gender: userData.gender,
-      birthDay: userData.birthDay
-        ? `${userData.birthDay.year}-${userData.birthDay.month.padStart(
-            2,
-            '0'
-          )}-${userData.birthDay.day.padStart(2, '0')}`
+      firstName: userData.firstName || '',
+      lastName: userData.lastName || '',
+      username: userData.username || '',
+      email: userData.email || '',
+      phone: userData.phone || '',
+      gender: userData.gender === true ? true : false,
+      birthDay: userData.birthDay && userData.birthDay.year && userData.birthDay.month && userData.birthDay.day
+        ? `${userData.birthDay.year}-${userData.birthDay.month.padStart(2, '0')}-${userData.birthDay.day.padStart(2, '0')}`
         : null,
-      location: userData.location,
-      education: userData.education,
-      status: userData.status,
-      reportApprovalCount: userData.reportApprovalCount,
-      workAt: userData.workAt,
-      biography: userData.biography,
+      location: userData.location || '',
+      education: userData.education || '',
+      workAt: userData.workAt || '',
+      biography: userData.biography || '',
       avatar: avatarData,
     };
 
+    console.log('Sending request data:', requestData);
+    
     updateUser(requestData, {
       onSuccess: () => {
         queryClient.invalidateQueries({
@@ -295,9 +312,11 @@ const EditProfile = () => {
         setErrors({});
       },
       onError: (err) => {
+        console.error('Update user error:', err);
+        console.error('Error response:', err?.response?.data);
         addToast({
           title: 'Error',
-          description: 'Error: ' + (err?.response?.data?.message || 'Unknown error'),
+          description: 'Error: ' + (err?.response?.data?.message || err?.message || 'Unknown error'),
           timeout: 3000,
           color: 'danger',
         });
