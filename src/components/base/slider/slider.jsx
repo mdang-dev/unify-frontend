@@ -1,5 +1,6 @@
 import { Spinner } from '@heroui/react';
 import React, { useEffect, useState, useRef, useCallback } from 'react';
+import Image from 'next/image';
 import PostVideo from './_components/post-video';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -31,9 +32,9 @@ const Slider = ({ srcs = [], onImageClick }) => {
         video.muted = true;
         preloadRef.current[media.url] = video;
       } else {
-        const img = new Image();
-        img.src = media.url;
-        preloadRef.current[media.url] = img;
+        const imgElement = new window.Image();
+        imgElement.src = media.url;
+        preloadRef.current[media.url] = imgElement;
       }
     },
     [srcs]
@@ -183,17 +184,18 @@ const Slider = ({ srcs = [], onImageClick }) => {
             <PostVideo src={srcs[currentIndex]?.url} />
           ) : (
             <div className="relative h-full w-full">
-              <img
-                src={srcs[currentIndex]?.url}
+              <Image
+                src={srcs[currentIndex]?.url && typeof srcs[currentIndex].url === 'string' ? srcs[currentIndex].url : '/images/unify_icon_lightmode.svg'}
                 alt={`Post media ${currentIndex + 1}`}
-                className="h-full w-full cursor-pointer object-contain"
+                fill
+                className="cursor-pointer object-contain"
                 onClick={onImageClick}
-                loading="eager"
                 onLoad={() => setLoading(false)}
                 onError={() => {
                   setLoading(false);
                   setError(true);
                 }}
+                unoptimized
               />
             </div>
           )}

@@ -10,7 +10,7 @@ const UserHistorySearch = ({ user, onClick, onDelete, isHistory = false }) => {
     >
       <div className="h-12 w-12 overflow-hidden rounded-full">
         <Image
-          src={isHistory ? user?.avatar : user.avatar?.url || Avatar}
+          src={isHistory ? (user?.avatar?.url || user?.avatar || Avatar) : (user.avatar?.url || Avatar)}
           alt={user.username}
           width={48}
           height={48}
