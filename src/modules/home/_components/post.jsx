@@ -14,12 +14,19 @@ const Post = () => {
   const { ref, inView } = useInView({ threshold: 0.3 });
   const [isLoading, setIsLoading] = useState(true);
 
-  const { data, fetchNextPage, isFetchingNextPage, hasNextPage, status } = useInfiniteQuery({
+  const { data, fetchNextPage, isFetchingNextPage, hasNextPage, status, error } = useInfiniteQuery({
     queryKey: [QUERY_KEYS.POSTS],
     queryFn: ({ pageParam = 0, pageSize = 3 }) => postsQueryApi.getPosts(pageParam, pageSize),
     getNextPageParam: (lastPage) => lastPage.nextPage ?? undefined,
     keepPreviousData: true,
   });
+
+  // Log error for debugging
+  useEffect(() => {
+    if (error) {
+      console.error('Posts query error:', error);
+    }
+  }, [error]);
 
   const showLoading = useDebounce(isFetchingNextPage, 50);
 
@@ -39,6 +46,32 @@ const Post = () => {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <PostLoading />
+      </div>
+    );
+  }
+
+  if (status === 'error') {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">
+            Unable to load posts
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            {error?.response?.status === 401 
+              ? 'Please log in to view posts' 
+              : 'Something went wrong. Please try again later.'
+            }
+          </p>
+          {error?.response?.status === 401 && (
+            <a 
+              href="/login" 
+              className="inline-block bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors"
+            >
+              Go to Login
+            </a>
+          )}
+        </div>
       </div>
     );
   }

@@ -1,25 +1,43 @@
 'use client';
 import { useState, useRef } from 'react';
 import Image from 'next/image';
-
-// Placeholder user info (replace with real user data)
-const user = {
-  username: 'john_doe',
-  avatar: '/images/avatar.png',
-};
+import { useRouter } from 'next/navigation';
+import { groupsCommandApi } from '@/src/apis/groups/command/groups.command.api';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
+import { getCookie } from '@/src/utils/cookies.util';
+import { COOKIE_KEYS } from '@/src/constants/cookie-keys.constant';
+import { useAuthStore } from '@/src/stores/auth.store';
+import { getUser } from '@/src/utils/auth.util';
+import { useQuery } from '@tanstack/react-query';
 
 const privacyOptions = [
-  { value: 'public', label: 'Public' },
-  { value: 'private', label: 'Private' },
+  { value: 'PUBLIC', label: 'Public' },
+  { value: 'PRIVATE', label: 'Private' },
 ];
 
 export default function CreateGroup() {
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const [groupName, setGroupName] = useState('');
-  const [privacy, setPrivacy] = useState('public');
+  const [privacy, setPrivacy] = useState('PUBLIC');
   const [description, setDescription] = useState('');
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef();
+
+  // Fetch user data using React Query
+  const { data: user, isLoading: userLoading } = useQuery({
+    queryKey: ['user'],
+    queryFn: getUser,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Get current user ID from token (you might need to adjust this based on your auth setup)
+  const getCurrentUserId = () => {
+    return user?.id;
+  };
 
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
@@ -42,24 +60,86 @@ export default function CreateGroup() {
     e.preventDefault();
   };
 
+  // Create group mutation
+  const createGroupMutation = useMutation({
+    mutationFn: async (groupData) => {
+      const ownerId = getCurrentUserId();
+      return await groupsCommandApi.createGroup(groupData, ownerId);
+    },
+    onSuccess: (data) => {
+      console.log('Group created successfully:', data);
+      // Invalidate and refetch groups query
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GROUPS] });
+      // Redirect to the created group or groups list
+      router.push('/groups');
+    },
+    onError: (error) => {
+      console.error('Error creating group:', error);
+      setIsSubmitting(false);
+    },
+  });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!isFormValid) return;
+
+    setIsSubmitting(true);
+    
+    try {
+      const groupData = {
+        name: groupName.trim(),
+        description: description.trim(),
+        privacyType: privacy,
+        coverImageUrl: avatarUrl || null, // You might want to upload the image first
+      };
+
+      createGroupMutation.mutate(groupData);
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      setIsSubmitting(false);
+    }
+  };
+
   const isFormValid = groupName.trim().length > 0;
+
+  // Show loading state while user data is being fetched
+  if (userLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-neutral-50 dark:bg-neutral-900">
+        <div className="text-center">
+          <div className="text-lg font-semibold text-zinc-800 dark:text-zinc-100">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if user data failed to load
+  if (!user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-neutral-50 dark:bg-neutral-900">
+        <div className="text-center">
+          <div className="text-lg font-semibold text-red-600 dark:text-red-400">Failed to load user data</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col gap-8 bg-neutral-50 p-6 dark:bg-neutral-900 lg:flex-row">
       {/* Left: Form Section */}
-      <div className="mx-auto flex w-full max-w-lg flex-col space-y-4 rounded-xl bg-white p-8 shadow-md dark:bg-zinc-900 lg:mx-0 lg:w-1/2">
+      <form onSubmit={handleSubmit} className="mx-auto flex w-full max-w-lg flex-col space-y-4 rounded-xl bg-white p-8 shadow-md dark:bg-zinc-900 lg:mx-0 lg:w-1/2">
         <h1 className="mb-2 text-2xl font-bold text-zinc-800 dark:text-zinc-100">Create Group</h1>
         {/* User Info Block */}
         <div className="mb-2 flex items-center gap-4">
           <Image
-            src={user.avatar}
-            alt={user.username}
-            width={48}
-            height={48}
+            src={user.avatar?.url || '/images/avatar.png'}
+            alt={user.username || 'User'}
+            width={70}
+            height={70}
             className="rounded-full border border-zinc-200 object-cover dark:border-zinc-700"
           />
           <div>
-            <div className="font-semibold text-zinc-800 dark:text-zinc-100">{user.username}</div>
+            <div className="font-semibold text-zinc-800 dark:text-zinc-100">{user.username || 'User'}</div>
             <div className="text-xs text-zinc-500 dark:text-zinc-400">Admin</div>
           </div>
         </div>
@@ -109,12 +189,20 @@ export default function CreateGroup() {
         </div>
         {/* Create Button */}
         <button
-          className={`mt-2 w-full rounded-lg bg-zinc-800 py-2 font-bold text-white shadow-md transition-colors ${isFormValid ? 'hover:bg-zinc-700 dark:hover:bg-zinc-700' : 'cursor-not-allowed opacity-60'}`}
-          disabled={!isFormValid}
+          type="submit"
+          className={`mt-2 w-full rounded-lg bg-zinc-800 py-2 font-bold text-white shadow-md transition-colors ${isFormValid && !isSubmitting ? 'hover:bg-zinc-700 dark:hover:bg-zinc-700' : 'cursor-not-allowed opacity-60'}`}
+          disabled={!isFormValid || isSubmitting}
         >
-          Create
+          {isSubmitting ? 'Creating...' : 'Create'}
         </button>
-      </div>
+        
+        {/* Error Message */}
+        {createGroupMutation.error && (
+          <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
+            Error: {createGroupMutation.error.message || 'Failed to create group'}
+          </div>
+        )}
+      </form>
       {/* Right: Live Preview Section */}
       <div className="flex w-full items-start justify-center lg:w-1/2">
         <div className="flex w-full max-w-md flex-col gap-4 rounded-xl bg-neutral-100 p-8 shadow-md dark:bg-zinc-900">

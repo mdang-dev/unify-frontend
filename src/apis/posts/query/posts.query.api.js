@@ -4,17 +4,22 @@ const url = '/posts';
 
 export const postsQueryApi = {
   getPosts: async (pageParam, pageSize) => {
-    const res = await httpClient(`${url}/personalized`, {
-      params: {
-        page: pageParam,
-        size: pageSize,
-      },
-    });
+    try {
+      const res = await httpClient(`${url}/personalized`, {
+        params: {
+          page: pageParam,
+          size: pageSize,
+        },
+      });
 
-    return {
-      posts: res?.data.posts ?? [],
-      nextPage: res?.data.hasNextPage ? pageParam + 1 : null,
-    };
+      return {
+        posts: res?.data.posts ?? [],
+        nextPage: res?.data.hasNextPage ? pageParam + 1 : null,
+      };
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+      throw error;
+    }
   },
   getPostsByHashtag: async (hashtag) => {
     const res = await httpClient(`${url}/hashtag/${hashtag}`);
@@ -50,6 +55,6 @@ export const postsQueryApi = {
   },
   getPostDetails: async (postId) => {
     const res = await httpClient(`${url}/post_detail/${postId}`);
-    return  res.data;
+    return res.data;
   },
 };

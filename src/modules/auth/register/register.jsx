@@ -1,304 +1,317 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
-import Image from 'next/image';
-import unify_icon_lightmode from '@/public/images/unify_icon_lightmode.svg';
+import { Input } from "@/src/components/ui/input";
+import { Label } from "@/src/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/src/components/ui/radio-group";
+import FullUnifyLogoIcon from "@/src/components/global/FullUnifyLogoIcon_Auth";
+import { Button } from "@/src/components/ui/button";
+import DateSelector from "@/src/components/global/DateInput";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMutation } from '@tanstack/react-query';
 import { authCommandApi } from '@/src/apis/auth/command/auth.command.api';
 
-export default function Register() {
+const RegisterPage = () => {
+  const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState("");
   const router = useRouter();
+
+  const months = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    username: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
+    firstName: "",
+    lastName: "",
+    username: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    gender: "true",
+    status: 0,
+    agreeToTerms: false,
   });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [date, setDate] = useState({
+    day: "",
+    month: "",
+    year: "",
+  });
+
   const registerMutation = useMutation({
     mutationFn: authCommandApi.register,
   });
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    setError('');
+  const validateForm = () => {
+    let newErrors = {};
+
+    if (!formData.firstName.trim())
+      newErrors.firstName = "First Name is required";
+    else if (!/^[A-Za-z]+$/.test(formData.firstName))
+      newErrors.firstName = "Only letters are allowed";
+
+    if (!formData.lastName.trim()) newErrors.lastName = "Last Name is required";
+    else if (!/^[A-Za-z]+$/.test(formData.lastName))
+      newErrors.lastName = "Only letters are allowed";
+
+    if (!formData.username.trim()) newErrors.username = "Username is required";
+    else if (!/^[A-Za-z0-9]+$/.test(formData.username))
+      newErrors.username = "Special characters are not allowed";
+    else if (formData.username.length > 30)
+      newErrors.username = "Max 30 characters";
+
+    if (!formData.email.trim()) newErrors.email = "Email is required";
+    else if (
+      !/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(formData.email)
+    )
+      newErrors.email = "Invalid email format";
+
+    if (!formData.password.trim()) newErrors.password = "Password is required";
+    else if (formData.password.length < 8)
+      newErrors.password = "At least 8 characters";
+
+    if (!formData.confirmPassword.trim())
+      newErrors.confirmPassword = "Confirm Password is required";
+    else if (formData.confirmPassword !== formData.password)
+      newErrors.confirmPassword = "Passwords do not match";
+
+    if (!date.day || !date.month || !date.year) {
+      newErrors.birthDay = "Please select your birth date";
+    }
+
+    const today = new Date();
+    const birthDate = new Date(
+      `${date.year}-${months.indexOf(date.month) + 1}-${date.day}`
+    );
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
+      age--;
+    }
+    if (age < 13) {
+      newErrors.birthDay = "You must be at least 13 years old";
+    }
+
+    if (!formData.agreeToTerms) {
+      newErrors.agreeToTerms = "You must agree to the Terms of Service";
+    }
+
+    setErrors(newErrors);
+
+    return Object.keys(newErrors).length === 0;
   };
 
-  const validateForm = () => {
-    if (
-      !formData.firstName ||
-      !formData.lastName ||
-      !formData.username ||
-      !formData.email ||
-      !formData.password ||
-      !formData.confirmPassword
-    ) {
-      setError('All fields are required');
-      return false;
-    }
-    if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      setError('Please enter a valid email address');
-      return false;
-    }
-    if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters long');
-      return false;
-    }
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return false;
-    }
-    return true;
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
+    setErrors((prevErrors) => ({
+      ...prevErrors,
+      [name]: "",
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!validateForm()) return;
 
-    setIsSubmitting(true);
-    setLoading(true);
+    const fullDate = `${date.year}-${String(
+      months.indexOf(date.month) + 1
+    ).padStart(2, "0")}-${String(date.day).padStart(2, "0")}`;
 
-    registerMutation.mutate(formData, {
+    const requestData = {
+      ...formData,
+      birthDay: fullDate,
+    };
+
+    registerMutation.mutate(requestData, {
       onSuccess: () => {
-        redirect('/login');
+        setTimeout(() => {
+          router.push("/login");
+        }, 1500);
       },
       onError: (err) => {
-        console.error('❌ Login error:', err?.message);
-      },
-      onSettled: () => {
-        setIsSubmitting(false);
-        setLoading(false);
+        console.error('❌ Register error:', err?.message);
+        setServerError(err?.message || "Something went wrong. Please try again.");
       },
     });
   };
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-white px-4 py-12 dark:bg-black sm:px-6 lg:px-8">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md space-y-8"
-      >
-        <div className="text-center">
-          <motion.div
-            initial={{ scale: 0.5, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="mb-8"
-          >
-            <Image
-              src={unify_icon_lightmode}
-              alt="Unify Logo"
-              width={126}
-              height={128}
-              className="mx-auto"
-              priority
-            />
-          </motion.div>
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="text-3xl font-bold text-black dark:text-white"
-          >
-            Create your account
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-            className="mt-2 text-sm text-neutral-600 dark:text-neutral-400"
-          >
-            Already have an account?{' '}
-            <Link href="/login" className="font-medium text-black hover:underline dark:text-white">
-              Sign in
-            </Link>
-          </motion.p>
-        </div>
-
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400"
-          >
-            {error}
-          </motion.div>
-        )}
-
-        <motion.form
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
-          className="mt-8 space-y-6"
-          onSubmit={handleSubmit}
-        >
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label
-                  htmlFor="firstName"
-                  className="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300"
-                >
-                  First name
-                </label>
-                <input
-                  id="firstName"
+    <div className={`w-full grid place-content-center`}>
+      <div>
+        <form onSubmit={handleSubmit}>
+          <div className={`grid gap-5`}>
+            <div align="center">
+              <FullUnifyLogoIcon className="mr-7" />
+            </div>
+            <div className="flex gap-2">
+              <div className="basis-1/2">
+                <Input
                   name="firstName"
-                  type="text"
-                  required
+                  placeholder="First Name"
+                  className="h-12"
                   value={formData.firstName}
                   onChange={handleChange}
-                  className="relative block w-full appearance-none rounded-xl border border-neutral-200 px-4 py-3 text-neutral-900 placeholder-neutral-500 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-black dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:placeholder-neutral-400 dark:focus:ring-white sm:text-sm"
-                  placeholder="Enter your first name"
                 />
+                {errors.firstName && (
+                  <p className="text-red-500 text-sm">{errors.firstName}</p>
+                )}
               </div>
-              <div>
-                <label
-                  htmlFor="lastName"
-                  className="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300"
-                >
-                  Last name
-                </label>
-                <input
-                  id="lastName"
+              <div className="basis-1/2">
+                <Input
                   name="lastName"
-                  type="text"
-                  required
+                  placeholder="Last Name"
+                  className="h-12"
                   value={formData.lastName}
                   onChange={handleChange}
-                  className="relative block w-full appearance-none rounded-xl border border-neutral-200 px-4 py-3 text-neutral-900 placeholder-neutral-500 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-black dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:placeholder-neutral-400 dark:focus:ring-white sm:text-sm"
-                  placeholder="Enter your last name"
                 />
+                {errors.lastName && (
+                  <p className="text-red-500 text-sm">{errors.lastName}</p>
+                )}
               </div>
             </div>
-
-            <div>
-              <label
-                htmlFor="username"
-                className="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300"
-              >
-                Username
-              </label>
-              <input
-                id="username"
+            <div className="basis-1/2">
+              <Input
                 name="username"
-                type="text"
-                required
+                placeholder="Username"
+                className="h-12"
                 value={formData.username}
                 onChange={handleChange}
-                className="relative block w-full appearance-none rounded-xl border border-neutral-200 px-4 py-3 text-neutral-900 placeholder-neutral-500 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-black dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:placeholder-neutral-400 dark:focus:ring-white sm:text-sm"
-                placeholder="Choose a username"
               />
+              {errors.username && (
+                <p className="text-red-500 text-sm">{errors.username}</p>
+              )}
             </div>
-
-            <div>
-              <label
-                htmlFor="email"
-                className="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300"
-              >
-                Email address
-              </label>
-              <input
-                id="email"
+            <div className="basis-1/2">
+              <Input
                 name="email"
-                type="email"
-                autoComplete="email"
-                required
+                placeholder="Email"
+                className="h-12"
                 value={formData.email}
                 onChange={handleChange}
-                className="relative block w-full appearance-none rounded-xl border border-neutral-200 px-4 py-3 text-neutral-900 placeholder-neutral-500 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-black dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:placeholder-neutral-400 dark:focus:ring-white sm:text-sm"
-                placeholder="Enter your email"
               />
+              {errors.email && (
+                <p className="text-red-500 text-sm">{errors.email}</p>
+              )}
+            </div>
+            <div className="basis-1/2">
+              <Input
+                name="password"
+                placeholder="Password"
+                className="h-12"
+                type="password"
+                value={formData.password}
+                onChange={handleChange}
+              />
+              {errors.password && (
+                <p className="text-red-500 text-sm">{errors.password}</p>
+              )}
             </div>
 
-            <div>
-              <label
-                htmlFor="password"
-                className="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300"
+            <div className="basis-1/2">
+              <Input
+                name="confirmPassword"
+                placeholder="Confirm Password"
+                className="h-12"
+                type="password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+              />
+
+              {errors.confirmPassword && (
+                <p className="text-red-500 text-sm">{errors.confirmPassword}</p>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <RadioGroup
+                onValueChange={(value) =>
+                  setFormData({ ...formData, gender: value })
+                }
+                defaultValue="true"
               >
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="relative block w-full appearance-none rounded-xl border border-neutral-200 px-4 py-3 pr-10 text-neutral-900 placeholder-neutral-500 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-black dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:placeholder-neutral-400 dark:focus:ring-white sm:text-sm"
-                  placeholder="Create a password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-400 hover:text-neutral-500 dark:hover:text-neutral-300"
-                >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
-              </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="true" id="r1" defaultChecked={true} />
+                  <Label htmlFor="r1">Male</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="false" id="r2" />
+                  <Label htmlFor="r2">Female</Label>
+                </div>
+              </RadioGroup>
+            </div>
+            <div className="basis-1/2">
+              <DateSelector date={date} setDate={setDate} months={months} />
+              {errors.birthDay && (
+                <p className="text-red-500 text-sm">{errors.birthDay}</p>
+              )}
             </div>
 
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300"
-              >
-                Confirm password
-              </label>
-              <div className="relative">
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  required
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className="relative block w-full appearance-none rounded-xl border border-neutral-200 px-4 py-3 pr-10 text-neutral-900 placeholder-neutral-500 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-black dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:placeholder-neutral-400 dark:focus:ring-white sm:text-sm"
-                  placeholder="Confirm your password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-400 hover:text-neutral-500 dark:hover:text-neutral-300"
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-5 w-5" />
-                  ) : (
-                    <Eye className="h-5 w-5" />
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
+            {serverError && (
+              <p className="text-red-500 text-sm">{serverError}</p>
+            )}
 
-          <div>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="group relative flex w-full justify-center rounded-xl border border-transparent bg-black px-4 py-3 text-sm font-medium text-white transition-all hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-neutral-100 dark:focus:ring-white"
+            <div className="flex items-center gap-1 m-auto">
+              <span>Do you have an account?</span>
+              <Link href="/login" className="text-[#0F00E1]">
+                Sign in
+              </Link>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="terms"
+                checked={formData.agreeToTerms}
+                onChange={(e) =>
+                  setFormData((prevData) => ({
+                    ...prevData,
+                    agreeToTerms: e.target.checked,
+                  }))
+                }
+              />
+              <Label htmlFor="terms" className="text-sm">
+                I agree to the{" "}
+                <Link href="/landing" className="text-blue-600 underline">
+                  Terms of Service
+                </Link>
+              </Label>
+            </div>
+            {errors.agreeToTerms && (
+              <p className="text-red-500 text-sm">{errors.agreeToTerms}</p>
+            )}
+
+            <Button 
+              type="submit" 
+              className="text-2xl p-6 mt-3"
+              disabled={registerMutation.isPending}
             >
-              {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Create account'}
-            </button>
+              {registerMutation.isPending ? 'Signing Up...' : 'Sign Up'}
+            </Button>
           </div>
-        </motion.form>
-      </motion.div>
+        </form>
+      </div>
     </div>
   );
-}
+};
+
+export default RegisterPage;
