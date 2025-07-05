@@ -68,7 +68,7 @@ export const groupsQueryApi = {
     // Get group members
     getGroupMembers: async (groupId, pageParam = 0, pageSize = 20) => {
         try {
-            const res = await httpClient(`${url}/${groupId}/members`, {
+            const res = await httpClient.get(`${url}/${groupId}/members`, {
                 params: {
                     page: pageParam,
                     size: pageSize,
@@ -81,7 +81,11 @@ export const groupsQueryApi = {
             };
         } catch (error) {
             console.error('Error fetching group members:', error);
-            throw error;
+            // Return empty members if endpoint doesn't exist
+            return {
+                members: [],
+                nextPage: null,
+            };
         }
     },
 
@@ -169,10 +173,26 @@ export const groupsQueryApi = {
     // Check if user is member of group
     checkGroupMembership: async (groupId) => {
         try {
-            const res = await httpClient(`${url}/${groupId}/membership`);
+            const res = await httpClient.get(`${url}/${groupId}/membership`);
             return res.data;
         } catch (error) {
             console.error('Error checking group membership:', error);
+            // Return default response if endpoint doesn't exist
+            return {
+                isMember: false,
+                isOwner: false,
+                role: null
+            };
+        }
+    },
+
+    // Get current user's groups
+    getMyGroups: async () => {
+        try {
+            const res = await httpClient.get(`${url}/my-groups`);
+            return res.data;
+        } catch (error) {
+            console.error('Error fetching my groups:', error);
             throw error;
         }
     },

@@ -39,9 +39,11 @@ export const groupsCommandApi = {
     },
 
     // Join group
-    joinGroup: async (groupId) => {
+    joinGroup: async (groupId, userId) => {
         try {
-            const res = await httpClient.post(`${url}/${groupId}/join`);
+            const res = await httpClient.post(`${url}/${groupId}/join`, null, {
+                params: { userId }
+            });
             return res.data;
         } catch (error) {
             console.error('Error joining group:', error);

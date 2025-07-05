@@ -3,54 +3,97 @@ import Image from 'next/image';
 import { useState } from 'react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/src/components/ui/popover';
 import { useRouter } from 'next/navigation';
-
-const yourGroups = [
-  {
-    id: 1,
-    name: 'Tech Enthusiasts',
-    cover: '/images/tech_network.png',
-    members: 1240,
-  },
-  {
-    id: 2,
-    name: 'Study Group',
-    cover: '/images/hoctap.jpg',
-    members: 320,
-  },
-  {
-    id: 3,
-    name: 'Community Helpers',
-    cover: '/images/community.png',
-    members: 980,
-  },
-  {
-    id: 4,
-    name: 'Data Security',
-    cover: '/images/data_security.png',
-    members: 410,
-  },
-  {
-    id: 5,
-    name: 'Developers',
-    cover: '/images/code.jpg',
-    members: 2100,
-  },
-  {
-    id: 6,
-    name: 'Job Seekers',
-    cover: '/images/hoi_tim_kiem_viec.jpg',
-    members: 150,
-  },
-];
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { groupsQueryApi } from '@/src/apis/groups/query/groups.query.api';
+import { groupsCommandApi } from '@/src/apis/groups/command/groups.command.api';
+import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
+import { addToast } from '@heroui/toast';
 
 export default function YourGroups() {
   const [openPopover, setOpenPopover] = useState(null);
   const router = useRouter();
+  const queryClient = useQueryClient();
+
+  // Fetch user's groups
+  const { data: groups, isLoading, error } = useQuery({
+    queryKey: [QUERY_KEYS.MY_GROUPS],
+    queryFn: () => groupsQueryApi.getMyGroups(),
+  });
+
+  // Leave group mutation
+  const leaveGroupMutation = useMutation({
+    mutationFn: (groupId) => groupsCommandApi.leaveGroup(groupId),
+    onSuccess: () => {
+      // Invalidate and refetch my groups
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.MY_GROUPS] });
+      addToast({
+        title: 'Success',
+        description: 'You have left the group successfully.',
+        timeout: 3000,
+        color: 'success',
+      });
+      setOpenPopover(null);
+    },
+    onError: (error) => {
+      addToast({
+        title: 'Error',
+        description: 'Failed to leave group. Please try again.',
+        timeout: 3000,
+        color: 'danger',
+      });
+      console.error('Error leaving group:', error);
+    },
+  });
+
+  const handleLeaveGroup = (groupId) => {
+    leaveGroupMutation.mutate(groupId);
+  };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="p-6">
+        <h2 className="mb-6 text-2xl font-bold text-zinc-800 dark:text-zinc-100">Your Groups</h2>
+        <div className="text-center text-gray-500">Loading your groups...</div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="p-6">
+        <h2 className="mb-6 text-2xl font-bold text-zinc-800 dark:text-zinc-100">Your Groups</h2>
+        <div className="text-center text-red-500">
+          Error loading groups: {error.message}
+        </div>
+      </div>
+    );
+  }
+
+  // Empty state
+  if (!groups || groups.length === 0) {
+    return (
+      <div className="p-6">
+        <h2 className="mb-6 text-2xl font-bold text-zinc-800 dark:text-zinc-100">Your Groups</h2>
+        <div className="text-center text-gray-500">
+          <p className="mb-4">You haven&apos;t joined any groups yet.</p>
+          <button
+            onClick={() => router.push('/groups/discover')}
+            className="rounded-lg bg-zinc-800 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:bg-zinc-100 dark:text-neutral-800 dark:hover:bg-zinc-400 dark:hover:text-zinc-50 dark:focus:ring-zinc-600"
+          >
+            Discover Groups
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6">
       <h2 className="mb-6 text-2xl font-bold text-zinc-800 dark:text-zinc-100">Your Groups</h2>
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {yourGroups.map((group) => (
+        {groups.map((group) => (
           <div
             key={group.id}
             className="flex flex-col gap-0 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-md transition-shadow hover:shadow-lg dark:border-zinc-800 dark:bg-zinc-900"
@@ -60,7 +103,7 @@ export default function YourGroups() {
               onClick={() => router.push(`/groups/${group.id}`)}
             >
               <Image
-                src={group.cover}
+                src={group.coverImageUrl || '/images/unify_icon_lightmode.svg'}
                 alt={group.name}
                 fill
                 className="h-full w-full object-cover"
@@ -76,8 +119,13 @@ export default function YourGroups() {
                 {group.name}
               </div>
               <div className="mb-2 text-sm text-neutral-400 dark:text-zinc-400">
-                {group.members.toLocaleString()} members
+                {group.memberIds ? group.memberIds.length.toLocaleString() : '0'} members
               </div>
+              {group.description && (
+                <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2">
+                  {group.description}
+                </p>
+              )}
               <div className="mt-auto flex gap-2">
                 <button
                   className="mt-auto w-full rounded-lg bg-zinc-800 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:bg-zinc-100 dark:text-neutral-800 dark:hover:bg-zinc-400 dark:hover:text-zinc-50 dark:focus:ring-zinc-600"
@@ -104,13 +152,11 @@ export default function YourGroups() {
                   >
                     <button
                       className="block w-full px-4 py-2 text-left text-sm font-normal text-red-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                      onClick={() => {
-                        setJoinedDropdownOpen(false);
-                        // Add leave group logic here
-                      }}
+                      onClick={() => handleLeaveGroup(group.id)}
+                      disabled={leaveGroupMutation.isPending}
                     >
                       <i className="fa-solid fa-right-from-bracket mr-2"></i>
-                      Leave Group
+                      {leaveGroupMutation.isPending ? 'Leaving...' : 'Leave Group'}
                     </button>
                   </PopoverContent>
                 </Popover>
