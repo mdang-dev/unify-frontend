@@ -15,11 +15,11 @@ export const reportsQueryApi = {
     return res.data;
   },
   fetchReportsOnMyPosts: async (username) => {
-    const res = await httpClient(`/reportUser/reported-my-posts?username=${username}`);
+    const res = await httpClient(`${url}/reportUser/reported-my-posts?username=${username}`);
     return res.data;
   },
   fetchMyReportedEntities: async (username) => {
-    const res = await httpClient(`/reportUser/user-reports?username=${username}`);
+    const res = await httpClient(`${url}/reportUser/user-reports?username=${username}`);
     return res.data;
   },
   getAllReportComments: async () => {
