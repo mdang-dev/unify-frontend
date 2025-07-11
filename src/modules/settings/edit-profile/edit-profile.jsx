@@ -58,12 +58,20 @@ const EditProfile = () => {
         phone: user.phone || '',
         gender: user.gender || false,
         birthDay: (() => {
-          if (!user.birthDay) return { day: '', month: '', year: '' };
+          if (!user.birthDay) return { day: '01', month: '01', year: '' };
           if (typeof user.birthDay === 'string') {
             const [year, month, day] = user.birthDay.split('-');
-            return { day, month, year };
+            return {
+              year: year || '',
+              month: month ? month.padStart(2, '0') : '01',
+              day: day ? day.padStart(2, '0') : '01',
+            };
           }
-          return user.birthDay;
+          return {
+            year: user.birthDay.year || '',
+            month: user.birthDay.month ? String(user.birthDay.month).padStart(2, '0') : '01',
+            day: user.birthDay.day ? String(user.birthDay.day).padStart(2, '0') : '01',
+          };
         })(),
         location: user.location || '',
         education: user.education || '',
@@ -85,23 +93,24 @@ const EditProfile = () => {
   };
 
   useEffect(() => {
-    if (!userData.birthDay) return;
+    if (!userData.birthDay || !userData.birthDay.month || !userData.birthDay.year) return;
 
     const { month, year } = userData.birthDay;
+    const days = new Date(parseInt(year, 10), parseInt(month, 10), 0).getDate();
+    setDaysInMonth(days);
 
-    if (month && year) {
-      const days = new Date(parseInt(year, 10), parseInt(month, 10), 0).getDate();
-      setDaysInMonth(days);
-
-      if (parseInt(userData.birthDay.day, 10) > days) {
-        setUserData((prev) => ({
-          ...prev,
-          birthDay: {
-            ...prev.birthDay,
-            day: days.toString().padStart(2, '0'),
-          },
-        }));
-      }
+    if (
+      !userData.birthDay.day ||
+      userData.birthDay.day === '' ||
+      parseInt(userData.birthDay.day, 10) > days
+    ) {
+      setUserData((prev) => ({
+        ...prev,
+        birthDay: {
+          ...prev.birthDay,
+          day: days.toString().padStart(2, '0'),
+        },
+      }));
     }
   }, [userData.birthDay?.month, userData.birthDay?.year]);
 
@@ -110,7 +119,12 @@ const EditProfile = () => {
       const birthField = field.split('.')[1];
       const newBirthDay = {
         ...userData.birthDay,
-        [birthField]: value.padStart(2, '0'),
+        [birthField]:
+          birthField === 'month' || birthField === 'day'
+            ? value
+              ? value.padStart(2, '0')
+              : '01'
+            : value,
       };
       setUserData((prevData) => ({ ...prevData, birthDay: newBirthDay }));
     } else {
@@ -120,13 +134,11 @@ const EditProfile = () => {
 
   const logoutUser = async () => {
     try {
-      // Try to call logout API, but don't fail if it doesn't work
       await authCommandApi.logout();
     } catch (error) {
       console.warn('Logout API failed, proceeding with client-side logout:', error);
     }
-    
-    // Always clear local data and redirect
+
     deleteCookie(COOKIE_KEYS.AUTH_TOKEN);
     queryClient.removeQueries({ queryKey: [QUERY_KEYS.USER_PROFILE] });
     setUser(null);
@@ -168,7 +180,7 @@ const EditProfile = () => {
       errors.birthDay = errors.birthDay || {};
       errors.birthDay.year = 'Invalid year';
     }
-    if (data.birthDay.year && data.birthDay.month && data.birthDay.day) {
+    if (data.birthDay.year != null && data.birthDay.month != null && data.birthDay.day != null) {
       const today = new Date();
       const birthDate = new Date(data.birthDay.year, data.birthDay.month - 1, data.birthDay.day);
 
@@ -264,8 +276,8 @@ const EditProfile = () => {
       if (userData.avatar.file instanceof File) {
         const uploadedFile = await handleUploadAvatar();
         avatarData = { url: uploadedFile.url };
-      } else if (userData.avatar.url && userData.avatar.url !== defaultAvatar) {
-        avatarData = { url: userData.avatar.url };
+      } else {
+        avatarData = { url: userData.avatar?.url || defaultAvatar };
       }
     } catch (error) {
       console.error('Avatar upload failed:', error);
@@ -280,15 +292,20 @@ const EditProfile = () => {
     }
 
     const requestData = {
+      id: userData.id || '',
       firstName: userData.firstName || '',
       lastName: userData.lastName || '',
       username: userData.username || '',
       email: userData.email || '',
       phone: userData.phone || '',
       gender: userData.gender === true ? true : false,
-      birthDay: userData.birthDay && userData.birthDay.year && userData.birthDay.month && userData.birthDay.day
-        ? `${userData.birthDay.year}-${userData.birthDay.month.padStart(2, '0')}-${userData.birthDay.day.padStart(2, '0')}`
-        : null,
+      birthDay:
+        userData.birthDay &&
+        userData.birthDay.year &&
+        userData.birthDay.month &&
+        userData.birthDay.day
+          ? `${userData.birthDay.year}-${userData.birthDay.month.padStart(2, '0')}-${userData.birthDay.day.padStart(2, '0')}`
+          : null,
       location: userData.location || '',
       education: userData.education || '',
       workAt: userData.workAt || '',
@@ -297,7 +314,7 @@ const EditProfile = () => {
     };
 
     console.log('Sending request data:', requestData);
-    
+
     updateUser(requestData, {
       onSuccess: () => {
         queryClient.invalidateQueries({
@@ -316,7 +333,8 @@ const EditProfile = () => {
         console.error('Error response:', err?.response?.data);
         addToast({
           title: 'Error',
-          description: 'Error: ' + (err?.response?.data?.message || err?.message || 'Unknown error'),
+          description:
+            'Error: ' + (err?.response?.data?.message || err?.message || 'Unknown error'),
           timeout: 3000,
           color: 'danger',
         });
@@ -550,14 +568,18 @@ const EditProfile = () => {
                         ))}
                       </select>
                       <select
-                        value={userData?.birthDay?.day}
+                        value={
+                          userData?.birthDay?.day && userData.birthDay.day !== ''
+                            ? userData.birthDay.day
+                            : '01'
+                        }
                         onChange={(e) => handleChange('birthDay.day', e.target.value)}
                         className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-neutral-600 dark:bg-neutral-700 dark:text-white"
                       >
                         <option value="">Day</option>
                         {[...Array(daysInMonth)].map((_, i) => (
                           <option key={i + 1} value={(i + 1).toString().padStart(2, '0')}>
-                            {i + 1}
+                            {(i + 1).toString().padStart(2, '0')}
                           </option>
                         ))}
                       </select>

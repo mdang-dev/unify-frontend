@@ -5,10 +5,13 @@ import { MessageCircle } from 'lucide-react';
 import { Heart } from 'lucide-react';
 import { ChevronRight } from 'lucide-react';
 import { ChevronLeft } from 'lucide-react';
-import { format } from 'node:util';
-
+// import { format } from 'node:util';
+import { format } from 'date-fns';
+import React, { useState } from 'react';
+import getStatusBadge from "@/src/modules/settings/support/_components/get-status-badge";
 const ReportCard = ({ report, type, sentReports, receivedReports }) => {
   const [activeImageIndex, setActiveImageIndex] = useState({});
+
 
   const handleImageChange = (reportId, direction) => {
     setActiveImageIndex((prev) => {
@@ -102,7 +105,7 @@ const ReportCard = ({ report, type, sentReports, receivedReports }) => {
 
             <div className="space-y-1">
               <p className="text-xs text-gray-600 dark:text-gray-300">
-                Reported on {format(new Date(report.reportedAt), 'PPP')}
+                Reported on {format(new Date(report?.reportedAt), 'PPP')}
               </p>
               <p className="text-xs text-gray-600 dark:text-gray-300">
                 <span className="font-medium">Author:</span> {report.reportedEntity?.user?.username}
