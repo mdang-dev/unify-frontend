@@ -10,6 +10,7 @@ import { COOKIE_KEYS } from '@/src/constants/cookie-keys.constant';
 import { useAuthStore } from '@/src/stores/auth.store';
 import { getUser } from '@/src/utils/auth.util';
 import { useQuery } from '@tanstack/react-query';
+import { addToast } from '@heroui/toast';
 
 const privacyOptions = [
   { value: 'PUBLIC', label: 'Public' },
@@ -42,6 +43,30 @@ export default function CreateGroup() {
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Validate file type
+      const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        addToast({
+          title: 'Invalid file type',
+          description: 'Only images (png, jpeg, jpg, gif, webp) are allowed.',
+          timeout: 3000,
+          color: 'warning',
+        });
+        return;
+      }
+
+      // Validate file size (10MB limit)
+      const maxFileSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxFileSize) {
+        addToast({
+          title: 'File too large',
+          description: 'File size must be less than 10MB.',
+          timeout: 3000,
+          color: 'warning',
+        });
+        return;
+      }
+
       setAvatarFile(file);
       setAvatarUrl(URL.createObjectURL(file));
     }
@@ -51,6 +76,30 @@ export default function CreateGroup() {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
     if (file) {
+      // Validate file type
+      const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        addToast({
+          title: 'Invalid file type',
+          description: 'Only images (png, jpeg, jpg, gif, webp) are allowed.',
+          timeout: 3000,
+          color: 'warning',
+        });
+        return;
+      }
+
+      // Validate file size (10MB limit)
+      const maxFileSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxFileSize) {
+        addToast({
+          title: 'File too large',
+          description: 'File size must be less than 10MB.',
+          timeout: 3000,
+          color: 'warning',
+        });
+        return;
+      }
+
       setAvatarFile(file);
       setAvatarUrl(URL.createObjectURL(file));
     }
@@ -58,6 +107,42 @@ export default function CreateGroup() {
 
   const handleDragOver = (e) => {
     e.preventDefault();
+  };
+
+  // Firebase upload function for group avatar (same pattern as posts-create)
+  const handleUpload = async () => {
+    if (!avatarFile) {
+      addToast({
+        title: 'No file selected',
+        description: 'Please select an image file to upload.',
+        timeout: 3000,
+        color: 'warning',
+      });
+      return null;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('files', avatarFile);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error('Upload failed');
+
+      const data = await res.json();
+      return data;
+    } catch (error) {
+      addToast({
+        title: 'Upload failed',
+        description: 'Failed to upload group avatar. Please try again.',
+        timeout: 3000,
+        color: 'danger',
+      });
+      return null;
+    }
   };
 
   // Create group mutation
@@ -68,6 +153,12 @@ export default function CreateGroup() {
     },
     onSuccess: (data) => {
       console.log('Group created successfully:', data);
+      addToast({
+        title: 'Success',
+        description: 'Group created successfully!',
+        timeout: 3000,
+        color: 'success',
+      });
       // Invalidate and refetch groups query
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GROUPS] });
       // Redirect to the created group or groups list
@@ -76,6 +167,12 @@ export default function CreateGroup() {
     onError: (error) => {
       console.error('Error creating group:', error);
       setIsSubmitting(false);
+      addToast({
+        title: 'Error',
+        description: error.message || 'Failed to create group. Please try again.',
+        timeout: 3000,
+        color: 'danger',
+      });
     },
   });
 
@@ -86,17 +183,32 @@ export default function CreateGroup() {
     setIsSubmitting(true);
     
     try {
+      let coverImageUrl = null;
+      
+      // Upload avatar to Firebase if file is selected (same pattern as posts-create)
+      if (avatarFile) {
+        const uploadedFiles = await handleUpload();
+        if (!uploadedFiles?.files?.length) throw new Error('Failed to upload avatar');
+        coverImageUrl = uploadedFiles.files[0].url;
+      }
+
       const groupData = {
         name: groupName.trim(),
         description: description.trim(),
         privacyType: privacy,
-        coverImageUrl: avatarUrl || null, // You might want to upload the image first
+        coverImageUrl: coverImageUrl,
       };
 
       createGroupMutation.mutate(groupData);
     } catch (error) {
       console.error('Error submitting form:', error);
       setIsSubmitting(false);
+      addToast({
+        title: 'Error',
+        description: error.message || 'Failed to create group. Please try again.',
+        timeout: 3000,
+        color: 'danger',
+      });
     }
   };
 
