@@ -233,11 +233,19 @@ export default function GroupDetail() {
           </h1>
           <div className="mb-4 flex flex-wrap items-center gap-4 text-sm text-neutral-500">
             <span>{memberCount.toLocaleString()} members</span>
-            <span className="rounded-full border border-neutral-300 px-2 py-0.5 text-xs font-medium dark:border-zinc-700">
+            <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
+              group.privacyType === 'PUBLIC' 
+                ? 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
+                : 'border-neutral-300 dark:border-zinc-700'
+            }`}>
               {group.privacyType || 'Public'}
             </span>
             {group.status && (
-              <span className="rounded-full border border-neutral-300 px-2 py-0.5 text-xs font-medium dark:border-zinc-700">
+              <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
+                group.status === 'ACTIVE'
+                  ? 'border-green-300 bg-green-50 text-green-700 dark:border-green-600 dark:bg-green-900/20 dark:text-green-400'
+                  : 'border-neutral-300 dark:border-zinc-700'
+              }`}>
                 {group.status}
               </span>
             )}
@@ -264,6 +272,7 @@ export default function GroupDetail() {
               ))}
             </div>
             <div className="flex items-center gap-2">
+            <p>Check: {isOwner}</p>
               {isOwner || isManager ? (
                 <>
                   <button
@@ -296,15 +305,7 @@ export default function GroupDetail() {
                     )}
                   </div>
                 </>
-              ) : !isMember ? (
-                <button 
-                  className="flex items-center justify-center gap-2 rounded-full bg-zinc-800 px-16 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-400 focus:ring-offset-2 dark:bg-zinc-100 dark:text-neutral-800 dark:hover:bg-zinc-400 dark:hover:text-zinc-50 dark:focus:ring-offset-zinc-900"
-                  onClick={handleJoinGroup}
-                  disabled={joinGroupMutation.isPending}
-                >
-                  {joinGroupMutation.isPending ? 'Joining...' : 'Join'}
-                </button>
-              ) : (
+              ) : isMember ? (
                 <>
                   <button
                     className="flex cursor-default items-center justify-center gap-2 rounded-full bg-zinc-800 px-6 py-2 text-sm font-semibold text-white shadow-sm dark:bg-zinc-100 dark:text-neutral-800"
@@ -313,7 +314,7 @@ export default function GroupDetail() {
                     <i className="fa-solid fa-people-group"></i>
                     Joined
                   </button>
-
+   
                   <div className="relative" ref={joinedDropdownRef}>
                     <button
                       className="rounded-fullp-2 ml-1 text-neutral-800 transition-all hover:text-zinc-400 dark:text-zinc-50 dark:hover:text-zinc-500"
@@ -336,6 +337,14 @@ export default function GroupDetail() {
                     )}
                   </div>
                 </>
+              ) : (
+                <button 
+                  className="flex items-center justify-center gap-2 rounded-full bg-zinc-800 px-16 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-400 focus:ring-offset-2 dark:bg-zinc-100 dark:text-neutral-800 dark:hover:bg-zinc-400 dark:hover:text-zinc-50 dark:focus:ring-offset-zinc-900"
+                  onClick={handleJoinGroup}
+                  disabled={joinGroupMutation.isPending}
+                >
+                  {joinGroupMutation.isPending ? 'Joining...' : 'Join'}
+                </button>
               )}
             </div>
           </div>
