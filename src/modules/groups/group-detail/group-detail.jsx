@@ -123,8 +123,8 @@ export default function GroupDetail() {
   // Update membership status when data changes
   useEffect(() => {
     if (membershipData) {
-      setIsMember(membershipData.isMember || false);
-      setIsOwner(membershipData.isOwner || false);
+      setIsMember(membershipData.member || false);
+      setIsOwner(membershipData.owner || false);
     } else {
       // If membership check is not available, check if user is in memberIds
       if (group && currentUser && group.memberIds) {
@@ -273,7 +273,7 @@ export default function GroupDetail() {
             </div>
             <div className="flex items-center gap-2">
             <p>Check: {isOwner}</p>
-              {isOwner || isManager ? (
+              {isOwner || isMember ? (
                 <>
                   <button
                     className="rounded-full bg-zinc-800 px-16 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-400 focus:ring-offset-2 dark:bg-zinc-100 dark:text-neutral-800 dark:hover:bg-zinc-400 dark:hover:text-zinc-50 dark:focus:ring-offset-zinc-900"
