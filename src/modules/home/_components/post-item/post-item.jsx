@@ -21,7 +21,6 @@ import User from './_components/user';
 const PostItem = ({ post }) => {
   const { user } = useAuthStore();
   const { likeCount, setLikeCount } = usePostLikeStatus(user?.id, post?.id);
-  const [openList, setOpenList] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showFullImage, setShowFullImage] = useState(false);
 
@@ -99,46 +98,24 @@ const PostItem = ({ post }) => {
       >
         <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-neutral-800">
           <User user={post.user} />
-          <button
-            onClick={() => setOpenList(true)}
-            className="text-lg text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-          >
-            •••
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-red-500 dark:text-gray-400 dark:hover:bg-neutral-700 dark:hover:text-red-400"
+              title="Report"
+            >
+              <i className="fa-solid fa-flag text-sm"></i>
+            </button>
+            <button
+              className="rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-neutral-700 dark:hover:text-gray-200"
+              title="Not interested"
+            >
+              <i className="fa-solid fa-eye-slash text-sm"></i>
+            </button>
+          </div>
         </div>
 
-        {openList && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="w-64 rounded-lg bg-white shadow-xl dark:bg-neutral-800"
-            >
-              <button
-                onClick={() => {
-                  setIsModalOpen(true);
-                  setOpenList(false);
-                }}
-                className="w-full rounded-t-lg py-3 text-sm font-medium text-red-500 transition-colors hover:bg-gray-100 dark:text-red-400 dark:hover:bg-neutral-700"
-              >
-                Report
-              </button>
-              <button className="w-full py-3 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-neutral-700">
-                Not interested
-              </button>
-              <button className="w-full py-3 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-neutral-700">
-                Share
-              </button>
-              <button
-                onClick={() => setOpenList(false)}
-                className="w-full rounded-b-lg py-3 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-neutral-700"
-              >
-                Close
-              </button>
-            </motion.div>
-          </div>
-        )}
+
 
         <ReportModal
           isOpen={isModalOpen}
