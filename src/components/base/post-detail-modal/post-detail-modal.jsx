@@ -38,7 +38,8 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete }) => {
   useEffect(() => {
     if (!post && postId) {
       setLoading(true);
-      postsQueryApi.getPostsById(postId)
+      postsQueryApi
+        .getPostsById(postId)
         .then((data) => {
           setFetchedPost(data);
           setSelectedMedia(data?.media || []);
@@ -295,10 +296,10 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete }) => {
           </div>
 
           {/* Comments Section */}
-          <div className="flex flex-1 flex-col">
+          <div className="flex min-h-0 flex-1 flex-col">
             {/* Caption */}
             {postData.captions && (
-              <div className="border-b p-4 dark:border-neutral-800">
+              <div className="flex-shrink-0 border-b p-4 dark:border-neutral-800">
                 <div className="flex items-start gap-3">
                   <div className="h-8 w-8 flex-shrink-0 overflow-hidden rounded-full border-2 border-gray-300 dark:border-gray-600">
                     <Image
@@ -328,7 +329,7 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete }) => {
 
             {/* Comments List */}
             <div
-              className="no-scrollbar flex-1 overflow-y-auto px-4 py-3"
+              className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-4 py-3"
               ref={commentsContainerRef}
             >
               {isCommentsLoading ? (
@@ -357,7 +358,7 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete }) => {
             </div>
 
             {/* Comment Input */}
-            <div className="border-t p-4 dark:border-neutral-800">
+            <div className="flex-shrink-0 border-t p-4 dark:border-neutral-800">
               <CommentInput
                 postId={postData.id}
                 setComments={updateComments}
