@@ -272,7 +272,6 @@ export default function GroupDetail() {
               ))}
             </div>
             <div className="flex items-center gap-2">
-            <p>Check: {isOwner}</p>
               {isOwner || isMember ? (
                 <>
                   <button

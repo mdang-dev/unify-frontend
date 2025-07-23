@@ -10,8 +10,8 @@ export default function Home() {
     <MainLayout>
       <div className="flex">
         <div className="h-screen basis-3/4">
-          <div id="newsfeed" className="no-scrollbar h-full overflow-y-scroll py-8">
-            <div className="mx-auto flex w-3/4 flex-col">
+          <div id="newsfeed" className="no-scrollbar bg-[#f5f5f5] h-full overflow-y-scroll py-8">
+            <div className="mx-auto flex flex-col w-full ">
               <Post />
             </div>
           </div>

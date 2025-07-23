@@ -148,7 +148,7 @@ const PostItem = ({ post }) => {
         />
 
         <div className="w-full bg-white dark:bg-neutral-900">
-          <div className="relative max-h-[600px] overflow-hidden">
+          <div className="relative overflow-hidden">
             <Slider srcs={post.media} onImageClick={() => setShowFullImage(true)} />
           </div>
         </div>

@@ -110,11 +110,16 @@ const Slider = ({ srcs = [], onImageClick }) => {
 
     if (media.width && media.height) {
       const ratio = media.width / media.height;
+      // For videos, use the actual aspect ratio
+      if (isVideo(media)) {
+        return ratio;
+      }
+      // For images, use responsive ratios
       return ratio >= 1.5 ? 16 / 9 : 4 / 5;
     }
 
     return 4 / 5;
-  }, []);
+  }, [isVideo]);
 
   useEffect(() => {
     if (srcs[currentIndex]) {
@@ -123,13 +128,15 @@ const Slider = ({ srcs = [], onImageClick }) => {
   }, [currentIndex, srcs, calculateAspectRatio]);
 
   const containerStyle = {
-    aspectRatio: mediaAspectRatio,
+    aspectRatio: isVideo(srcs[currentIndex]) ? mediaAspectRatio : mediaAspectRatio,
+    minHeight: isVideo(srcs[currentIndex]) ? '300px' : '300px',
+    maxHeight: isVideo(srcs[currentIndex]) ? '80vh' : '80vh',
   };
 
   return (
     <div
       ref={sliderRef}
-      className="relative h-full w-full"
+      className="relative w-full"
       style={containerStyle}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -178,7 +185,7 @@ const Slider = ({ srcs = [], onImageClick }) => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="h-full w-full"
+          className="w-full h-full"
         >
           {isVideo(srcs[currentIndex]) ? (
             <PostVideo src={srcs[currentIndex]?.url} />
@@ -196,6 +203,7 @@ const Slider = ({ srcs = [], onImageClick }) => {
                   setError(true);
                 }}
                 unoptimized
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               />
             </div>
           )}
