@@ -1,8 +1,8 @@
-import { cookies } from 'next/headers';
 import { COOKIE_KEYS } from '../constants/cookie-keys.constant';
+import { getCookie } from './cookies.util';
 
 export const getUser = async () => {
-  const token = (await cookies()).get(COOKIE_KEYS.AUTH_TOKEN)?.value;
+  const token = getCookie(COOKIE_KEYS.AUTH_TOKEN);
 
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/my-info`, {
     headers: {
