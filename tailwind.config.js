@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 const { heroui } = require('@heroui/react');
+const { keyframes } = require('framer-motion');
 module.exports = {
   darkMode: ['class'],
   content: [
@@ -11,6 +12,22 @@ module.exports = {
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
         'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
+      },
+      keyframes: {
+        scaleRing: {
+          '0%, 100%': { transform: 'scale(1)' },
+          '50%': { transform: 'scale(1.15)' },
+        },
+        smallping: {
+          '75%, 100%': {
+            transform: 'scale(1.5)',
+            opacity: '0',
+          },
+        },
+      },
+      animation: {
+        scaleRing: 'scaleRing 1.6s ease-in-out infinite',
+        smallping: 'smallping 1s cubic-bezier(0, 0, 0.2, 1) infinite',
       },
       borderRadius: {
         lg: 'var(--radius)',

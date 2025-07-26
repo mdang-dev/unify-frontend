@@ -5,6 +5,7 @@ import { HeroUIProvider } from '@heroui/react';
 import { useEffect } from 'react';
 import { useAuthStore } from '../stores/auth.store';
 import IncomingCall from '../modules/incoming-call';
+import { Toaster } from '../components/ui/sonner';
 
 export default function MainLayout({ children }) {
   useEffect(() => {
@@ -25,7 +26,8 @@ export default function MainLayout({ children }) {
         </aside>
         <main className="relative h-screen w-full flex-initial overflow-y-auto scrollbar-hide">
           {children}
-          <IncomingCall/>
+          <IncomingCall />
+          <Toaster />
         </main>
       </div>
     </HeroUIProvider>

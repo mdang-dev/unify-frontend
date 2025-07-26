@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getCookie } from './cookies.util';
+import { deleteCookie, getCookie } from './cookies.util';
 import { COOKIE_KEYS } from '../constants/cookie-keys.constant';
 
 const httpClient = axios.create({
@@ -21,6 +21,7 @@ httpClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      deleteCookie(COOKIE_KEYS.AUTH_TOKEN);
       console.warn('Unauthorized - handle logout or refresh');
     }
     return Promise.reject(error);
