@@ -121,7 +121,9 @@ const Sidebar = () => {
                 iconClass={'fa-brands fa-facebook-messenger'}
               />
             </li>
-
+            <li className="h-16">
+              <NavButton title="Groups" href="/groups" iconClass={'fa-solid fa-users'} />
+            </li>
             <li className="h-16">
               <button
                 ref={buttonRef}

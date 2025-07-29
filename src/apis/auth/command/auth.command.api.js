@@ -1,6 +1,6 @@
 import httpClient from '@/src/utils/http-client.util';
 
-const url = '/api/auth';
+const url = '/auth';
 
 export const authCommandApi = {
   login: async (data) => {
