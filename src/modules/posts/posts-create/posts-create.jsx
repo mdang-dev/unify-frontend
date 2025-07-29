@@ -293,11 +293,14 @@ const PostsCreate = () => {
 
     setPromptLoading(true);
     try {
-      const response = await fetch(`/api/prompt?query=${encodeURIComponent(prompt.trim())}`, {
-        method: 'GET',
+      const response = await fetch(`https://unify-mobile.app.n8n.cloud/webhook/generate-post`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          prompt: prompt.trim(),
+        }),
       });
 
       if (!response.ok) {
@@ -306,20 +309,48 @@ const PostsCreate = () => {
 
       const data = await response.json();
       
-      // Handle the response data here
-      console.log('Prompt response:', data);
-      
-      addToast({
-        title: 'Prompt sent successfully',
-        description: 'Your prompt has been processed.',
-        timeout: 3000,
-        color: 'success',
-      });
-
-      // You can handle the response data here, for example:
-      // - Update the caption with AI-generated content
-      // - Process the response and update the UI
-      // - Store the response for later use
+      // Handle the n8n workflow response
+      if (data && typeof data === 'object') {
+        // Extract the actual data from the output key
+        let responseData = data;
+        if (data.output && typeof data.output === 'object') {
+          responseData = data.output;
+        }
+        
+        // Update caption if provided
+        if (responseData.captions) {
+          setCaption(responseData.captions);
+        }
+        
+        // Update audience if provided
+        if (responseData.audience) {
+          setAudience(responseData.audience);
+        }
+        
+        // Update comment visibility if provided
+        if (typeof responseData.isCommentVisible === 'boolean') {
+          setIsCommentVisible(!responseData.isCommentVisible); // Invert because our state is "turn off commenting"
+        }
+        
+        // Update like visibility if provided
+        if (typeof responseData.isLikeVisible === 'boolean') {
+          setIsLikeVisible(!responseData.isLikeVisible); // Invert because our state is "hide like counts"
+        }
+        
+        addToast({
+          title: 'AI Content Generated!',
+          description: 'Your post has been enhanced with AI-generated content.',
+          timeout: 3000,
+          color: 'success',
+        });
+      } else {
+        addToast({
+          title: 'Prompt processed',
+          description: 'Your prompt has been processed.',
+          timeout: 3000,
+          color: 'success',
+        });
+      }
       
     } catch (error) {
       console.error('Error sending prompt:', error);
@@ -340,6 +371,8 @@ const PostsCreate = () => {
       handlePromptSubmit();
     }
   };
+
+
 
   return (
     <>
@@ -550,11 +583,13 @@ const PostsCreate = () => {
                     Advanced Settings
                   </h3>
                   <PostSwitch
+                    isOn={isLikeVisible}
                     onToggle={setIsLikeVisible}
                     title="Hide like and comment counts"
                     subtitle="Keep the focus on your content by hiding engagement metrics"
                   />
                   <PostSwitch
+                    isOn={isCommentVisible}
                     onToggle={setIsCommentVisible}
                     title="Turn off commenting"
                     subtitle="Disable comments to control interactions on your post"
