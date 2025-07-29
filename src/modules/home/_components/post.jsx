@@ -77,7 +77,7 @@ const Post = () => {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-4">
+    <div className="mx-auto max-w-[580px] px-4 py-4">
       <AnimatePresence mode="wait">
         {data?.pages.map((page, pageIndex) => (
           <motion.div
