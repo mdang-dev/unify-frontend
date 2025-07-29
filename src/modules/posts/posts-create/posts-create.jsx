@@ -26,7 +26,9 @@ const PostsCreate = () => {
   const [isCommentVisible, setIsCommentVisible] = useState(false);
   const [audience, setAudience] = useState('PUBLIC');
   const [caption, setCaption] = useState('');
+  const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
+  const [promptLoading, setPromptLoading] = useState(false);
   const { user } = useAuthStore();
 
   const savePostMutation = useMutation({
@@ -267,6 +269,7 @@ const PostsCreate = () => {
     setFiles([]);
     setPreviews([]);
     setCaption('');
+    setPrompt('');
     setIsCommentVisible(false);
     setIsLikeVisible(false);
     setAudience('PUBLIC');
@@ -275,6 +278,67 @@ const PostsCreate = () => {
   const removeFile = (file) => {
     setPreviews((prev) => prev.filter((item) => item.url !== file.url));
     setFiles((prev) => prev.filter((item) => item.url !== file.url));
+  };
+
+  const handlePromptSubmit = async () => {
+    if (!prompt.trim()) {
+      addToast({
+        title: 'Empty prompt',
+        description: 'Please enter a prompt before sending.',
+        timeout: 3000,
+        color: 'warning',
+      });
+      return;
+    }
+
+    setPromptLoading(true);
+    try {
+      const response = await fetch(`/api/prompt?query=${encodeURIComponent(prompt.trim())}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Handle the response data here
+      console.log('Prompt response:', data);
+      
+      addToast({
+        title: 'Prompt sent successfully',
+        description: 'Your prompt has been processed.',
+        timeout: 3000,
+        color: 'success',
+      });
+
+      // You can handle the response data here, for example:
+      // - Update the caption with AI-generated content
+      // - Process the response and update the UI
+      // - Store the response for later use
+      
+    } catch (error) {
+      console.error('Error sending prompt:', error);
+      addToast({
+        title: 'Prompt failed',
+        description: error.message || 'Failed to send prompt. Please try again.',
+        timeout: 3000,
+        color: 'danger',
+      });
+    } finally {
+      setPromptLoading(false);
+    }
+  };
+
+  const handlePromptKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handlePromptSubmit();
+    }
   };
 
   return (
@@ -402,6 +466,51 @@ const PostsCreate = () => {
                 <div className="flex items-center justify-between border-b border-gray-200 pb-4 dark:border-neutral-700">
                   <User user={user} />
                 </div>
+                
+                {/* AI Prompt Section - Above Caption */}
+                <div className="rounded-lg bg-gradient-to-r from-purple-50 to-blue-50 p-3 shadow-sm dark:from-purple-900/20 dark:to-blue-900/20">
+                  <div className="mb-2 flex items-center gap-2">
+                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-r from-purple-500 to-blue-500">
+                      <i className="fa-solid fa-robot text-xs text-white"></i>
+                    </div>
+                    <span className="text-xs font-medium text-gray-900 dark:text-gray-100">AI Assistant</span>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Textarea
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.target.value)}
+                      onKeyPress={handlePromptKeyPress}
+                      placeholder="Ask AI for help with your post..."
+                      minRows={1}
+                      className="flex-1"
+                      disabled={promptLoading}
+                      classNames={{
+                        input: "bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm text-xs",
+                        inputWrapper: "border border-transparent bg-gradient-to-r from-purple-200/50 to-blue-200/50 dark:from-purple-700/30 dark:to-blue-700/30 backdrop-blur-sm hover:from-purple-300/50 hover:to-blue-300/50 dark:hover:from-purple-600/30 dark:hover:to-blue-600/30 transition-all duration-300"
+                      }}
+                    />
+                    <button
+                      onClick={handlePromptSubmit}
+                      disabled={promptLoading || !prompt.trim()}
+                      className={cn(
+                        'flex h-6 w-6 items-center justify-center rounded-md',
+                        'bg-gradient-to-r from-purple-500 to-blue-500 text-white',
+                        'hover:from-purple-600 hover:to-blue-600',
+                        'disabled:cursor-not-allowed disabled:opacity-50',
+                        'transition-all duration-300 shadow-sm hover:shadow-md',
+                        'transform hover:scale-105 active:scale-95'
+                      )}
+                    >
+                      {promptLoading ? (
+                        <Spinner size="sm" color="white" />
+                      ) : (
+                        <i className="fa-solid fa-paper-plane text-xs"></i>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-900 dark:text-gray-100">
                     Caption
