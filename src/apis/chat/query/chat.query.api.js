@@ -1,6 +1,6 @@
 import httpClient from '@/src/utils/http-client.util';
 
-const url = '/api/messages';
+const url = '/messages';
 
 export const chatQueryApi = {
   getChatList: async (userId) => {

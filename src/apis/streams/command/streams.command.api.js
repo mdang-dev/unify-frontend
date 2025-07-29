@@ -3,6 +3,11 @@ import httpClient from '@/src/utils/http-client.util';
 const url = '/streams';
 
 export const streamsCommandApi = {
+  createViewerToken: async (hostIdentity, selfIdentity) => {
+    const res = await httpClient.post(`${url}/create-viewer-token`, { hostIdentity, selfIdentity });
+    return res.data;
+  },
+
   createStream: async (streamData) => {
     const res = await httpClient.post(`${url}/create`, streamData);
     return res.data;
@@ -29,6 +34,10 @@ export const streamsCommandApi = {
   },
   generateConnection: async (userId) => {
     const res = await httpClient.post(`${url}/generate-connection`, { userId });
+    return res.data;
+  },
+  createConnection: async (data) => {
+    const res = await httpClient.post(`${url}/create-connection`, data);
     return res.data;
   },
 };
