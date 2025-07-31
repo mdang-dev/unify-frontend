@@ -186,7 +186,7 @@ const PostsCreate = () => {
     }
   };
 
-  const handleSave = async () => {
+    const handleSave = async () => {
     setLoading(true);
 
     if (files.length === 0) {
@@ -202,6 +202,17 @@ const PostsCreate = () => {
     }
 
     try {
+      // Handle media upload first
+      const uploadedFiles = await handleUpload();
+      if (!uploadedFiles?.files?.length) throw new Error('Failed to upload media');
+
+      const postMedia = uploadedFiles.files.map((file) => ({
+        url: file.url,
+        fileType: file.file_type,
+        size: file.size,
+        mediaType: file.media_type.toUpperCase(),
+      }));
+
       const newPost = {
         captions: caption,
         audience: audience,
@@ -209,6 +220,7 @@ const PostsCreate = () => {
         isCommentVisible: isCommentVisible,
         isLikeVisible: isLikeVisible,
         postedAt: new Date().toISOString(),
+        media: postMedia, // Include media directly in the post object
       };
 
       const post = await savePostMutation.mutateAsync(newPost);
@@ -228,27 +240,13 @@ const PostsCreate = () => {
         );
       }
 
-      // Handle media upload
-      const uploadedFiles = await handleUpload();
-      if (!uploadedFiles?.files?.length) throw new Error('Failed to upload media');
-
-      const postMedia = uploadedFiles.files.map((file) => ({
-        post: post,
-        url: file.url,
-        fileType: file.file_type,
-        size: file.size,
-        mediaType: file.media_type.toUpperCase(),
-      }));
-
-      await saveMediaMutation.mutateAsync(postMedia);
-
       // Final success toast
       addToast({
         title: 'Post created!',
         description: 'Your post was published successfully.',
         timeout: 3000,
         color: 'success',
-      
+     
       });
 
       refreshPost();
@@ -258,7 +256,7 @@ const PostsCreate = () => {
         description: error.message || 'Something went wrong. Please try again.',
         timeout: 3000,
         color: 'danger',
-       
+     
       });
     } finally {
       setLoading(false);
@@ -276,25 +274,25 @@ const PostsCreate = () => {
   };
 
   const removeFile = (file) => {
-    setPreviews((prev) => prev.filter((item) => item.url !== file.url));
-    setFiles((prev) => prev.filter((item) => item.url !== file.url));
+    // Find the index of the file in previews
+    const previewIndex = previews.findIndex((item) => item.url === file.url);
+    
+    if (previewIndex !== -1) {
+      // Remove from both arrays using the same index
+      setPreviews((prev) => prev.filter((_, index) => index !== previewIndex));
+      setFiles((prev) => prev.filter((_, index) => index !== previewIndex));
+    }
   };
 
   const handlePromptSubmit = async () => {
     if (!prompt.trim()) {
-      addToast({
-        title: 'Empty prompt',
-        description: 'Please enter a prompt before sending.',
-        timeout: 3000,
-        color: 'warning',
-      });
       return;
     }
 
     setPromptLoading(true);
     try {
-      // const response = await fetch(`https://unify-mobile.app.n8n.cloud/webhook/generate-post`, {
-        const response = await fetch(`https://unify-mobile.app.n8n.cloud/webhook-test/generate-post`, {
+      const response = await fetch(`https://unify-mobile.app.n8n.cloud/webhook/generate-post`, {
+        // const response = await fetch(`https://unify-mobile.app.n8n.cloud/webhook-test/generate-post`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -337,7 +335,7 @@ const PostsCreate = () => {
             setIsLikeVisible(!responseData.isLikeVisible); // Invert because our state is "hide like counts"
           }
           
-          // Handle image URL if provided
+                    // Handle image URL if provided
           if (responseData.imageUrl) {
             try {
               await addImageFromUrl(responseData.imageUrl, 'ai-generated-image.jpg');
@@ -351,13 +349,6 @@ const PostsCreate = () => {
               });
             }
           }
-          
-          addToast({
-            title: 'AI Content Generated!',
-            description: 'Your post has been enhanced with AI-generated content.',
-            timeout: 3000,
-            color: 'success',
-          });
         } else {
           addToast({
             title: 'Invalid response format',
@@ -407,13 +398,6 @@ const PostsCreate = () => {
             });
           }
         }
-        
-        addToast({
-          title: 'AI Content Generated!',
-          description: 'Your post has been enhanced with AI-generated content.',
-          timeout: 3000,
-          color: 'success',
-        });
       } else {
         addToast({
           title: 'Prompt processed',
@@ -463,7 +447,6 @@ const PostsCreate = () => {
       
       return file;
     } catch (error) {
-      console.error('Error converting base64 to file:', error);
       addToast({
         title: 'Conversion failed',
         description: 'Failed to convert base64 image to file.',
@@ -514,13 +497,6 @@ const PostsCreate = () => {
     };
 
     setPreviews((prevPreviews) => [...prevPreviews, newPreview]);
-
-    addToast({
-      title: 'Image added',
-      description: `${filename} has been added to your post.`,
-      timeout: 3000,
-      color: 'success',
-    });
   };
 
   const addMultipleBase64Images = (base64Array, filenamePrefix = 'image') => {
@@ -584,7 +560,6 @@ const PostsCreate = () => {
         img.src = imageUrl;
       });
     } catch (error) {
-      console.error('Error converting URL to base64:', error);
       addToast({
         title: 'Conversion failed',
         description: 'Failed to convert image URL to base64.',
@@ -688,6 +663,7 @@ const PostsCreate = () => {
                   'disabled:cursor-not-allowed disabled:opacity-50',
                   'transition-colors duration-200'
                 )}
+
               >
                 {loading ? 'Creating...' : 'Create Post'}
               </button>
