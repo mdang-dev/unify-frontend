@@ -293,7 +293,8 @@ const PostsCreate = () => {
 
     setPromptLoading(true);
     try {
-      const response = await fetch(`https://unify-mobile.app.n8n.cloud/webhook/generate-post`, {
+      // const response = await fetch(`https://unify-mobile.app.n8n.cloud/webhook/generate-post`, {
+        const response = await fetch(`https://unify-mobile.app.n8n.cloud/webhook-test/generate-post`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -309,9 +310,64 @@ const PostsCreate = () => {
 
       const data = await response.json();
       
-      // Handle the n8n workflow response
-      if (data && typeof data === 'object') {
-        // Extract the actual data from the output key
+      // Handle the new response format with array structure
+      if (Array.isArray(data) && data.length > 0) {
+        // Find the parse action response
+        const parseAction = data.find(item => item.action === 'parse');
+        if (parseAction && parseAction.response && parseAction.response.output) {
+          const responseData = parseAction.response.output;
+          
+          // Update caption if provided
+          if (responseData.captions) {
+            setCaption(responseData.captions);
+          }
+          
+          // Update audience if provided
+          if (responseData.audience) {
+            setAudience(responseData.audience);
+          }
+          
+          // Update comment visibility if provided
+          if (typeof responseData.isCommentVisible === 'boolean') {
+            setIsCommentVisible(!responseData.isCommentVisible); // Invert because our state is "turn off commenting"
+          }
+          
+          // Update like visibility if provided
+          if (typeof responseData.isLikeVisible === 'boolean') {
+            setIsLikeVisible(!responseData.isLikeVisible); // Invert because our state is "hide like counts"
+          }
+          
+          // Handle image URL if provided
+          if (responseData.imageUrl) {
+            try {
+              await addImageFromUrl(responseData.imageUrl, 'ai-generated-image.jpg');
+            } catch (error) {
+              console.error('Failed to add AI-generated image:', error);
+              addToast({
+                title: 'Image failed',
+                description: 'AI suggested an image but failed to add it to your post.',
+                timeout: 3000,
+                color: 'warning',
+              });
+            }
+          }
+          
+          addToast({
+            title: 'AI Content Generated!',
+            description: 'Your post has been enhanced with AI-generated content.',
+            timeout: 3000,
+            color: 'success',
+          });
+        } else {
+          addToast({
+            title: 'Invalid response format',
+            description: 'Received unexpected response format from AI service.',
+            timeout: 3000,
+            color: 'warning',
+          });
+        }
+      } else if (data && typeof data === 'object') {
+        // Handle legacy response format for backward compatibility
         let responseData = data;
         if (data.output && typeof data.output === 'object') {
           responseData = data.output;
@@ -329,12 +385,27 @@ const PostsCreate = () => {
         
         // Update comment visibility if provided
         if (typeof responseData.isCommentVisible === 'boolean') {
-          setIsCommentVisible(!responseData.isCommentVisible); // Invert because our state is "turn off commenting"
+          setIsCommentVisible(!responseData.isCommentVisible);
         }
         
         // Update like visibility if provided
         if (typeof responseData.isLikeVisible === 'boolean') {
-          setIsLikeVisible(!responseData.isLikeVisible); // Invert because our state is "hide like counts"
+          setIsLikeVisible(!responseData.isLikeVisible);
+        }
+        
+        // Handle image URL if provided (legacy format)
+        if (responseData.imageUrl) {
+          try {
+            await addImageFromUrl(responseData.imageUrl, 'ai-generated-image.jpg');
+          } catch (error) {
+            console.error('Failed to add AI-generated image:', error);
+            addToast({
+              title: 'Image failed',
+              description: 'AI suggested an image but failed to add it to your post.',
+              timeout: 3000,
+              color: 'warning',
+            });
+          }
         }
         
         addToast({
@@ -372,6 +443,206 @@ const PostsCreate = () => {
     }
   };
 
+  const convertBase64ToFile = (base64String, filename = 'image.jpg', mimeType = 'image/jpeg') => {
+    try {
+      // Remove data URL prefix if present
+      const base64Data = base64String.replace(/^data:image\/[a-z]+;base64,/, '');
+      
+      // Convert base64 to binary
+      const byteCharacters = atob(base64Data);
+      const byteNumbers = new Array(byteCharacters.length);
+      
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      
+      const byteArray = new Uint8Array(byteNumbers);
+      
+      // Create File object
+      const file = new File([byteArray], filename, { type: mimeType });
+      
+      return file;
+    } catch (error) {
+      console.error('Error converting base64 to file:', error);
+      addToast({
+        title: 'Conversion failed',
+        description: 'Failed to convert base64 image to file.',
+        timeout: 3000,
+        color: 'danger',
+      });
+      return null;
+    }
+  };
+
+  const addBase64Image = (base64String, filename = 'image.jpg', mimeType = 'image/jpeg') => {
+    const maxFiles = 12;
+    const maxFileSize = 10 * 1024 * 1024; // 10MB
+
+    // Check file count
+    if (files.length >= maxFiles) {
+      addToast({
+        title: 'Too many files',
+        description: `You can only upload up to ${maxFiles} files.`,
+        timeout: 3000,
+        color: 'warning',
+      });
+      return;
+    }
+
+    // Convert base64 to File object
+    const file = convertBase64ToFile(base64String, filename, mimeType);
+    if (!file) return;
+
+    // Check file size
+    if (file.size > maxFileSize) {
+      addToast({
+        title: 'File too large',
+        description: `${filename} exceeds the 10MB size limit.`,
+        timeout: 3000,
+        color: 'warning',
+      });
+      return;
+    }
+
+    // Add file to state
+    setFiles((prevFiles) => [...prevFiles, file]);
+    
+    // Create preview
+    const newPreview = {
+      url: URL.createObjectURL(file),
+      type: file.type,
+    };
+
+    setPreviews((prevPreviews) => [...prevPreviews, newPreview]);
+
+    addToast({
+      title: 'Image added',
+      description: `${filename} has been added to your post.`,
+      timeout: 3000,
+      color: 'success',
+    });
+  };
+
+  const addMultipleBase64Images = (base64Array, filenamePrefix = 'image') => {
+    const maxFiles = 12;
+    const remainingSlots = maxFiles - files.length;
+    
+    if (base64Array.length === 0) return;
+    
+    // Limit the number of images that can be added
+    const imagesToAdd = base64Array.slice(0, remainingSlots);
+    
+    if (imagesToAdd.length < base64Array.length) {
+      addToast({
+        title: 'Some images skipped',
+        description: `Only ${remainingSlots} images were added due to file limit.`,
+        timeout: 3000,
+        color: 'warning',
+      });
+    }
+
+    imagesToAdd.forEach((base64String, index) => {
+      const filename = `${filenamePrefix}_${index + 1}.jpg`;
+      addBase64Image(base64String, filename);
+    });
+  };
+
+  const convertUrlToBase64 = async (imageUrl, filename = 'image.jpg', mimeType = 'image/jpeg') => {
+    try {
+      // Create a canvas to draw the image
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      // Create a new image object
+      const img = new Image();
+      img.crossOrigin = 'anonymous'; // Handle CORS issues
+      
+      return new Promise((resolve, reject) => {
+        img.onload = () => {
+          try {
+            // Set canvas dimensions to match image
+            canvas.width = img.width;
+            canvas.height = img.height;
+            
+            // Draw image on canvas
+            ctx.drawImage(img, 0, 0);
+            
+            // Convert canvas to base64
+            const base64String = canvas.toDataURL(mimeType, 0.8); // 0.8 quality for smaller size
+            
+            resolve(base64String);
+          } catch (error) {
+            reject(new Error('Failed to convert image to base64'));
+          }
+        };
+        
+        img.onerror = () => {
+          reject(new Error('Failed to load image from URL'));
+        };
+        
+        // Set source to trigger loading
+        img.src = imageUrl;
+      });
+    } catch (error) {
+      console.error('Error converting URL to base64:', error);
+      addToast({
+        title: 'Conversion failed',
+        description: 'Failed to convert image URL to base64.',
+        timeout: 3000,
+        color: 'danger',
+      });
+      return null;
+    }
+  };
+
+  const addImageFromUrl = async (imageUrl, filename = 'image.jpg', mimeType = 'image/jpeg') => {
+    try {
+      const base64String = await convertUrlToBase64(imageUrl, filename, mimeType);
+      if (base64String) {
+        addBase64Image(base64String, filename, mimeType);
+      }
+    } catch (error) {
+      addToast({
+        title: 'URL conversion failed',
+        description: error.message || 'Failed to process image from URL.',
+        timeout: 3000,
+        color: 'danger',
+      });
+    }
+  };
+
+  const addMultipleImagesFromUrls = async (urlArray, filenamePrefix = 'image') => {
+    const maxFiles = 12;
+    const remainingSlots = maxFiles - files.length;
+    
+    if (urlArray.length === 0) return;
+    
+    // Limit the number of images that can be added
+    const imagesToAdd = urlArray.slice(0, remainingSlots);
+    
+    if (imagesToAdd.length < urlArray.length) {
+      addToast({
+        title: 'Some images skipped',
+        description: `Only ${remainingSlots} images were added due to file limit.`,
+        timeout: 3000,
+        color: 'warning',
+      });
+    }
+
+    // Process images sequentially to avoid overwhelming the browser
+    for (let i = 0; i < imagesToAdd.length; i++) {
+      const url = imagesToAdd[i];
+      const filename = `${filenamePrefix}_${i + 1}.jpg`;
+      
+      try {
+        await addImageFromUrl(url, filename);
+        // Small delay to prevent overwhelming the browser
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (error) {
+        console.error(`Failed to process image ${i + 1}:`, error);
+      }
+    }
+  };
 
 
   return (
