@@ -73,6 +73,7 @@ const UpdatePassword = () => {
             title: 'Success',
             description: 'Password updated successfully',
             type: 'success',
+             color: 'success',
           });
           setCurrentPassword('');
           setNewPassword('');
@@ -83,6 +84,7 @@ const UpdatePassword = () => {
             title: 'Error',
             description: 'Failed to update password',
             type: 'error',
+             color: 'danger',
           });
         },
         onSettled: () => setLoading(false),

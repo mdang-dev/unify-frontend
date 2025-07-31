@@ -26,4 +26,8 @@ export const authCommandApi = {
     const res = await httpClient.post(`${url}/forgot-password/otp-verification`, { email, otp });
     return res.data;
   },
+    changePassword: async (currentPassword, newPassword) => {
+    const res = await httpClient.post(`${url}/change-password`, { currentPassword, newPassword });
+    return res.data;
+  },
 };
