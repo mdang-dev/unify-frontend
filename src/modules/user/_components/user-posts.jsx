@@ -100,6 +100,7 @@ const UserPosts = ({ username }) => {
 
   return (
     <>
+    
       <div className="mx-auto max-w-3xl">
         {loading ? (
           <div className="grid grid-cols-3 gap-1">

@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
 import Image from 'next/image';
 import Avatar from '@/public/images/testAvt.jpg';
 import filterLightIcon from '@/public/images/filter_lightmode.png';
@@ -22,7 +22,7 @@ import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
 import { userQueryApi } from '@/src/apis/user/query/user.query.api';
 
 const UserManagement = () => {
-  const [filteredUsers, setFilteredUsers] = useState([]);
+  // const [filteredUsers, setFilteredUsers] = useState([]);
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 9;
@@ -32,17 +32,22 @@ const UserManagement = () => {
     queryFn: userQueryApi.getAllUsers,
   });
 
-  useEffect(() => {
-    if (users) {
-      setFilteredUsers(users);
-    }
-  }, [users]);
+  // useEffect(() => {
+  //   if (users) {
+  //     setFilteredUsers(users);
+  //   }
+  // }, [users]);
 
-  useEffect(() => {
-    setFilteredUsers(
-      users.filter((user) => user.username?.toLowerCase().includes(search.toLowerCase()))
-    );
-  }, [search, users]);
+  // useEffect(() => {
+  //   setFilteredUsers(
+  //     users.filter((user) => user.username?.toLowerCase().includes(search.toLowerCase()))
+  //   );
+  // }, [search, users]);
+const filteredUsers = useMemo(() => {
+  return users.filter((user) =>
+    user.username?.toLowerCase().includes(search.toLowerCase())
+  );
+}, [search, users]);
 
   return (
     <div className="h-screen w-[78rem] px-6 py-10">
