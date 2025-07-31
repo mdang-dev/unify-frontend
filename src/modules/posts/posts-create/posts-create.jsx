@@ -85,10 +85,6 @@ const PostsCreate = () => {
     };
   }, [previews]);
 
-
-
-
-
   const handleFileChange = (e) => {
     const selectedFiles = Array.from(e.target.files);
     const maxFiles = 12;
@@ -206,6 +202,17 @@ const PostsCreate = () => {
     }
 
     try {
+      // Handle media upload first
+      const uploadedFiles = await handleUpload();
+      if (!uploadedFiles?.files?.length) throw new Error('Failed to upload media');
+
+      const postMedia = uploadedFiles.files.map((file) => ({
+        url: file.url,
+        fileType: file.file_type,
+        size: file.size,
+        mediaType: file.media_type.toUpperCase(),
+      }));
+
       const newPost = {
         captions: caption,
         audience: audience,
@@ -213,6 +220,7 @@ const PostsCreate = () => {
         isCommentVisible: isCommentVisible,
         isLikeVisible: isLikeVisible,
         postedAt: new Date().toISOString(),
+        media: postMedia, // Include media directly in the post object
       };
 
       const post = await savePostMutation.mutateAsync(newPost);
@@ -231,20 +239,6 @@ const PostsCreate = () => {
           }))
         );
       }
-
-      // Handle media upload
-      const uploadedFiles = await handleUpload();
-      if (!uploadedFiles?.files?.length) throw new Error('Failed to upload media');
-
-      const postMedia = uploadedFiles.files.map((file) => ({
-        post: post,
-        url: file.url,
-        fileType: file.file_type,
-        size: file.size,
-        mediaType: file.media_type.toUpperCase(),
-      }));
-
-      await saveMediaMutation.mutateAsync(postMedia);
 
       // Final success toast
       addToast({

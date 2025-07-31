@@ -36,7 +36,7 @@ export default function QueryProvider({ children }) {
     <QueryClientProvider client={client}>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <UserHydrator />
-        <ToastProvider placement="top-right" />
+        <ToastProvider placement="top-center" />
         {children}
       </ThemeProvider>
       {/* <ReactQueryDevtools initialIsOpen={false} /> */}
