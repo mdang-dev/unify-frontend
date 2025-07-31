@@ -16,7 +16,6 @@ import { useAuthStore } from '@/src/stores/auth.store';
 import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
 import { userQueryApi } from '@/src/apis/user/query/user.query.api';
 import NavButton from '../_components/nav-button';
-
 const OthersProfile = () => {
   const [activeTab, setActiveTab] = useState('post');
   const [userReels, setUserReels] = useState([]);
@@ -61,23 +60,34 @@ const OthersProfile = () => {
             setIsModalOpen(false);
           },
           onError: (error) => {
-            console.log('error', error);
-            const errorMessage =
-              error?.response?.data?.message || error?.message || 'An unknown error occurred';
+            let errorMessage = 'Unknown error';
+            let errorColor = 'danger';
+
+            if (error.response) {
+              const { status, data } = error.response;
+              errorMessage = data?.detail || error.message || 'Unknown error';
+
+              if (
+                (status === 400 || status === 409) &&
+                (errorMessage === 'You cannot report your own content.' ||
+                  errorMessage === 'You have already reported this content.')
+              ) {
+                errorColor = 'warning';
+                console.warn('Report warning:', errorMessage);
+              } else {
+                errorColor = 'danger';
+                console.error('Report error:', error);
+              }
+            } else {
+              errorMessage = 'Failed to connect to the server.';
+              console.error('Report error:', error);
+            }
 
             addToast({
-              title:
-                errorMessage === 'You have reported this content before.'
-                  ? 'Fail to report user'
-                  : 'Encountered an error',
-              description:
-                errorMessage === 'You have reported this content before.'
-                  ? errorMessage
-                  : 'Error: ' + errorMessage,
+              title: 'Fail to report post',
+              description: errorMessage,
               timeout: 3000,
-
-              color:
-                errorMessage === 'You have reported this content before.' ? 'warning' : 'danger',
+              color: errorColor,
             });
 
             setIsModalOpen(false);
@@ -92,6 +102,7 @@ const OthersProfile = () => {
 
   return (
     <>
+    {/* <ToastProvider placement={'top-right'} /> */}
       <div className="mx-auto max-w-4xl py-6">
         {/* Profile Header */}
         <div className="flex px-4 sm:px-6">

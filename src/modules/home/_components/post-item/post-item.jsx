@@ -7,7 +7,7 @@ import ShareButton from '@/src/components/button/share-button';
 import Bookmark from '@/src/components/base/bookmark';
 import Slider from '@/src/components/base/slider';
 import { usePostLikeStatus } from '@/src/hooks/use-post-like-status';
-import { addToast } from '@heroui/react';
+import { addToast, ToastProvider } from '@heroui/react';
 import Link from 'next/link';
 import ReportModal from '@/src/components/base/report-modal';
 import { motion } from 'framer-motion';
@@ -25,42 +25,75 @@ const PostItem = ({ post }) => {
   const [showFullImage, setShowFullImage] = useState(false);
 
   const { mutate: reportPost } = useMutation({
-    mutationFn: ({ endpoint, reportId, reason }) =>
-      reportsCommandApi.createReport(endpoint, reportId, reason),
-    onSuccess: (data) => {
-      if (data?.error) {
-        const isDuplicate = data.error === 'You have reported this content before.';
+  mutationFn: ({ endpoint, reportId, reason }) =>
+    reportsCommandApi.createReport(endpoint, reportId, reason),
+  onSuccess: (data) => {
+    let toastConfig = {
+      title: 'Success',
+      description: 'Report post successful.',
+      timeout: 3000,
+      color: 'success',
+    };
 
-        addToast({
-          title: isDuplicate ? 'Fail to report post' : 'Encountered an error',
-          description: isDuplicate ? data.error : `Error: ${data.error}`,
-          timeout: 3000,
+    if (data?.error) {
+      const errorMessage = data.error;
+      let color = 'danger';
 
-          color: isDuplicate ? 'warning' : 'danger',
-        });
+      if (
+        errorMessage === 'You cannot report your own content.' ||
+        errorMessage === 'You have already reported this content.'
+      ) {
+        color = 'warning';
+        console.warn('Report warning:', errorMessage);
       } else {
-        addToast({
-          title: 'Success',
-          description: 'Report post successful.',
-          timeout: 3000,
-
-          color: 'success',
-        });
+        console.error('Report error:', errorMessage);
       }
 
-      setIsModalOpen(false);
-    },
-    onError: (error) => {
-      addToast({
-        title: 'Network Error',
-        description: error?.message || 'Something went wrong',
+      toastConfig = {
+        title: 'Fail to report post',
+        description: errorMessage,
         timeout: 3000,
+        color,
+      };
+    }
 
-        color: 'danger',
-      });
-      setIsModalOpen(false);
-    },
-  });
+    addToast(toastConfig);
+    setIsModalOpen(false);
+  },
+  onError: (error) => {
+    let errorMessage = 'Failed to connect to the server.';
+    let color = 'danger';
+
+    if (error.response) {
+      const { status, data } = error.response;
+      errorMessage = data?.detail || error.message || 'Unknown error';
+
+      if (
+        (status === 400 || status === 409) &&
+        (errorMessage === 'You cannot report your own content.' ||
+          errorMessage === 'You have already reported this content.')
+      ) {
+        color = 'warning';
+        console.warn('Report warning:', errorMessage);
+      } else {
+        color = 'danger';
+        console.error('Report error:', error);
+      }
+    } else {
+      console.error('Report error:', error);
+    }
+
+    addToast({
+      title: 'Fail to report post',
+      description: errorMessage,
+      timeout: 3000,
+      color,
+    });
+
+    setIsModalOpen(false);
+  },
+});
+
 
   const handleReportPost = useCallback(
     async (postId, reason) => {
@@ -90,6 +123,7 @@ const PostItem = ({ post }) => {
 
   return (
     <>
+    <ToastProvider placement={'top-right'} />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
