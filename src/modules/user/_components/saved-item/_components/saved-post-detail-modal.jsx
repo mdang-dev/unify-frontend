@@ -33,40 +33,56 @@ const SavedPostDetailModal = ({ post, onClose, onDelete }) => {
   });
 
   // Xử lý report bài post
-  const handleReportPost = useCallback(
-    (postId, reason) => {
-      createReport(
-        { endpoint: 'post', reportedId: postId, reason },
-        {
-          onSuccess: () => {
-            addToast({
-              title: 'Success',
-              description: 'Report post successful.',
-              timeout: 3000,
+const handleReportPost = useCallback(
+  (postId, reason) => {
+    createReport(
+      { endpoint: 'post', reportedId: postId, reason },
+      {
+        onSuccess: () => {
+          addToast({
+            title: 'Success',
+            description: 'Report post successful.',
+            timeout: 3000,
+            color: 'success',
+          });
+        },
+        onError: (error) => {
+          let errorMessage = 'Unknown error';
+          let errorColor = 'danger';
 
-              color: 'success',
-            });
-          },
-          onError: (error) => {
-            const errorMessage = error?.message || 'Unknown error';
-            addToast({
-              title: 'Fail to report post',
-              description:
-                errorMessage === 'You have reported this content before.'
-                  ? 'You have reported this content before.'
-                  : 'Error: ' + errorMessage,
-              timeout: 3000,
+          if (error.response) {
+            const { status, data } = error.response;
+            errorMessage = data?.detail || error.message || 'Unknown error';
 
-              color:
-                errorMessage === 'You have reported this content before.' ? 'warning' : 'danger',
-            });
-          },
-          onSettled: () => setIsModalOpen(false),
-        }
-      );
-    },
-    [createReport]
-  );
+            if (
+              (status === 400 || status === 409) &&
+              (errorMessage === 'You cannot report your own content.' ||
+                errorMessage === 'You have already reported this content.')
+            ) {
+              errorColor = 'warning';
+              console.warn('Report warning:', errorMessage);
+            } else {
+              errorColor = 'danger'; 
+              console.error('Report error:', error); 
+            }
+          } else {
+            errorMessage = 'Failed to connect to the server.';
+            console.error('Report error:', error); 
+          }
+
+          addToast({
+            title: 'Fail to report post',
+            description: errorMessage,
+            timeout: 3000,
+            color: errorColor,
+          });
+        },
+        onSettled: () => setIsModalOpen(false),
+      }
+    );
+  },
+  [createReport]
+);
 
   // Biến đổi hashtag thành link
   const transformHashtags = (text) => {

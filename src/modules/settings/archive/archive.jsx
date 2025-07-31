@@ -11,7 +11,6 @@ import { postsQueryApi } from '@/src/apis/posts/query/posts.query.api';
 import { postsCommandApi } from '@/src/apis/posts/command/posts.command.api';
 import PostCard from './_components/post-card';
 import { PostDetailModal } from '@/src/components/base';
-
 const Archive = () => {
   const [selectedPost, setSelectedPost] = useState(null);
   const { username } = useParams();
@@ -53,7 +52,6 @@ const Archive = () => {
             title: 'Success',
             description: 'Post deleted successfully.',
             timeout: 3000,
-            shouldShowTimeoutProgess: true,
             color: 'success',
           });
         },
@@ -62,7 +60,6 @@ const Archive = () => {
             title: 'Error',
             description: 'Failed to delete post: ' + (error.message || 'Unknown error'),
             timeout: 3000,
-            shouldShowTimeoutProgess: true,
             color: 'danger',
           });
         },
@@ -83,7 +80,6 @@ const Archive = () => {
             title: 'Success',
             description: 'Successfully moved to archive.',
             timeout: 3000,
-            shouldShowTimeoutProgess: true,
             color: 'success',
           });
         },
@@ -92,7 +88,6 @@ const Archive = () => {
             title: 'Error',
             description: 'Failed to archive post: ' + (error.message || 'Unknown error'),
             timeout: 3000,
-            shouldShowTimeoutProgess: true,
             color: 'danger',
           });
         },
