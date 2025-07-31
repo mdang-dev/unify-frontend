@@ -57,19 +57,19 @@ const EditProfile = () => {
         phone: user.phone || '',
         gender: user.gender || false,
         birthDay: (() => {
-          if (!user.birthDay) return { day: '01', month: '01', year: '' };
+          if (!user.birthDay) return { day: '', month: '', year: '' };
           if (typeof user.birthDay === 'string') {
             const [year, month, day] = user.birthDay.split('-');
             return {
               year: year || '',
-              month: month ? month.padStart(2, '0') : '01',
-              day: day ? day.padStart(2, '0') : '01',
+              month: month ? month.padStart(2, '0') : '',
+              day: day ? day.padStart(2, '0') : '',
             };
           }
           return {
             year: user.birthDay.year || '',
-            month: user.birthDay.month ? String(user.birthDay.month).padStart(2, '0') : '01',
-            day: user.birthDay.day ? String(user.birthDay.day).padStart(2, '0') : '01',
+            month: user.birthDay.month ? String(user.birthDay.month).padStart(2, '0') : '',
+            day: user.birthDay.day ? String(user.birthDay.day).padStart(2, '0') : '',
           };
         })(),
         location: user.location || '',
@@ -98,11 +98,7 @@ const EditProfile = () => {
     const days = new Date(parseInt(year, 10), parseInt(month, 10), 0).getDate();
     setDaysInMonth(days);
 
-    if (
-      !userData.birthDay.day ||
-      userData.birthDay.day === '' ||
-      parseInt(userData.birthDay.day, 10) > days
-    ) {
+    if (userData.birthDay.day && parseInt(userData.birthDay.day, 10) > days) {
       setUserData((prev) => ({
         ...prev,
         birthDay: {
@@ -122,7 +118,7 @@ const EditProfile = () => {
           birthField === 'month' || birthField === 'day'
             ? value
               ? value.padStart(2, '0')
-              : '01'
+              : ''
             : value,
       };
       setUserData((prevData) => ({ ...prevData, birthDay: newBirthDay }));
@@ -538,7 +534,7 @@ const EditProfile = () => {
                     </label>
                     <div className="grid grid-cols-3 gap-4">
                       <select
-                        value={userData?.birthDay?.month}
+                        value={userData?.birthDay?.month ?? ''}
                         onChange={(e) => handleChange('birthDay.month', e.target.value)}
                         className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-neutral-600 dark:bg-neutral-700 dark:text-white"
                       >
@@ -550,11 +546,7 @@ const EditProfile = () => {
                         ))}
                       </select>
                       <select
-                        value={
-                          userData?.birthDay?.day && userData.birthDay.day !== ''
-                            ? userData.birthDay.day
-                            : '01'
-                        }
+                        value={userData?.birthDay?.day ?? ''}
                         onChange={(e) => handleChange('birthDay.day', e.target.value)}
                         className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-neutral-600 dark:bg-neutral-700 dark:text-white"
                       >
@@ -566,14 +558,14 @@ const EditProfile = () => {
                         ))}
                       </select>
                       <select
-                        value={userData?.birthDay?.year}
+                        value={userData?.birthDay?.year ?? ''}
                         onChange={(e) => handleChange('birthDay.year', e.target.value)}
                         className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-neutral-600 dark:bg-neutral-700 dark:text-white"
                       >
                         <option value="">Year</option>
                         {[...Array(100)].map((_, i) => (
-                          <option key={i} value={2024 - i}>
-                            {2024 - i}
+                          <option key={i} value={new Date().getFullYear() - i}>
+                            {new Date().getFullYear() - i}
                           </option>
                         ))}
                       </select>
@@ -651,26 +643,47 @@ const EditProfile = () => {
                 <button
                   type="button"
                   onClick={() => {
-                    setUserData({
-                      id: user.id || '',
-                      firstName: user.firstName || '',
-                      lastName: user.lastName || '',
-                      username: user.username || '',
-                      email: user.email || '',
-                      password: user.password || '',
-                      phone: user.phone || '',
-                      gender: user.gender || false,
-                      birthDay: user.birthDay || { day: '', month: '', year: '' },
-                      location: user.location || '',
-                      education: user.education || '',
-                      status: user.status || 0,
-                      reportApprovalCount: user.reportApprovalCount || '',
-                      workAt: user.workAt || '',
-                      biography: user.biography || '',
-                      avatar: user.avatar ? { url: user.avatar.url } : { url: defaultAvatar },
-                    });
-                    setAvatar(user.avatar && user.avatar.url ? user.avatar.url : defaultAvatar);
-                    setGender(user.gender || false);
+                    if (user) {
+                      setUserData({
+                        id: user.id || '',
+                        firstName: user.firstName || '',
+                        lastName: user.lastName || '',
+                        username: user.username || '',
+                        email: user.email || '',
+                        password: user.password || '',
+                        phone: user.phone || '',
+                        gender: user.gender || false,
+                        birthDay: (() => {
+                          if (!user.birthDay) return { day: '', month: '', year: '' };
+                          if (typeof user.birthDay === 'string') {
+                            const [year, month, day] = user.birthDay.split('-');
+                            return {
+                              year: year || '',
+                              month: month ? month.padStart(2, '0') : '',
+                              day: day ? day.padStart(2, '0') : '',
+                            };
+                          }
+                          return {
+                            year: user.birthDay.year || '',
+                            month: user.birthDay.month
+                              ? String(user.birthDay.month).padStart(2, '0')
+                              : '',
+                            day: user.birthDay.day
+                              ? String(user.birthDay.day).padStart(2, '0')
+                              : '',
+                          };
+                        })(),
+                        location: user.location || '',
+                        education: user.education || '',
+                        status: user.status || 0,
+                        reportApprovalCount: user.reportApprovalCount || '',
+                        workAt: user.workAt || '',
+                        biography: user.biography || '',
+                        avatar: user.avatar ? { url: user.avatar.url } : { url: defaultAvatar },
+                      });
+                      setAvatar(user.avatar && user.avatar.url ? user.avatar.url : defaultAvatar);
+                      setGender(user.gender || false);
+                    }
                     setErrors({});
                   }}
                   className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:border-neutral-600 dark:bg-neutral-700 dark:text-gray-200 dark:hover:bg-neutral-600"
