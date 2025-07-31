@@ -4,12 +4,13 @@ import { CommentItem } from '@/src/components/base';
 import { useQuery } from '@tanstack/react-query';
 import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
 import { commentsQueryApi } from '@/src/apis/comments/query/comments.query.api';
+
 const ModalPost = ({ report, isOpen, onClose }) => {
   const [selectedMedia, setSelectedMedia] = useState(null);
 
   const { reportedEntity } = report;
 
-  const { data: comments } = useQuery({
+  const { data: comments = [], isLoading } = useQuery({
     queryKey: [QUERY_KEYS.COMMENTS_BY_POST, reportedEntity?.id],
     queryFn: () => commentsQueryApi.getCommentsByPostId(reportedEntity?.id),
     enabled: !!reportedEntity?.id,
@@ -34,7 +35,7 @@ const ModalPost = ({ report, isOpen, onClose }) => {
               <video src={selectedMedia.url} controls className="h-full w-full object-contain" />
             ) : (
               <img
-                src={selectedMedia.url}
+                src={selectedMedia?.url}
                 alt="Reported Media"
                 className="h-full w-full object-contain"
               />
@@ -45,9 +46,9 @@ const ModalPost = ({ report, isOpen, onClose }) => {
             </div>
           )}
 
-          {reportedEntity.media.length > 1 && (
+          {reportedEntity?.media?.length > 1 && (
             <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 transform gap-2 rounded-lg bg-black bg-opacity-50 p-2">
-              {reportedEntity.media.map((item, index) => (
+              {(reportedEntity?.media || []).map((item, index) => (
                 <div
                   key={index}
                   className={`h-12 w-12 cursor-pointer border-2 ${
@@ -76,7 +77,7 @@ const ModalPost = ({ report, isOpen, onClose }) => {
               <div className="relative h-[50px] w-[50px] overflow-hidden rounded-full border-2 border-gray-300">
                 {reportedEntity?.avatar?.url ? (
                   <img
-                    src={reportedEntity.avatar.url}
+                    src={reportedEntity.avatar?.url}
                     alt="Avatar"
                     width={50}
                     height={50}
@@ -115,16 +116,19 @@ const ModalPost = ({ report, isOpen, onClose }) => {
             </p>
 
             <div className="space-y-2">
-              {comments.map((comment) => (
-                <CommentItem key={comment.id} comment={comment} />
-              ))}
-              {comments.length === 0 && (
+              {isLoading ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400">Loading comments...</p>
+              ) : comments.length > 0 ? (
+                comments.map((comment) => (
+                  <CommentItem key={comment.id} comment={comment} />
+                ))
+              ) : (
                 <p className="text-sm text-gray-500 dark:text-gray-400">No comments yet.</p>
               )}
             </div>
           </div>
 
-          <div className="border-t px-4 pb-4 pt-2">
+          {/* <div className="border-t px-4 pb-4 pt-2">
             <p className="text-sm dark:text-white">
               <span className="font-semibold">Reported by:</span> {report.userId}
             </p>
@@ -135,7 +139,7 @@ const ModalPost = ({ report, isOpen, onClose }) => {
             <p className="text-sm dark:text-white">
               <span className="font-semibold">Status:</span> Pending
             </p>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

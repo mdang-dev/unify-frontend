@@ -5,7 +5,7 @@ import ModalUser from '../../reports/_components/modal-user';
 import { addToast } from '@heroui/toast';
 import { motion } from 'framer-motion';
 import { Info } from 'lucide-react';
-import { useFetchPendingReports } from '@/src/hooks/use-report';
+import { useFetchPendingReports, useFetchApprovedReports } from '@/src/hooks/use-report';
 import { reportsCommandApi } from '@/src/apis/reports/command/report.command.api';
 import ConfirmModal from './_components/confirm-modal';
 import { useMutation } from '@tanstack/react-query';
@@ -15,9 +15,17 @@ import AdminReasonModal from '../../_components/admin-reason-modal';
 const ReportUsers = () => {
   const {
     data: pendingReports = [],
-    isLoading: loading,
+    isLoading: loadingPending,
     refetch: fetchPendingReports,
   } = useFetchPendingReports();
+
+  const {
+    data: approvedReports = [],
+    isLoading: loadingApproved,
+    refetch: fetchApprovedReports,
+  } = useFetchApprovedReports();
+
+  const loading = loadingPending || loadingApproved;
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedReport, setSelectedReport] = useState(null);
@@ -42,8 +50,10 @@ const ReportUsers = () => {
       reportsCommandApi.updateReportWithAdminReason(reportId, status, adminReason),
   });
 
+  const reportsToShow = dateFilter === 'approvedReport' ? approvedReports : pendingReports;
+
   const filteredReports = useMemo(() => {
-    let reports = [...pendingReports];
+    let reports = [...reportsToShow];
 
     reports = reports.filter((report) =>
       (report.reportedId || '').toLowerCase().includes(search.toLowerCase())
@@ -65,13 +75,15 @@ const ReportUsers = () => {
           const threeMonthsAgo = new Date();
           threeMonthsAgo.setMonth(now.getMonth() - 3);
           return reportedDate >= threeMonthsAgo;
+        case 'approvedReport':
+          return report.status == 1;
         default:
           return true;
       }
     });
 
     return reports;
-  }, [pendingReports, search, dateFilter]);
+  }, [reportsToShow, search, dateFilter]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -171,12 +183,13 @@ const ReportUsers = () => {
             <select
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
-              className="rounded-md border px-5 py-2 dark:bg-neutral-800 dark:text-white"
+              className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm shadow-sm dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
             >
               <option value="all">All</option>
               <option value="today">Today</option>
               <option value="1month">Within the past month</option>
               <option value="3months">Within the past three months</option>
+              <option value="approvedReport">Approved report</option>
             </select>
           </div>
         </div>
@@ -234,22 +247,35 @@ const ReportUsers = () => {
 
                       <td className="rounded-r-xl py-2 text-center">
                         <button
-                          className="mr-2 rounded-md border border-green-500 px-3 py-1 text-green-500 hover:bg-green-500 hover:text-white"
+                          className={`mr-2 rounded-md border px-3 py-1 ${
+                            report.status === 0
+                              ? 'border-green-500 text-green-500 hover:bg-green-500 hover:text-white'
+                              : 'cursor-not-allowed border-gray-400 text-gray-400'
+                          }`}
                           onClick={(e) => {
                             e.stopPropagation();
-                            openAdminReasonModal(report.id, 'approve');
+                            if (report.status === 0) {
+                              openAdminReasonModal(report.id, 'approve');
+                            }
                           }}
-                          disabled={isButtonLoading}
+                          disabled={report.status !== 0 || isButtonLoading}
                         >
                           Approve
                         </button>
+
                         <button
-                          className="rounded-md border border-red-500 px-3 py-1 text-red-500 hover:bg-red-500 hover:text-white"
+                          className={`rounded-md border px-3 py-1 ${
+                            report.status === 0
+                              ? 'border-red-500 text-red-500 hover:bg-red-500 hover:text-white'
+                              : 'cursor-not-allowed border-gray-400 text-gray-400'
+                          }`}
                           onClick={(e) => {
                             e.stopPropagation();
-                            openAdminReasonModal(report.id, 'reject');
+                            if (report.status === 0) {
+                              openAdminReasonModal(report.id, 'reject');
+                            }
                           }}
-                          disabled={isButtonLoading}
+                          disabled={report.status !== 0 || isButtonLoading}
                         >
                           Reject
                         </button>
