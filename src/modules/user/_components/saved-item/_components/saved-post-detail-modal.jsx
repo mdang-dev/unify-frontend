@@ -178,7 +178,6 @@ const handleReportPost = useCallback(
 
   return (
     <>
-      <ToastProvider placement={'top-right'} />
       <div className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm dark:bg-neutral-700/40">
         <div className="flex h-[640px] w-[900px] flex-row overflow-hidden rounded-xl border-1 border-neutral-700 bg-gray-100 shadow-2xl dark:bg-neutral-900">
           {/* Media */}

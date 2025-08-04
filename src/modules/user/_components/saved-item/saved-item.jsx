@@ -110,11 +110,15 @@ const SavedItems = ({ username }) => {
             ))}
           </div>
         ) : (
-          <div className="mt-4 text-center text-gray-500">
-            <p>No saved posts available.</p>
-            <button onClick={refetchBookmarks} className="text-blue-500">
-              Try again
-            </button>
+           <div className="flex h-[400px] flex-col items-center justify-center text-gray-500 dark:text-gray-400">
+            <i className="fa-regular fa-image mb-4 text-4xl"></i>
+            <p className="mb-2 text-lg font-medium">No posts yet</p>
+            <p className="text-sm">
+              When you save photos and videos, they&apos;ll appear on your profile.
+            </p>
+          <button onClick={refetchBookmarks} className="text-blue-500">
+            Try again
+          </button>
           </div>
         )}
 
