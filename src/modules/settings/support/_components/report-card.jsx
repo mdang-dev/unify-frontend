@@ -117,9 +117,9 @@ const ReportCard = ({ report, type, sentReports, receivedReports }) => {
               {type === 'received' && (
                 <>
                   {getStatusBadge(report.status)}
-                  {report.adminNotes && (
+                  {report.adminReason && (
                     <p className="text-xs text-gray-600">
-                      <span className="font-medium">Admin Notes:</span> {report.adminNotes}
+                      <span className="font-bold">Admin Notes:</span> {report.adminReason}
                     </p>
                   )}
                 </>

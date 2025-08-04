@@ -18,9 +18,9 @@ const getStatusBadge = (status) => {
         <>
           <Badge className="bg-green-100 text-xs text-green-800">Approved</Badge>
           <span className="mt-1 block text-xs text-gray-500">
-            Your post has violated our community guidelines and has been removed from feeds and your
+            {/* Your post has violated our community guidelines and has been removed from feeds and your
             personal page. You can review the post here, and we encourage you to revisit our
-            policies to ensure proper use of the platform.
+            policies to ensure proper use of the platform. */}
           </span>
         </>
       );
@@ -28,7 +28,7 @@ const getStatusBadge = (status) => {
       return (
         <>
           <Badge className="bg-red-100 text-xs text-red-800">Rejected</Badge>
-          <span className="mt-1 block text-xs text-gray-500">This report has been rejected.</span>
+          {/* <span className="mt-1 block text-xs text-gray-500">This report has been rejected.</span> */}
         </>
       );
     default:
