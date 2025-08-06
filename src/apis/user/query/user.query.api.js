@@ -39,4 +39,8 @@ export const userQueryApi = {
     });
     return res.data;
   },
+  getUserDetails: async (id) => {
+    const res = await httpClient(`${url}/${id}`);
+    return res.data;
+  },
 };

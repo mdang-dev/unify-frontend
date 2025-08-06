@@ -18,6 +18,7 @@ import {
   Select,
   SelectItem,
   Pagination,
+  Tooltip,
 } from '@heroui/react';
 import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from '@heroui/react';
 import {
@@ -30,25 +31,48 @@ import {
   TableRow as ShadcnTableRow,
 } from '@/src/components/ui/table';
 import TableLoading from '../../_components/table-loading';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
 import { userQueryApi } from '@/src/apis/user/query/user.query.api';
+import { useRouter } from 'next/navigation';
+import { useUserManagementStore } from '@/src/stores/user-management.store';
 
 const UserManagement = () => {
-  const [filters, setFilters] = useState({
-    birthDay: '',
-    email: '',
-    status: '',
-    username: '',
-    firstName: '',
-    lastName: '',
-  });
-  const [appliedFilters, setAppliedFilters] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const router = useRouter();
+  const queryClient = useQueryClient();
+
+  // Get state from store
+  const {
+    filters,
+    currentPage,
+    itemsPerPage,
+    appliedFilters,
+    cachedUsers,
+    cachedTotalPages,
+    cachedTotalElements,
+    setFilters,
+    setAppliedFilters,
+    setPagination,
+    setCachedData,
+    clearCache,
+    hasCachedData,
+    getCachedState,
+  } = useUserManagementStore();
+
+  // Local state for immediate UI updates
+  const [localFilters, setLocalFilters] = useState(filters);
+  const [localCurrentPage, setLocalCurrentPage] = useState(currentPage);
+  const [localItemsPerPage, setLocalItemsPerPage] = useState(itemsPerPage);
+
+  // Initialize local state from store on mount
+  useEffect(() => {
+    setLocalFilters(filters);
+    setLocalCurrentPage(currentPage);
+    setLocalItemsPerPage(itemsPerPage);
+  }, [filters, currentPage, itemsPerPage]);
 
   // API call with pagination and filters
-  const { data: userResponse, isLoading: loading, error } = useQuery({
+  const { data: userResponse, isLoading: loading, error, refetch, isFetching } = useQuery({
     queryKey: [QUERY_KEYS.USERS, appliedFilters, currentPage, itemsPerPage],
     queryFn: () => userQueryApi.manageUsers({
       ...appliedFilters,
@@ -56,56 +80,102 @@ const UserManagement = () => {
       size: itemsPerPage,
     }),
     enabled: appliedFilters !== null, // Only fetch when filters are applied
+    placeholderData: keepPreviousData, // Keep previous data while fetching new data
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchOnMount: false, // Don't refetch when component mounts if data exists
+    refetchOnReconnect: false, // Don't refetch when reconnecting to network
   });
 
-  // Extract data from response
-  const users = userResponse?.users || [];
-  const totalPages = userResponse?.totalPages || 0;
-  const totalElements = userResponse?.totalElements || 0;
+  // Cache the response data
+  useEffect(() => {
+    if (userResponse && appliedFilters !== null) {
+      setCachedData(userResponse);
+    }
+  }, [userResponse, appliedFilters, setCachedData]);
+
+  // Extract data from response or cache
+  const users = userResponse?.users || cachedUsers || [];
+  const totalPages = userResponse?.totalPages || cachedTotalPages || 0;
+  const totalElements = userResponse?.totalElements || cachedTotalElements || 0;
   const hasNext = userResponse?.hasNext || false;
   const hasPrevious = userResponse?.hasPrevious || false;
 
   const handleApplyFilters = () => {
-    setAppliedFilters({ ...filters });
-    setCurrentPage(1);
+    setFilters(localFilters);
+    setAppliedFilters({ ...localFilters });
+    setPagination(1, localItemsPerPage);
+    setLocalCurrentPage(1);
   };
 
   const handleClearFilters = () => {
-    setFilters({
+    const emptyFilters = {
       birthDay: '',
       email: '',
       status: '',
       username: '',
       firstName: '',
       lastName: '',
-    });
+    };
+    setLocalFilters(emptyFilters);
+    setFilters(emptyFilters);
     setAppliedFilters(null);
-    setCurrentPage(1);
+    setPagination(1, localItemsPerPage);
+    setLocalCurrentPage(1);
+    clearCache();
   };
 
   const handleFilterChange = (field, value) => {
-    setFilters(prev => ({
+    setLocalFilters(prev => ({
       ...prev,
       [field]: value
     }));
   };
 
   const handlePageChange = (page) => {
-    setCurrentPage(page);
+    setLocalCurrentPage(page);
+    setPagination(page, localItemsPerPage);
   };
 
   const handleItemsPerPageChange = (value) => {
-    setItemsPerPage(parseInt(value));
-    setCurrentPage(1);
+    const newItemsPerPage = parseInt(value);
+    setLocalItemsPerPage(newItemsPerPage);
+    setPagination(1, newItemsPerPage);
+    setLocalCurrentPage(1);
+  };
+
+  // Handle manual refresh
+  const handleRefresh = async () => {
+    try {
+      await refetch();
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    }
+  };
+
+  // Invalidate cache for current query
+  const handleInvalidateCache = () => {
+    queryClient.invalidateQueries({
+      queryKey: [QUERY_KEYS.USERS, appliedFilters, currentPage, itemsPerPage]
+    });
   };
 
   // Check if at least one filter is applied
   const hasActiveFilters = useMemo(() => {
-    return Object.values(filters).some(value => value !== '' && value !== null && value !== undefined);
-  }, [filters]);
+    return Object.values(localFilters).some(value => value !== '' && value !== null && value !== undefined);
+  }, [localFilters]);
+
+  const handleAction = (action, user) => {
+    console.log(`${action} action for user:`, user);
+    // Implement your action logic here
+    if (action === 'view') {
+      router.push(`/manage/users/detail/${user.id}`);
+    } else {
+      alert(`${action} action for user: ${user.username}`);
+    }
+  };
 
   return (
-    <div className="h-screen w-full px-6 py-10">
+    <div className="h-screen w-full px-6 pb-10">
       <div className="mx-auto mb-6 flex max-w-7xl flex-col gap-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -115,6 +185,26 @@ const UserManagement = () => {
               Manage all users in the system with advanced filtering options.
             </p>
           </div>
+          {/* Refresh Button */}
+          {appliedFilters && (
+            <div className="flex items-center gap-2">
+              <Tooltip content="Refresh data" placement="top">
+                <Button
+                  isIconOnly
+                  variant="bordered"
+                  size="sm"
+                  onClick={handleRefresh}
+                  disabled={isFetching}
+                  className="transition-all duration-200 hover:scale-105"
+                >
+                  <i className={`fa-solid fa-rotate ${isFetching ? 'animate-spin' : ''}`}></i>
+                </Button>
+              </Tooltip>
+              {isFetching && (
+                <span className="text-xs text-muted-foreground">Refreshing...</span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Filter Section */}
@@ -127,7 +217,7 @@ const UserManagement = () => {
               <Input
                 type="date"
                 placeholder="Select date"
-                value={filters.birthDay}
+                value={localFilters.birthDay}
                 onChange={(e) => handleFilterChange('birthDay', e.target.value)}
                 className="w-full"
               />
@@ -139,7 +229,7 @@ const UserManagement = () => {
               <Input
                 type="text"
                 placeholder="Enter email"
-                value={filters.email}
+                value={localFilters.email}
                 onChange={(e) => handleFilterChange('email', e.target.value)}
                 className="w-full"
               />
@@ -150,7 +240,7 @@ const UserManagement = () => {
               <label className="text-sm font-medium">Status</label>
               <Select
                 placeholder="Select status"
-                value={filters.status}
+                value={localFilters.status}
                 onChange={(e) => handleFilterChange('status', e.target.value)}
                 className="w-full"
               >
@@ -169,7 +259,7 @@ const UserManagement = () => {
               <Input
                 type="text"
                 placeholder="Enter username"
-                value={filters.username}
+                value={localFilters.username}
                 onChange={(e) => handleFilterChange('username', e.target.value)}
                 className="w-full"
               />
@@ -181,7 +271,7 @@ const UserManagement = () => {
               <Input
                 type="text"
                 placeholder="Enter first name"
-                value={filters.firstName}
+                value={localFilters.firstName}
                 onChange={(e) => handleFilterChange('firstName', e.target.value)}
                 className="w-full"
               />
@@ -193,7 +283,7 @@ const UserManagement = () => {
               <Input
                 type="text"
                 placeholder="Enter last name"
-                value={filters.lastName}
+                value={localFilters.lastName}
                 onChange={(e) => handleFilterChange('lastName', e.target.value)}
                 className="w-full"
               />
@@ -223,13 +313,22 @@ const UserManagement = () => {
         {/* Results Summary */}
         {appliedFilters && (
           <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Showing {users.length} of {totalElements} users
-            </p>
+            <div className="flex items-center gap-4">
+              <p className="text-sm text-muted-foreground">
+                Showing {users.length} of {totalElements} users
+              </p>
+              {/* Cache Status Indicator */}
+              <div className="flex items-center gap-1">
+                <div className={`h-2 w-2 rounded-full ${loading ? 'bg-yellow-400' : 'bg-green-400'}`}></div>
+                <span className="text-xs text-muted-foreground">
+                  {loading ? 'Loading...' : hasCachedData() ? 'Cached' : 'Fresh'}
+                </span>
+              </div>
+            </div>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Items per page:</span>
               <Select
-                value={itemsPerPage.toString()}
+                value={localItemsPerPage.toString()}
                 onChange={(e) => handleItemsPerPageChange(e.target.value)}
                 className="w-20"
               >
@@ -256,6 +355,14 @@ const UserManagement = () => {
                 <p className="text-sm text-muted-foreground">
                   {error.message || 'An error occurred while loading user data'}
                 </p>
+                <Button
+                  variant="bordered"
+                  onClick={handleRefresh}
+                  className="mt-4"
+                >
+                  <i className="fa-solid fa-rotate mr-2"></i>
+                  Retry
+                </Button>
               </div>
             </div>
           ) : !appliedFilters ? (
@@ -289,14 +396,14 @@ const UserManagement = () => {
                     <TableHead>First Name</TableHead>
                     <TableHead>Last Name</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="w-[100px]">Actions</TableHead>
+                    <TableHead className="w-[150px]">Actions</TableHead>
                   </ShadcnTableRow>
                 </ShadcnTableHeader>
                 <ShadcnTableBody>
                   {users.map((user, index) => (
                     <ShadcnTableRow key={user.id + index}>
                       <ShadcnTableCell className="font-medium">
-                        {(currentPage - 1) * itemsPerPage + index + 1}
+                        {(localCurrentPage - 1) * localItemsPerPage + index + 1}
                       </ShadcnTableCell>
                       <ShadcnTableCell>{user.username}</ShadcnTableCell>
                       <ShadcnTableCell>{user.email}</ShadcnTableCell>
@@ -314,28 +421,43 @@ const UserManagement = () => {
                         </span>
                       </ShadcnTableCell>
                       <ShadcnTableCell>
-                        <Dropdown>
-                          <DropdownTrigger>
+                        <div className="flex items-center gap-2">
+                          <Tooltip content="View Profile" placement="top">
                             <Button
                               isIconOnly
                               variant="light"
                               size="sm"
+                              color="primary"
+                              onClick={() => handleAction('view', user)}
                             >
-                              <i className="fa-solid fa-ellipsis-vertical"></i>
+                              <i className="fa-solid fa-eye"></i>
                             </Button>
-                          </DropdownTrigger>
-                          <DropdownMenu onAction={(key) => alert(key)}>
-                            <DropdownItem key="view">
-                              <i className="fa-solid fa-eye"></i> View Profile
-                            </DropdownItem>
-                            <DropdownItem key="temp" className="text-warning-500" color="warning">
-                              <i className="fa-solid fa-eye-slash"></i> Temporarily Disable
-                            </DropdownItem>
-                            <DropdownItem key="perm" className="text-danger" color="danger">
-                              <i className="fa-solid fa-user-slash"></i> Permanently Disable
-                            </DropdownItem>
-                          </DropdownMenu>
-                        </Dropdown>
+                          </Tooltip>
+                          
+                          <Tooltip content="Temporarily Disable" placement="top">
+                            <Button
+                              isIconOnly
+                              variant="light"
+                              size="sm"
+                              color="warning"
+                              onClick={() => handleAction('temporarily_disable', user)}
+                            >
+                              <i className="fa-solid fa-eye-slash"></i>
+                            </Button>
+                          </Tooltip>
+                          
+                          <Tooltip content="Permanently Disable" placement="top">
+                            <Button
+                              isIconOnly
+                              variant="light"
+                              size="sm"
+                              color="danger"
+                              onClick={() => handleAction('permanently_disable', user)}
+                            >
+                              <i className="fa-solid fa-user-slash"></i>
+                            </Button>
+                          </Tooltip>
+                        </div>
                       </ShadcnTableCell>
                     </ShadcnTableRow>
                   ))}
@@ -346,11 +468,11 @@ const UserManagement = () => {
               {totalPages > 1 && (
                 <div className="flex items-center justify-between border-t px-4 py-3">
                   <div className="text-sm text-muted-foreground">
-                    Page {currentPage} of {totalPages}
+                    Page {localCurrentPage} of {totalPages}
                   </div>
                   <Pagination
                     total={totalPages}
-                    page={currentPage}
+                    page={localCurrentPage}
                     onChange={handlePageChange}
                     showControls
                     color="primary"

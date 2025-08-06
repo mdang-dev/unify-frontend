@@ -105,6 +105,11 @@ const AdminSidebar = () => {
     }
   ];
 
+  // Function to check if a section is active
+  const isSectionActive = (sectionItems) => {
+    return sectionItems.some(item => pathname === item.href);
+  };
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
@@ -138,21 +143,26 @@ const AdminSidebar = () => {
         
         <SidebarSeparator />
         
-        {menuItems.map((group, groupIndex) => (
-          <SidebarGroup key={groupIndex}>
-            <SidebarGroupLabel className="flex items-center gap-2 text-xs font-medium text-sidebar-foreground/70">
-              <i className={`${group.icon} text-sm`} />
-              <span className="group-data-[collapsible=icon]:hidden">{group.title}</span>
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {group.items.map((item, itemIndex) => {
-                  const isActive = pathname === item.href;
-                  return (
+        {menuItems.map((group, groupIndex) => {
+          const isActive = isSectionActive(group.items);
+          return (
+            <SidebarGroup key={groupIndex}>
+              <SidebarGroupLabel 
+                className={`flex items-center gap-2 text-xs font-medium transition-colors ${
+                  isActive 
+                    ? 'text-sidebar-accent-foreground bg-sidebar-accent' 
+                    : 'text-sidebar-foreground/70'
+                }`}
+              >
+                <i className={`${group.icon} text-sm`} />
+                <span className="group-data-[collapsible=icon]:hidden">{group.title}</span>
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {group.items.map((item, itemIndex) => (
                     <SidebarMenuItem key={itemIndex}>
                       <SidebarMenuButton 
                         asChild 
-                        isActive={isActive}
                         tooltip={item.title}
                       >
                         <Link href={item.href} className="flex items-center gap-2">
@@ -161,12 +171,12 @@ const AdminSidebar = () => {
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          );
+        })}
       </SidebarContent>
       
       <SidebarFooter className="border-t border-sidebar-border">
