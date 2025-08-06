@@ -99,7 +99,7 @@ const Messages = () => {
         return (
           fullname?.toLowerCase().includes(searchLower) ||
           username?.toLowerCase().includes(searchLower)
-        );
+  );
       });
     } catch (error) {
       // Only log critical errors

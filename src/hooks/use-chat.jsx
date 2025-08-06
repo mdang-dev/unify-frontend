@@ -196,13 +196,13 @@ export const useChat = (user, chatPartner) => {
         // ✅ FIX: Update existing chat
         updated = oldList.map((chat, index) =>
           index === existingChatIndex
-            ? {
-                ...chat,
+          ? {
+              ...chat,
                 lastMessage: newMessage.content || (newMessage.fileUrls?.length ? 'Đã gửi file' : ''),
-                lastUpdated: newMessage.timestamp,
-              }
-            : chat
-        );
+              lastUpdated: newMessage.timestamp,
+            }
+          : chat
+      );
       } else {
         // ✅ FIX: Add new chat if it doesn't exist
         const newChat = {
@@ -316,8 +316,8 @@ export const useChat = (user, chatPartner) => {
           };
           
           // ✅ PERFORMANCE: Send with optimized headers
-          stompClientRef.current.publish({
-            destination: '/app/chat.sendMessage',
+    stompClientRef.current.publish({
+      destination: '/app/chat.sendMessage',
             body: JSON.stringify(messagePayload),
             headers: {
               'content-type': 'application/json',
@@ -369,7 +369,7 @@ export const useChat = (user, chatPartner) => {
           'Connection': 'keep-alive', // ✅ PERFORMANCE: Keep connection alive
           'Keep-Alive': 'timeout=5, max=1000', // ✅ PERFORMANCE: Connection pooling
         },
-        body: JSON.stringify(message),
+      body: JSON.stringify(message),
         // ✅ PERFORMANCE: Optimized fetch options
         keepalive: true, // Keep connection alive for faster subsequent requests
       });

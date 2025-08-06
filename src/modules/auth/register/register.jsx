@@ -142,6 +142,8 @@ const RegisterPage = () => {
       birthDay: fullDate,
     };
 
+    console.log('Sending registration data:', requestData);
+
     registerMutation.mutate(requestData, {
       onSuccess: () => {
         setTimeout(() => {
@@ -149,8 +151,12 @@ const RegisterPage = () => {
         }, 1500);
       },
       onError: (err) => {
-        console.error('❌ Register error:', err?.message);
-        setServerError(err?.message || "Something went wrong. Please try again.");
+        console.error('❌ Register error:', err);
+        console.error('❌ Error response:', err?.response?.data);
+        console.error('❌ Error status:', err?.response?.status);
+        
+        const errorMessage = err?.response?.data || err?.message || "Something went wrong. Please try again.";
+        setServerError(errorMessage);
       },
     });
   };

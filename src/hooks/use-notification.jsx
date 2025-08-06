@@ -101,8 +101,8 @@ export const useNotification = (userId) => {
           timeout: 8000, // ✅ PERFORMANCE: Faster timeout
           heartbeat: 15000, // ✅ PERFORMANCE: Optimized heartbeat
         });
-        const client = new Client({
-          webSocketFactory: () => socket,
+    const client = new Client({
+      webSocketFactory: () => socket,
           connectHeaders: {
             userId,
             token: token,
@@ -111,9 +111,9 @@ export const useNotification = (userId) => {
           reconnectDelay: 3000, // ✅ PERFORMANCE: Faster reconnection
           heartbeatIncoming: 15000, // ✅ PERFORMANCE: Optimized heartbeat
           heartbeatOutgoing: 15000,
-          onConnect: () => {
+      onConnect: () => {
             try {
-              client.subscribe(`/user/${userId}/queue/notifications`, handleWebSocketMessage);
+        client.subscribe(`/user/${userId}/queue/notifications`, handleWebSocketMessage);
               if (process.env.NODE_ENV === 'development') {
                 console.log('✅ WebSocket connected for notifications');
               }
@@ -122,7 +122,7 @@ export const useNotification = (userId) => {
                 console.error('❌ Failed to subscribe to notifications:', error);
               }
             }
-          },
+      },
           onStompError: (frame) => {
             console.error('❌ STOMP error in notifications:', frame);
             console.error('Error details:', frame.headers?.message || 'Unknown error');
@@ -141,8 +141,8 @@ export const useNotification = (userId) => {
         });
 
         try {
-          client.activate();
-          stompClientRef.current = client;
+    client.activate();
+    stompClientRef.current = client;
           console.log('WebSocket client activated for notifications');
         } catch (error) {
           console.error('❌ Failed to activate WebSocket client for notifications:', error);

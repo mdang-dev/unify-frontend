@@ -5,7 +5,7 @@ const url = '/messages';
 export const chatQueryApi = {
   getChatList: async (userId) => {
     try {
-      const res = await httpClient.get(`${url}/chat-list/${userId}`);
+    const res = await httpClient.get(`${url}/chat-list/${userId}`);
       
       // Silent API response - only log errors
       
@@ -17,10 +17,10 @@ export const chatQueryApi = {
       return res.data.map((chat) => {
         // Silent processing - only log errors
         return {
-          userId: chat.userId,
+      userId: chat.userId,
           fullname: chat.fullName || 'Unknown User', // Backend returns fullName (camelCase)
           username: chat.username || 'unknown',
-          avatar: chat.avatar,
+      avatar: chat.avatar,
           lastMessage: chat.lastMessage || '',
           lastUpdated: chat.lastMessageTime || new Date().toISOString(),
         };

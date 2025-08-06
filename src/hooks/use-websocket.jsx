@@ -158,17 +158,17 @@ export const useWebSocket = (userId) => {
 
     const initializeWebSocket = async () => {
       const stompClient = await createStompClient();
-      if (stompClient) {
-        clientRef.current = stompClient;
-        setClient(stompClient);
-        
-        try {
-          stompClient.activate();
-        } catch (err) {
-          console.error('Error activating WebSocket client:', err);
-          setError(`Failed to connect: ${err.message}`);
-        }
+    if (stompClient) {
+      clientRef.current = stompClient;
+      setClient(stompClient);
+      
+      try {
+        stompClient.activate();
+      } catch (err) {
+        console.error('Error activating WebSocket client:', err);
+        setError(`Failed to connect: ${err.message}`);
       }
+    }
     };
 
     initializeWebSocket();
