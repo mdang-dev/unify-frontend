@@ -22,7 +22,7 @@ export const chatQueryApi = {
           username: chat.username || 'unknown',
           avatar: chat.avatar,
           lastMessage: chat.lastMessage || '',
-          lastUpdated: chat.lastMessageTime || new Date().toISOString(),
+          lastUpdated: chat.lastMessageTime ? new Date(chat.lastMessageTime).toISOString() : new Date().toISOString(),
         };
       });
     } catch (error) {
