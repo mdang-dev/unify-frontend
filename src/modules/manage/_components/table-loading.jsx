@@ -20,30 +20,15 @@ export default function TableLoading({ tableHeaders = [''] }) {
               {header}
             </TableColumn>
           ))}
-          {/* <TableColumn className="text-md">No.</TableColumn>
-                    <TableColumn className="text-md">Username</TableColumn>
-                    <TableColumn className="text-md">Email</TableColumn>
-                    <TableColumn className="text-md">Report Aproval Count</TableColumn>
-                    <TableColumn className="text-md">Actions</TableColumn> */}
         </TableHeader>
         <TableBody>
           {[...Array(10)].map((_, index) => (
             <TableRow key={index}>
-              <TableCell>
-                <Skeleton className="h-6 rounded-lg" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-6 rounded-lg" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-6 rounded-lg" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-6 rounded-lg" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-6 rounded-lg" />
-              </TableCell>
+              {tableHeaders.map((_, cellIndex) => (
+                <TableCell key={cellIndex}>
+                  <Skeleton className="h-6 rounded-lg" />
+                </TableCell>
+              ))}
             </TableRow>
           ))}
         </TableBody>

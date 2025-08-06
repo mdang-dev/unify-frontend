@@ -2,9 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import UnifyLogo from '../full-unify-logo';
-import { Accordion, AccordionItem, Avatar, Divider, User } from '@heroui/react';
-import NavButton from './_components/nav-button';
+import { usePathname } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/src/stores/auth.store';
 import { useRouter } from 'next/navigation';
@@ -12,9 +10,25 @@ import { authCommandApi } from '@/src/apis/auth/command/auth.command.api';
 import { deleteCookie } from '@/src/utils/cookies.util';
 import { COOKIE_KEYS } from '@/src/constants/cookie-keys.constant';
 import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarSeparator,
+} from '@/src/components/ui/sidebar';
+import { Avatar, User } from '@heroui/react';
+import UnifyLogo from '../full-unify-logo';
 
 const AdminSidebar = () => {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, setUser } = useAuthStore();
   const defaultAvatar = '/images/unify_icon_2.svg';
   const queryClient = useQueryClient();
@@ -34,146 +48,149 @@ const AdminSidebar = () => {
     router.push('/login');
   };
 
+  // Menu items configuration
+  const menuItems = [
+    {
+      title: "USERS",
+      icon: "fa-solid fa-users",
+      items: [
+        {
+          title: "User List",
+          icon: "fa-solid fa-user",
+          href: "/manage/users/list"
+        },
+        {
+          title: "Reported Users",
+          icon: "fa-solid fa-user-xmark",
+          href: "/manage/users/reports"
+        },
+        {
+          title: "Blocked Users", 
+          icon: "fa-solid fa-ban",
+          href: "/manage/users/list"
+        }
+      ]
+    },
+    {
+      title: "POSTS",
+      icon: "fa-solid fa-blog",
+      items: [
+        {
+          title: "Post List",
+          icon: "fa-solid fa-file-lines",
+          href: "/manage/posts/list"
+        },
+        {
+          title: "Reported Posts",
+          icon: "fa-solid fa-triangle-exclamation",
+          href: "/manage/posts/list"
+        }
+      ]
+    },
+    {
+      title: "COMMENTS",
+      icon: "fa-solid fa-comment",
+      items: [
+        {
+          title: "Comment List",
+          icon: "fa-solid fa-comments",
+          href: "/manage/comments/list"
+        },
+        {
+          title: "Reported Comments",
+          icon: "fa-solid fa-comment-slash",
+          href: "/manage/comments/list"
+        }
+      ]
+    }
+  ];
+
+  // Function to check if a section is active
+  const isSectionActive = (sectionItems) => {
+    return sectionItems.some(item => pathname === item.href);
+  };
+
   return (
-    <div className="relative flex flex-row">
-      <div className="fixed left-0 top-0 flex h-screen flex-col border border-none bg-gray-200 p-3 dark:border-neutral-500 dark:bg-neutral-800">
-        <UnifyLogo className="mx-auto w-52" />
-        <Divider className="mb-2 mt-5" />
-        <div className="flex w-full justify-between">
-          <User
-            avatarProps={{
-              src: `${user?.avatar?.url}` || defaultAvatar,
-            }}
-            description={`Admin`}
-            name={`${user?.firstName || ''} ${user?.lastName || ''}`}
-            className="my-3 justify-start !opacity-100"
-          />
-          <div>{/* <Avatar src={account?.avatar?.url} /> */}</div>
-          <Link
-            href={''}
-            className="my-auto text-xl text-zinc-500 hover:text-red-500"
-            onClick={logoutUser}
-          >
-            <i className="fa-solid fa-right-from-bracket"></i>
-          </Link>
+    <Sidebar collapsible="icon">
+      <SidebarHeader className="border-b border-sidebar-border">
+        <div className="flex items-center justify-center p-4">
+          <UnifyLogo className="w-40 group-data-[collapsible=icon]:w-8" />
         </div>
-        <Divider className="mt-2" />
-        <div className="no-scrollbar flex w-60 grow flex-col overflow-y-auto">
-          <Accordion variant="light" className="w-full">
-            <AccordionItem
-              className="font-bold"
-              key="1"
-              aria-label="Users"
-              title="USERS"
-              startContent={<i className="fa-solid fa-users"></i>}
-            >
-              <div className="pl-5 font-light">
-                <ul>
-                  <li>
-                    <NavButton
-                      iconClass="fa-solid fa-user-xmark"
-                      text="Reported Users"
-                      href="/manage/users/reports"
-                    />
-                  </li>
-                  <li>
-                    <NavButton
-                      iconClass="fa-solid fa-ban"
-                      text="Blocked Users"
-                      href="/manage/users/list"
-                    />
-                  </li>
-                </ul>
-              </div>
-            </AccordionItem>
-            <AccordionItem
-              key="2"
-              className="font-bold"
-              aria-label=""
-              title="POSTS"
-              startContent={<i className="fa-solid fa-blog"></i>}
-            >
-              <div className="pl-5 font-light">
-                <ul>
-                  <li>
-                    <NavButton
-                      iconClass="fa-solid fa-triangle-exclamation"
-                      text="Reported Posts"
-                      href="/manage/posts/list"
-                    />
-                  </li>
-                </ul>
-              </div>
-            </AccordionItem>
-            <AccordionItem
-              key="3"
-              className="font-bold"
-              aria-label=""
-              title="COMMENTS"
-              startContent={<i className="fa-solid fa-comment"></i>}
-            >
-              <div className="font-light">
-                <ul>
-                  <li>
-                    <NavButton
-                      iconClass="fa-solid fa-comment-slash"
-                      text="Reported Comments"
-                      href="/manage/comments/list"
-                    />
-                  </li>
-                </ul>
-              </div>
-            </AccordionItem>
-            {/* <AccordionItem key="3" aria-label="" className="font-bold" title="GROUPS" startContent={<i className="fa-solid fa-users-rays"></i>}>
-              <div className="pl-5 font-light">
-                <ul>
-                  <li>
-                    <NavButton
-                      iconClass="fa-solid fa-circle-exclamation"
-                      text="Reported Groups"
-                      href="/manage/groups/list"
-                    />
-                  </li>
-                </ul>
-              </div>
-            </AccordionItem> */}
-            {/* <AccordionItem key="4" aria-label="" className="font-bold" title="STATISTICS" startContent={<i className="fa-solid fa-square-poll-vertical"></i>}>
-              <div className="pl-5 font-light">
-                <ul>
-                  <li>
-                    <NavButton
-                      iconClass="fa-solid fa-chart-pie"
-                      text="Trends"
-                      href="/statistics/posts"
-                    />
-                  </li>
-                  <li>
-                    <NavButton
-                      iconClass="fa-regular fa-handshake"
-                      text="New Users"
-                      href="/statistics/users"
-                    />
-                  </li>
-                </ul>
-              </div>
-            </AccordionItem>
-            <AccordionItem key="5" aria-label="" className="font-bold" title="UNIFY STAFFS" startContent={<i className="fa-solid fa-u"></i>}>
-              <div className="pl-5 font-light">
-                <ul>
-                  <li>
-                    <NavButton
-                      iconClass="fa-solid fa-clipboard-user"
-                      text="All Staffs"
-                      href="/manage/users/list"
-                    />
-                  </li>
-                </ul>
-              </div>
-            </AccordionItem> */}
-          </Accordion>
+      </SidebarHeader>
+      
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <div className="flex items-center gap-2 p-2">
+              <User
+                avatarProps={{
+                  src: `${user?.avatar?.url}` || defaultAvatar,
+                }}
+                description="Admin"
+                name={`${user?.firstName || ''} ${user?.lastName || ''}`}
+                className="flex-1 group-data-[collapsible=icon]:hidden"
+              />
+              <button
+                onClick={logoutUser}
+                className="flex h-8 w-8 items-center justify-center rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                title="Logout"
+              >
+                <i className="fa-solid fa-right-from-bracket text-sm" />
+              </button>
+            </div>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        
+        <SidebarSeparator />
+        
+        {menuItems.map((group, groupIndex) => {
+          const isActive = isSectionActive(group.items);
+          return (
+            <SidebarGroup key={groupIndex}>
+              <SidebarGroupLabel 
+                className={`flex items-center gap-2 text-xs font-medium transition-colors ${
+                  isActive 
+                    ? 'text-sidebar-accent-foreground bg-sidebar-accent' 
+                    : 'text-sidebar-foreground/70'
+                }`}
+              >
+                <i className={`${group.icon} text-sm`} />
+                <span className="group-data-[collapsible=icon]:hidden">{group.title}</span>
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {group.items.map((item, itemIndex) => (
+                    <SidebarMenuItem key={itemIndex}>
+                      <SidebarMenuButton 
+                        asChild 
+                        tooltip={item.title}
+                      >
+                        <Link href={item.href} className="flex items-center gap-2">
+                          <i className={`${item.icon} text-sm`} />
+                          <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          );
+        })}
+      </SidebarContent>
+      
+      <SidebarFooter className="border-t border-sidebar-border">
+        <div className="p-2 text-xs text-sidebar-foreground/70">
+          <div className="flex items-center justify-between group-data-[collapsible=icon]:justify-center">
+            <span className="group-data-[collapsible=icon]:hidden">Admin Panel</span>
+            <span className="group-data-[collapsible=icon]:hidden">v1.0.0</span>
+            <div className="group-data-[collapsible=icon]:block hidden">
+              <i className="fa-solid fa-shield-halved text-sm" />
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      </SidebarFooter>
+    </Sidebar>
   );
 };
 

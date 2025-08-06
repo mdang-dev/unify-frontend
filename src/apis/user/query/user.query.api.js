@@ -24,4 +24,23 @@ export const userQueryApi = {
     });
     return res.data;
   },
+  manageUsers: async (params) => {
+    const res = await httpClient(`${url}/manage`, {
+      params: {
+        birthDay: params.birthDay || undefined,
+        email: params.email || undefined,
+        status: params.status || undefined,
+        username: params.username || undefined,
+        firstName: params.firstName || undefined,
+        lastName: params.lastName || undefined,
+        page: params.page || 0,
+        size: params.size || 10,
+      },
+    });
+    return res.data;
+  },
+  getUserDetails: async (id) => {
+    const res = await httpClient(`${url}/${id}`);
+    return res.data;
+  },
 };

@@ -57,4 +57,34 @@ export const postsQueryApi = {
     const res = await httpClient(`${url}/post_detail/${postId}`);
     return res.data;
   },
+  getPostsWithFilters: async (filters) => {
+    try {
+      // TODO: Replace with actual filter endpoint when backend is ready
+      // For now, use the personalized posts endpoint as a fallback
+      console.log('Using fallback endpoint - filters:', filters);
+
+      const res = await httpClient(`${url}/personalized`, {
+        params: {
+          page: filters.page || 0,
+          size: filters.size || 10,
+        },
+      });
+
+      // Transform the response to match the expected format
+      return {
+        posts: res?.data?.posts ?? [],
+        hasNextPage: res?.data?.hasNextPage ?? false,
+        currentPage: filters.page || 0,
+      };
+    } catch (error) {
+      console.error('Error fetching posts with filters:', error);
+
+      // Return empty data structure to prevent UI errors
+      return {
+        posts: [],
+        hasNextPage: false,
+        currentPage: filters.page || 0,
+      };
+    }
+  },
 };
