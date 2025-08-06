@@ -10,7 +10,7 @@ import {
   FaFileAlt,
 } from 'react-icons/fa';
 import Message from './_components/message';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import Picker from 'emoji-picker-react';
 import { Smile, Send, Plus } from 'lucide-react';
 import { useChat } from '@/src/hooks/use-chat';
@@ -34,6 +34,23 @@ const Messages = () => {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { chatMessages, sendMessage, chatList } = useChat(user, chatPartner);
+  
+  // Silent chat list updates - only log errors
+  
+  // ✅ REAL-TIME: Handle chat list updates
+  const handleChatListUpdate = (updatedChatList) => {
+    // React Query cache is automatically updated by useChat hook
+  };
+  
+  // ✅ OPTIMISTIC: Handle message retry
+  const handleRetryMessage = useCallback((messageId) => {
+    // Find the failed message and retry sending
+    const failedMessage = chatMessages.find(msg => msg.id === messageId && msg.isFailed);
+    if (failedMessage) {
+      // Retry sending the message
+      sendMessage(failedMessage.content, [], failedMessage.receiver);
+    }
+  }, [chatMessages, sendMessage]);
   const [newMessage, setNewMessage] = useState('');
   const [showPicker, setShowPicker] = useState(false);
   const pickerRef = useRef(null);
@@ -66,11 +83,30 @@ const Messages = () => {
   const [files, setFiles] = useState([]);
   const [searchQuery, setSearchQuery] = useState(''); // State for search input
 
-  const filteredChatList = chatList?.filter(
-    (chat) =>
-      chat.fullname.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      chat.username.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // ✅ PERFORMANCE: Memoized filtered chat list to prevent unnecessary re-renders
+  const filteredChatList = useMemo(() => {
+    try {
+      return (chatList || [])?.filter((chat) => {
+        // Skip invalid chat objects silently
+        if (!chat || typeof chat !== 'object') {
+          return false;
+        }
+        
+        const fullname = chat?.fullname || chat?.fullName || '';
+        const username = chat?.username || '';
+        const searchLower = searchQuery.toLowerCase();
+        
+        return (
+          fullname?.toLowerCase().includes(searchLower) ||
+          username?.toLowerCase().includes(searchLower)
+        );
+      });
+    } catch (error) {
+      // Only log critical errors
+      console.error('Critical error filtering chat list:', error);
+      return [];
+    }
+  }, [chatList, searchQuery]);
 
   useEffect(() => {
     const userId = searchParams.get('userId');
@@ -102,17 +138,23 @@ const Messages = () => {
     }
   }, [chatMessages]);
 
-  const handleSendMessage = () => {
+  // ✅ PERFORMANCE: Memoized send message handler
+  const handleSendMessage = useCallback(() => {
     if (!chatPartner) {
-      alert('Bạn cần chọn người nhận trước khi gửi tin nhắn!');
+      addToast({
+        title: 'Error',
+        description: 'Bạn cần chọn người nhận trước khi gửi tin nhắn!',
+        timeout: 3000,
+        color: 'danger',
+      });
       return;
     }
-    if (newMessage || files) {
-      sendMessage(newMessage, files, messagesEndRef);
+    if (newMessage || files.length > 0) {
+      sendMessage(newMessage, files, chatPartner);
       setNewMessage('');
       setFiles([]);
     }
-  };
+  }, [chatPartner, newMessage, files, sendMessage]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -163,15 +205,31 @@ const Messages = () => {
     }
   };
 
-  const handleChatSelect = (chat) => {
+  // ✅ PERFORMANCE: Memoized chat selection handler
+  const handleChatSelect = useCallback((chat) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Chat selected:', chat);
+    }
+    
+    if (!chat?.userId || typeof chat.userId !== 'string') {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Invalid chat selected:', chat);
+      }
+      return;
+    }
+    
     setOpChat({
-      userId: chat?.userId,
+      userId: chat.userId,
       avatar: chat?.avatar?.url,
-      fullname: chat?.fullname,
-      username: chat?.username,
+      fullname: chat?.fullname || chat?.fullName || 'Unknown User',
+      username: chat?.username || 'unknown',
     });
-    setChatPartner(chat?.userId);
-  };
+    setChatPartner(chat.userId);
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Chat partner set to:', chat.userId);
+    }
+  }, []);
 
   const handleCall = () => {
     if (!user || !opChat) return;
@@ -233,12 +291,18 @@ const Messages = () => {
 
           {/* Chat List */}
           <div className="flex-1 overflow-y-scroll border-r-1 px-4 py-1 scrollbar-hide dark:border-r-neutral-700 dark:bg-black">
-            {filteredChatList?.length > 0 ? (
+            {!chatList ? (
+              <div className="flex h-full items-center justify-center">
+                <p className="text-lg text-gray-500 dark:text-neutral-400">
+                  Loading chats...
+                </p>
+              </div>
+            ) : filteredChatList?.length > 0 ? (
               filteredChatList.map((chat, index) => (
                 <div
-                  key={index}
+                  key={chat?.userId || index}
                   className={`mt-3 flex w-full max-w-md cursor-pointer items-center justify-between rounded-lg p-3 transition duration-200 ease-in-out ${
-                    chat.userId === chatPartner
+                    chat?.userId === chatPartner
                       ? 'bg-gray-200 shadow-md ring-1 ring-white dark:bg-neutral-800 dark:ring-neutral-600'
                       : 'hover:bg-gray-300 dark:hover:bg-neutral-700'
                   } text-black dark:text-white`}
@@ -252,7 +316,7 @@ const Messages = () => {
                     />
                     <div className="ml-4">
                       <h4 className="w-23 truncate text-sm font-medium">
-                        {chat?.fullname || opChat?.fullname}
+                        {chat?.fullname || chat?.fullName || opChat?.fullname || 'Unknown User'}
                       </h4>
                       <p className="w-60 truncate text-sm text-neutral-500 dark:text-gray-400">
                         {chat?.lastMessage}
@@ -260,10 +324,10 @@ const Messages = () => {
                     </div>
                   </div>
                   <span className="text-sm text-gray-400">
-                    {new Date(chat?.lastUpdated).toLocaleTimeString('vi-VN', {
+                    {chat?.lastUpdated ? new Date(chat.lastUpdated).toLocaleTimeString('vi-VN', {
                       hour: '2-digit',
                       minute: '2-digit',
-                    })}
+                    }) : ''}
                   </span>
                 </div>
               ))
@@ -339,6 +403,7 @@ const Messages = () => {
                   messages={chatMessages}
                   messagesEndRef={messagesEndRef}
                   avatar={opChat.avatar || AvatarDefault.src}
+                  onRetryMessage={handleRetryMessage}
                 />
               </div>
 

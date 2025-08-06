@@ -6,6 +6,8 @@ import { useEffect, useRef, useCallback } from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { QUERY_KEYS } from '../constants/query-keys.constant';
+import { getCookie } from '../utils/cookies.util';
+import { COOKIE_KEYS } from '../constants/cookie-keys.constant';
 
 export const useNotification = (userId) => {
   const queryClient = useQueryClient();
@@ -60,19 +62,97 @@ export const useNotification = (userId) => {
     if (!userId) return;
     refetch(); // Initial fetch
 
-    const socket = new SockJS(`${process.env.NEXT_PUBLIC_API_URL}/ws`);
-    const client = new Client({
-      webSocketFactory: () => socket,
-      reconnectDelay: 5000,
-      onConnect: () => {
-        client.subscribe(`/user/${userId}/queue/notifications`, handleWebSocketMessage);
-        console.log('✅ WebSocket connected');
-      },
-      onStompError: (frame) => console.error('❌ STOMP error:', frame),
-    });
+    const setupWebSocket = async () => {
+      try {
+        // Get authentication token
+        const token = getCookie(COOKIE_KEYS.AUTH_TOKEN);
+        if (!token) {
+          console.warn('No authentication token found for notifications WebSocket');
+          return;
+        }
+        
+        // Fetch CSRF token for WebSocket connection
+        let csrfToken = null;
+        try {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/csrf`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            csrfToken = data.token;
+            console.log('CSRF token fetched for notifications');
+          } else {
+            console.warn('Failed to fetch CSRF token, status:', response.status);
+          }
+        } catch (error) {
+          console.warn('Failed to fetch CSRF token for notifications:', error);
+        }
 
-    client.activate();
-    stompClientRef.current = client;
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Setting up WebSocket connection for notifications...');
+        }
+        const socket = new SockJS(`${process.env.NEXT_PUBLIC_API_URL}/ws?token=${token}`, null, {
+          transports: ['websocket'], // ✅ PERFORMANCE: WebSocket only
+          timeout: 8000, // ✅ PERFORMANCE: Faster timeout
+          heartbeat: 15000, // ✅ PERFORMANCE: Optimized heartbeat
+        });
+        const client = new Client({
+          webSocketFactory: () => socket,
+          connectHeaders: {
+            userId,
+            token: token,
+            ...(csrfToken && { 'X-CSRF-TOKEN': csrfToken }),
+          },
+          reconnectDelay: 3000, // ✅ PERFORMANCE: Faster reconnection
+          heartbeatIncoming: 15000, // ✅ PERFORMANCE: Optimized heartbeat
+          heartbeatOutgoing: 15000,
+          onConnect: () => {
+            try {
+              client.subscribe(`/user/${userId}/queue/notifications`, handleWebSocketMessage);
+              if (process.env.NODE_ENV === 'development') {
+                console.log('✅ WebSocket connected for notifications');
+              }
+            } catch (error) {
+              if (process.env.NODE_ENV === 'development') {
+                console.error('❌ Failed to subscribe to notifications:', error);
+              }
+            }
+          },
+          onStompError: (frame) => {
+            console.error('❌ STOMP error in notifications:', frame);
+            console.error('Error details:', frame.headers?.message || 'Unknown error');
+            console.error('Error headers:', frame.headers);
+          },
+          onWebSocketError: (event) => {
+            console.error('❌ WebSocket error in notifications:', event);
+            console.error('Error type:', event.type);
+            console.error('Error target:', event.target);
+          },
+          onWebSocketClose: (event) => {
+            console.log('🔌 WebSocket closed for notifications:', event);
+            console.log('Close code:', event.code);
+            console.log('Close reason:', event.reason);
+          },
+        });
+
+        try {
+          client.activate();
+          stompClientRef.current = client;
+          console.log('WebSocket client activated for notifications');
+        } catch (error) {
+          console.error('❌ Failed to activate WebSocket client for notifications:', error);
+        }
+      } catch (error) {
+        console.error('❌ Failed to setup WebSocket for notifications:', error);
+      }
+    };
+
+    setupWebSocket();
 
     return () => {
       stompClientRef.current?.deactivate(); // Disconnect on unmount
