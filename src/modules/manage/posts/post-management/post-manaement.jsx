@@ -183,7 +183,7 @@ const PostManagement = () => {
     console.log(`${action} action for post:`, post);
     // Implement your action logic here
     if (action === 'view') {
-      router.push(`/manage/posts/detail/${post.id}`);
+      router.push(`/manage/posts/${post.id}`);
     } else {
       alert(`${action} action for post: ${post.id}`);
     }

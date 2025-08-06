@@ -63,6 +63,7 @@ const UserManagement = () => {
   const [localFilters, setLocalFilters] = useState(filters);
   const [localCurrentPage, setLocalCurrentPage] = useState(currentPage);
   const [localItemsPerPage, setLocalItemsPerPage] = useState(itemsPerPage);
+  const [showFilters, setShowFilters] = useState(false);
 
   // Initialize local state from store on mount
   useEffect(() => {
@@ -185,9 +186,17 @@ const UserManagement = () => {
               Manage all users in the system with advanced filtering options.
             </p>
           </div>
-          {/* Refresh Button */}
-          {appliedFilters && (
-            <div className="flex items-center gap-2">
+          {/* Filter Toggle and Refresh Buttons */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="bordered"
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2"
+            >
+              <i className="fa-solid fa-filter"></i>
+              {showFilters ? 'Hide Filters' : 'Show Filters'}
+            </Button>
+            {appliedFilters && (
               <Tooltip content="Refresh data" placement="top">
                 <Button
                   isIconOnly
@@ -200,115 +209,114 @@ const UserManagement = () => {
                   <i className={`fa-solid fa-rotate ${isFetching ? 'animate-spin' : ''}`}></i>
                 </Button>
               </Tooltip>
-              {isFetching && (
-                <span className="text-xs text-muted-foreground">Refreshing...</span>
-              )}
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Filter Section */}
-        <div className="rounded-lg border bg-card p-6">
-          <h2 className="mb-4 text-lg font-semibold">Filter Criteria</h2>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {/* Birthday Filter */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Birthday</label>
-              <Input
-                type="date"
-                placeholder="Select date"
-                value={localFilters.birthDay}
-                onChange={(e) => handleFilterChange('birthDay', e.target.value)}
-                className="w-full"
-              />
+        {showFilters && (
+          <div className="rounded-lg border bg-card p-6">
+            <h2 className="mb-4 text-lg font-semibold">Filter Criteria</h2>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {/* Birthday Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Birthday</label>
+                <Input
+                  type="date"
+                  placeholder="Select date"
+                  value={localFilters.birthDay}
+                  onChange={(e) => handleFilterChange('birthDay', e.target.value)}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Email Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Email</label>
+                <Input
+                  type="text"
+                  placeholder="Enter email"
+                  value={localFilters.email}
+                  onChange={(e) => handleFilterChange('email', e.target.value)}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Status Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Status</label>
+                <Select
+                  placeholder="Select status"
+                  value={localFilters.status}
+                  onChange={(e) => handleFilterChange('status', e.target.value)}
+                  className="w-full"
+                >
+                  {/* status = 0; Normal */}
+                  <SelectItem key="0" value="0">Normal</SelectItem>
+                  {/* status = 1; Temporarily Banned */}
+                  <SelectItem key="1" value="1">Temporarily Banned</SelectItem>
+                  {/* status = 2; Permanently Banned */}
+                  <SelectItem key="2" value="2">Permanently Banned</SelectItem>
+                </Select>
+              </div>
+
+              {/* Username Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Username</label>
+                <Input
+                  type="text"
+                  placeholder="Enter username"
+                  value={localFilters.username}
+                  onChange={(e) => handleFilterChange('username', e.target.value)}
+                  className="w-full"
+                />
+              </div>
+
+              {/* First Name Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">First Name</label>
+                <Input
+                  type="text"
+                  placeholder="Enter first name"
+                  value={localFilters.firstName}
+                  onChange={(e) => handleFilterChange('firstName', e.target.value)}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Last Name Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Last Name</label>
+                <Input
+                  type="text"
+                  placeholder="Enter last name"
+                  value={localFilters.lastName}
+                  onChange={(e) => handleFilterChange('lastName', e.target.value)}
+                  className="w-full"
+                />
+              </div>
             </div>
 
-            {/* Email Filter */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Email</label>
-              <Input
-                type="text"
-                placeholder="Enter email"
-                value={localFilters.email}
-                onChange={(e) => handleFilterChange('email', e.target.value)}
-                className="w-full"
-              />
-            </div>
-
-            {/* Status Filter */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
-              <Select
-                placeholder="Select status"
-                value={localFilters.status}
-                onChange={(e) => handleFilterChange('status', e.target.value)}
-                className="w-full"
+            {/* Filter Actions */}
+            <div className="mt-6 flex gap-3">
+              <Button
+                color="primary"
+                onClick={handleApplyFilters}
+                className="px-6"
+                disabled={!hasActiveFilters}
               >
-                {/* status = 0; Normal */}
-                <SelectItem key="0" value="0">Normal</SelectItem>
-                {/* status = 1; Temporarily Banned */}
-                <SelectItem key="1" value="1">Temporarily Banned</SelectItem>
-                {/* status = 2; Permanently Banned */}
-                <SelectItem key="2" value="2">Permanently Banned</SelectItem>
-              </Select>
-            </div>
-
-            {/* Username Filter */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Username</label>
-              <Input
-                type="text"
-                placeholder="Enter username"
-                value={localFilters.username}
-                onChange={(e) => handleFilterChange('username', e.target.value)}
-                className="w-full"
-              />
-            </div>
-
-            {/* First Name Filter */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">First Name</label>
-              <Input
-                type="text"
-                placeholder="Enter first name"
-                value={localFilters.firstName}
-                onChange={(e) => handleFilterChange('firstName', e.target.value)}
-                className="w-full"
-              />
-            </div>
-
-            {/* Last Name Filter */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Last Name</label>
-              <Input
-                type="text"
-                placeholder="Enter last name"
-                value={localFilters.lastName}
-                onChange={(e) => handleFilterChange('lastName', e.target.value)}
-                className="w-full"
-              />
+                Apply Filters
+              </Button>
+              <Button
+                variant="bordered"
+                onClick={handleClearFilters}
+                className="px-6"
+              >
+                Clear Filters
+              </Button>
             </div>
           </div>
-
-          {/* Filter Actions */}
-          <div className="mt-6 flex gap-3">
-            <Button
-              color="primary"
-              onClick={handleApplyFilters}
-              className="px-6"
-              disabled={!hasActiveFilters}
-            >
-              Apply Filters
-            </Button>
-            <Button
-              variant="bordered"
-              onClick={handleClearFilters}
-              className="px-6"
-            >
-              Clear Filters
-            </Button>
-          </div>
-        </div>
+        )}
 
         {/* Results Summary */}
         {appliedFilters && (
