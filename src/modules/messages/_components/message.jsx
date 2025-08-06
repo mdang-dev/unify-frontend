@@ -11,7 +11,7 @@ const PostDetailModal = dynamic(() => import('@/src/components/base/post-detail-
 const POST_LINK_REGEX = /https?:\/\/localhost:3000\/posts\/([0-9a-fA-F\-]{36})/g;
 const POST_SHARE_REGEX = /^POST_SHARE:([0-9a-fA-F\-]{36})$/;
 
-const Message = ({ messages, messagesEndRef, avatar }) => {
+const Message = ({ messages, messagesEndRef, avatar, onRetryMessage }) => {
   const user = useAuthStore((s) => s.user);
   const currentUser = user?.id;
   const [openPostId, setOpenPostId] = useState(null);
@@ -174,7 +174,9 @@ const Message = ({ messages, messagesEndRef, avatar }) => {
         return (
           <div
             key={message.id || message.timestamp}
-            className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
+            className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} ${
+              message.isOptimistic ? 'opacity-70' : ''
+            } ${message.isFailed ? 'opacity-50' : ''}`}
           >
             {isFirstOfGroup && !isCurrentUser && (
               <div className="mr-3">
@@ -248,9 +250,25 @@ const Message = ({ messages, messagesEndRef, avatar }) => {
                     isCurrentUser
                       ? 'bg-blue-600 text-white'
                       : 'bg-zinc-700 text-white dark:bg-zinc-800'
+                  } ${message.isOptimistic ? 'animate-pulse' : ''} ${
+                    message.isFailed ? 'bg-red-500' : ''
                   }`}
                 >
                   {renderContent(message.content)}
+                  {message.isOptimistic && (
+                    <div className="text-xs opacity-50 mt-1">Sending...</div>
+                  )}
+                  {message.isFailed && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="text-xs opacity-75">Failed to send</div>
+                      <button
+                        onClick={() => onRetryMessage?.(message.id)}
+                        className="text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 

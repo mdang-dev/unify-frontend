@@ -20,7 +20,7 @@ export const useCallStore = create((set, get) => ({
   notifySound: null,
   broadcastChannel: null,
 
-  init: (userId) => {
+  init: async (userId) => {
     const bc = new BroadcastChannel('smartcall');
     bc.onmessage = (e) => {
       if (e.data.type === 'incoming_call') {
@@ -30,10 +30,39 @@ export const useCallStore = create((set, get) => ({
         // Display notification UI in app
       }
     };
+
+    // Fetch CSRF token for WebSocket connection
+    let csrfToken = null;
+    try {
+      const token = getCookie(COOKIE_KEYS.AUTH_TOKEN);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/auth/csrf`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        csrfToken = data.token;
+      }
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Failed to fetch CSRF token for call:', error);
+      }
+    }
+
     const client = Stomp.over(
-      () => new SockJS('http://localhost:8080/ws?token=' + getCookie(COOKIE_KEYS.AUTH_TOKEN))
+      () => new SockJS('http://localhost:8080/ws?token=' + getCookie(COOKIE_KEYS.AUTH_TOKEN), null, {
+        transports: ['websocket'], // ✅ PERFORMANCE: WebSocket only
+        timeout: 8000, // ✅ PERFORMANCE: Faster timeout
+        heartbeat: 10000, // ✅ PERFORMANCE: Optimized heartbeat
+      })
     );
-    client.connect({}, () => {
+    client.connect({
+      ...(csrfToken && { 'X-CSRF-TOKEN': csrfToken }),
+    }, () => {
       client.subscribe(`/queue/call/${userId}`, (msg) => {
         const data = JSON.parse(msg.body);
         get().handleSignaling(data);

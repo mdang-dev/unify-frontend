@@ -4,18 +4,35 @@ const url = '/messages';
 
 export const chatQueryApi = {
   getChatList: async (userId) => {
-    const res = await httpClient(`${url}/chat-list/${userId}`);
-    return res?.data.map((chat) => ({
-      userId: chat.userId,
-      fullname: chat.fullName,
-      username: chat.username,
-      avatar: chat.avatar,
-      lastMessage: chat.lastMessage,
-      lastUpdated: chat.lastMessageTime,
-    }));
+    try {
+      const res = await httpClient.get(`${url}/chat-list/${userId}`);
+      
+      // Silent API response - only log errors
+      
+      if (!res?.data || !Array.isArray(res.data)) {
+        // Silent invalid response - only log critical errors
+        return [];
+      }
+      
+      return res.data.map((chat) => {
+        // Silent processing - only log errors
+        return {
+          userId: chat.userId,
+          fullname: chat.fullName || 'Unknown User', // Backend returns fullName (camelCase)
+          username: chat.username || 'unknown',
+          avatar: chat.avatar,
+          lastMessage: chat.lastMessage || '',
+          lastUpdated: chat.lastMessageTime || new Date().toISOString(),
+        };
+      });
+    } catch (error) {
+      // Only log critical errors
+      console.error('Critical error fetching chat list:', error);
+      return [];
+    }
   },
   getMessages: async (userId, partnerId) => {
-    const res = await httpClient(`${url}/${userId}/${partnerId}`);
+    const res = await httpClient.get(`${url}/${userId}/${partnerId}`);
     return res?.data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
   },
 };

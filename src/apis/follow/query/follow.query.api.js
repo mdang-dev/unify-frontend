@@ -4,15 +4,15 @@ const url = '/api/follow';
 
 export const followQueryApi = {
   isFollowing: async (userId, followingId) => {
-    const res = await httpClient(`${url}/isFollowing/${userId}/${followingId}`);
+    const res = await httpClient.get(`${url}/isFollowing/${userId}/${followingId}`);
     return res.data;
   },
   countFollowers: async (userId) => {
-    const res = await httpClient(`${url}/followers/${userId}`);
+    const res = await httpClient.get(`${url}/followers/${userId}`);
     return res.data;
   },
   countFollowing: async (userId) => {
-    const res = await httpClient(`${url}/following/${userId}`);
+    const res = await httpClient.get(`${url}/following/${userId}`);
     return res.data;
   },
 };
