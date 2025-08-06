@@ -6,6 +6,7 @@ import { ThemeProvider as NextThemesProvider } from 'next-themes';
 import { useEffect } from 'react';
 import { useState } from 'react';
 import { useAuthStore } from '../stores/auth.store';
+import { SidebarProvider, SidebarTrigger } from '../components/ui/sidebar';
 
 const AdminLayout = ({ children }) => {
   useEffect(() => {
@@ -18,12 +19,20 @@ const AdminLayout = ({ children }) => {
   return (
     <HeroUIProvider className="w-full">
       <NextThemesProvider attribute="class" defaultTheme="dark" enableSystem>
-        <div className={`flex w-full bg-background text-foreground light dark:bg-black`}>
-          <aside className="w-60 flex-none">
+        <SidebarProvider>
+          <div className={`flex w-full bg-background text-foreground light dark:bg-black`}>
             <AdminSidebar />
-          </aside>
-          <main className="z-10 w-full flex-initial pl-5">{children}</main>
-        </div>
+            <main className="z-10 w-full flex-initial">
+              <div className="flex h-16 items-center gap-2 border-b px-4">
+                <SidebarTrigger />
+                <div className="flex-1" />
+              </div>
+              <div className="p-4">
+                {children}
+              </div>
+            </main>
+          </div>
+        </SidebarProvider>
       </NextThemesProvider>
     </HeroUIProvider>
   );
