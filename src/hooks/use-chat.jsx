@@ -68,24 +68,41 @@ export const useChat = (user, chatPartner) => {
   const connectWebSocket = useCallback(async () => {
     if (!user?.id) return;
 
-    // Fetch CSRF token for WebSocket connection
+    // Fetch CSRF token for WebSocket connection with better error handling
     let csrfToken = null;
     try {
       const token = getCookie(COOKIE_KEYS.AUTH_TOKEN);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/csrf`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
       
       if (response.ok) {
         const data = await response.json();
         csrfToken = data.token;
+      } else {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(`CSRF token fetch failed with status: ${response.status}`);
+        }
       }
     } catch (error) {
-      console.warn('Failed to fetch CSRF token for chat:', error);
+      if (process.env.NODE_ENV === 'development') {
+        if (error.name === 'AbortError') {
+          console.warn('CSRF token fetch timed out');
+        } else {
+          console.warn('Failed to fetch CSRF token for chat:', error.message);
+        }
+      }
+      // Continue without CSRF token if fetch fails
     }
 
     const socket = new SockJS(

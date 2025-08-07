@@ -91,7 +91,7 @@ const ShareButton = ({ post, className = '' }) => {
                     filteredFriends.map((friend) => (
                       <div className="text-center" key={friend.id}>
                         <Image
-                          src={friend.avatar?.url || '/images/unify_icon_2.svg'}
+                          src={friend.avatar?.url || '/images/unify_icon_2.png'}
                           alt={`avtshare-${friend.username}`}
                           width={80}
                           height={80}

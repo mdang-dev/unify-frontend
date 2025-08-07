@@ -419,7 +419,7 @@ export default function ReelsPost() {
                               '/upload/',
                               '/upload/w_80,h_80,c_fill,q_auto/'
                             )}`
-                          : '/images/unify_icon_2.svg'
+                          : '/images/unify_icon_2.png'
                       }
                       width={40}
                       height={40}

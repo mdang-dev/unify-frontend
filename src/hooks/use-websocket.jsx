@@ -22,25 +22,40 @@ export const useWebSocket = (userId) => {
       return null;
     }
 
-    // Fetch CSRF token for WebSocket connection
+    // Fetch CSRF token for WebSocket connection with better error handling
     let csrfToken = null;
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
       const response = await fetch(`${apiUrl}/auth/csrf`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
       
       if (response.ok) {
         const data = await response.json();
         csrfToken = data.token;
+      } else {
+        // Log specific error for debugging
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(`CSRF token fetch failed with status: ${response.status}`);
+        }
       }
     } catch (error) {
       if (process.env.NODE_ENV === 'development') {
-        console.warn('Failed to fetch CSRF token:', error);
+        if (error.name === 'AbortError') {
+          console.warn('CSRF token fetch timed out');
+        } else {
+          console.warn('Failed to fetch CSRF token:', error.message);
+        }
       }
       // Continue without CSRF token if fetch fails
     }

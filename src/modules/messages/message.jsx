@@ -15,7 +15,7 @@ import Picker from 'emoji-picker-react';
 import { Smile, Send, Plus } from 'lucide-react';
 import { useChat } from '@/src/hooks/use-chat';
 import { useSearchParams } from 'next/navigation';
-import AvatarDefault from '@/public/images/unify_icon_2.svg';
+import AvatarDefault from '@/public/images/unify_icon_2.png';
 import { useAuthStore } from '@/src/stores/auth.store';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { QUERY_KEYS } from '@/src/constants/query-keys.constant';

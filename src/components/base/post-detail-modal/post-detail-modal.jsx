@@ -5,7 +5,7 @@ import { CommentItem, CommentInput } from '..';
 import Cookies from 'js-cookie';
 import Link from 'next/link';
 import Image from 'next/image';
-import Avatar from '@/public/images/unify_icon_2.svg';
+import Avatar from '@/public/images/unify_icon_2.png';
 import OptionsPostModal from './_components/options-post-modal';
 import DeletePostModal from './_components/delete-post-modal';
 import ArchivePostModal from './_components/archive-post-modal';

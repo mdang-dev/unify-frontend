@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import avatar from '@/public/images/unify_icon_2.svg';
+import avatar from '@/public/images/unify_icon_2.png';
 import SearchHorizontalToggle from './_components/search-horizontal-toggle';
 import NotificationModal from './_components/notification-modal';
 import UnifyLogoIcon from '../unify-logo-icon';

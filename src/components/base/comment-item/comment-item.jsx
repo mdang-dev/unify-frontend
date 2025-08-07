@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import Reply from './_components/reply';
 import Content from './_components/content';
 import { addToast } from '@heroui/react';
-import defaultAvatar from '@/public/images/unify_icon_2.svg';
+import defaultAvatar from '@/public/images/unify_icon_2.png';
 import { reportsCommandApi } from '@/src/apis/reports/command/report.command.api';
 import { commentsCommandApi } from '@/src/apis/comments/command/comments.command.api';
 import CommentReportModal from './_components/comment-report-modal';
