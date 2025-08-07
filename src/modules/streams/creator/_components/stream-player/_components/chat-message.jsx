@@ -1,6 +1,7 @@
 import { stringToColor } from '@/src/lib/utils';
 import { format } from 'date-fns';
 
+
 export default function ChatMessage({ data }) {
   const { from, message, timestamp } = data;
   const { fullName, avatar: avatarUrl } = JSON.parse(from?.metadata || '{}');
@@ -28,7 +29,10 @@ export default function ChatMessage({ data }) {
           <span className="text-sm" style={{ color: color }} title={from?.name}>
             {username}
           </span>
-          <span className="text-xs text-white/40">{format(timestamp, 'HH:mm')}</span>
+          <span className="text-xs text-white/40">{new Date(timestamp).toLocaleTimeString('vi-VN', {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}</span>
         </div>
         <p className="break-words text-sm leading-snug text-white">{message}</p>
       </div>

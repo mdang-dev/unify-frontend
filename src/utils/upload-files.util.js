@@ -14,7 +14,9 @@ export const uploadFiles = async (files) => {
       .upload(fileName, file, { cacheControl: '3600', upsert: false });
 
     if (error) {
-      console.error('Upload failed:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Upload failed:', error);
+      }
     } else {
       urls.push(
         `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/files/${fileName}`

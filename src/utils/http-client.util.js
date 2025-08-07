@@ -22,7 +22,10 @@ httpClient.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       deleteCookie(COOKIE_KEYS.AUTH_TOKEN);
-      console.warn('Unauthorized - handle logout or refresh');
+      // Silent warning - only log in development
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Unauthorized - handle logout or refresh');
+      }
     }
     return Promise.reject(error);
   }

@@ -46,8 +46,7 @@ export const useWebSocket = (userId) => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
     const wsUrl = `${apiUrl}/ws?token=${token}`;
     
-    console.log('Creating WebSocket connection:', wsUrl);
-    
+    // Create STOMP client with optimized settings for real-time communication
     return new Client({
       webSocketFactory: () => {
         return new SockJS(wsUrl, null, {
@@ -65,6 +64,8 @@ export const useWebSocket = (userId) => {
       heartbeatIncoming: 15000,
       heartbeatOutgoing: 15000,
       debug: (str) => {
+        // Disable STOMP debug logs in production to reduce console noise
+        // Only show debug info during development for troubleshooting
         if (process.env.NODE_ENV === 'development') {
           console.log('STOMP Debug:', str);
         }
@@ -73,13 +74,13 @@ export const useWebSocket = (userId) => {
       reconnectDelay: 3000, // Faster reconnection
       maxWebSocketFrameSize: 16 * 1024, // 16KB frame size
       onConnect: () => {
-        console.log('✅ WebSocket Connected Successfully');
+        // WebSocket successfully connected - update state and reset retry counter
         setConnected(true);
         setError(null);
         retryCountRef.current = 0; // Reset retry count on successful connection
       },
       onDisconnect: () => {
-        console.log('❌ WebSocket Disconnected');
+        // WebSocket disconnected - update connection state
         setConnected(false);
       },
       onStompError: (frame) => {
@@ -87,11 +88,10 @@ export const useWebSocket = (userId) => {
         setError(`STOMP Error: ${frame.headers.message || 'Connection failed'}`);
         setConnected(false);
         
-        // Retry logic for STOMP errors
+        // Implement exponential backoff retry strategy for STOMP errors
         if (retryCountRef.current < maxRetries) {
           retryCountRef.current++;
-          const delay = Math.pow(2, retryCountRef.current) * 1000; // Exponential backoff
-          console.log(`🔄 Retrying connection in ${delay}ms (attempt ${retryCountRef.current}/${maxRetries})`);
+          const delay = Math.pow(2, retryCountRef.current) * 1000; // Exponential backoff: 2s, 4s, 8s, etc.
           
           retryTimeoutRef.current = setTimeout(async () => {
             if (clientRef.current) {
@@ -109,11 +109,10 @@ export const useWebSocket = (userId) => {
         setError(`WebSocket Error: ${event.message || 'Connection failed'}`);
         setConnected(false);
         
-        // Retry logic for WebSocket errors
+        // Implement exponential backoff retry strategy for WebSocket errors
         if (retryCountRef.current < maxRetries) {
           retryCountRef.current++;
-          const delay = Math.pow(2, retryCountRef.current) * 1000;
-          console.log(`🔄 Retrying WebSocket connection in ${delay}ms (attempt ${retryCountRef.current}/${maxRetries})`);
+          const delay = Math.pow(2, retryCountRef.current) * 1000; // Exponential backoff: 2s, 4s, 8s, etc.
           
           retryTimeoutRef.current = setTimeout(async () => {
             if (clientRef.current) {
@@ -127,14 +126,13 @@ export const useWebSocket = (userId) => {
         }
       },
       onWebSocketClose: (event) => {
-        console.log('🔌 WebSocket Closed:', event);
+        // WebSocket connection closed - update connection state
         setConnected(false);
         
-        // Only retry if it's not a normal closure
+        // Only retry reconnection if it's not a normal closure (code 1000 = normal close)
         if (event.code !== 1000 && retryCountRef.current < maxRetries) {
           retryCountRef.current++;
-          const delay = Math.pow(2, retryCountRef.current) * 1000;
-          console.log(`🔄 Retrying after WebSocket close in ${delay}ms (attempt ${retryCountRef.current}/${maxRetries})`);
+          const delay = Math.pow(2, retryCountRef.current) * 1000; // Exponential backoff: 2s, 4s, 8s, etc.
           
           retryTimeoutRef.current = setTimeout(async () => {
             const newClient = await createStompClient();

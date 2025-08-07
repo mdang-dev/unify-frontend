@@ -17,7 +17,9 @@ export const postsQueryApi = {
         nextPage: res?.data.hasNextPage ? pageParam + 1 : null,
       };
     } catch (error) {
-      console.error('Error fetching posts:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error fetching posts:', error);
+      }
       throw error;
     }
   },
@@ -26,8 +28,12 @@ export const postsQueryApi = {
     return res.data;
   },
   getRecommendedPosts: async () => {
+    // Fetch recommended posts for the explore page
     const res = await httpClient(`${url}/explorer`);
-    console.log(res);
+    if (process.env.NODE_ENV === 'development') {
+      // Log response for debugging in development mode
+      console.log(res);
+    }
     return res.data;
   },
   getPostsById: async (postId) => {
@@ -61,7 +67,10 @@ export const postsQueryApi = {
     try {
       // TODO: Replace with actual filter endpoint when backend is ready
       // For now, use the personalized posts endpoint as a fallback
-      console.log('Using fallback endpoint - filters:', filters);
+      if (process.env.NODE_ENV === 'development') {
+        // Log fallback usage for debugging in development mode
+        console.log('Using fallback endpoint - filters:', filters);
+      }
 
       const res = await httpClient(`${url}/personalized`, {
         params: {
@@ -70,14 +79,16 @@ export const postsQueryApi = {
         },
       });
 
-      // Transform the response to match the expected format
+      // Transform the response to match the expected format for filtered posts
       return {
         posts: res?.data?.posts ?? [],
         hasNextPage: res?.data?.hasNextPage ?? false,
         currentPage: filters.page || 0,
       };
     } catch (error) {
-      console.error('Error fetching posts with filters:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error fetching posts with filters:', error);
+      }
 
       // Return empty data structure to prevent UI errors
       return {

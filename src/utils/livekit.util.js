@@ -14,7 +14,9 @@ export function chain(...callbacks) {
         try {
           callback(...args);
         } catch (e) {
-          console.error(e);
+          if (process.env.NODE_ENV === 'development') {
+            console.error(e);
+          }
         }
       }
     }
