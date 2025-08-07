@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { useState, useEffect } from 'react';
 import { postsQueryApi } from '@/src/apis/posts/query/posts.query.api';
 
+
 const PostDetailModal = dynamic(() => import('@/src/components/base/post-detail-modal'), { ssr: false });
 
 const POST_LINK_REGEX = /https?:\/\/localhost:3000\/posts\/([0-9a-fA-F\-]{36})/g;

@@ -82,29 +82,41 @@ export const useCallStore = create((set, get) => ({
   },
 
   sendSignal: (msg) => {
+    // Send WebRTC signaling messages through STOMP WebSocket
     const { signalingClient, otherUser } = get();
     if (signalingClient && signalingClient.connected) {
+      // Send signaling message to the other user's call endpoint
       signalingClient.send(
         `/app/call/${otherUser}`,
         {},
         JSON.stringify({ ...msg, from: get().userId })
       );
-      console.log('[STOMP] Signal sent', msg);
+      if (process.env.NODE_ENV === 'development') {
+        // Log successful signal transmission for debugging
+        console.log('[STOMP] Signal sent', msg);
+      }
     } else {
-      console.warn('[STOMP] Not connected, cannot send');
+      if (process.env.NODE_ENV === 'development') {
+        // Log connection issue for debugging
+        console.warn('[STOMP] Not connected, cannot send');
+      }
     }
   },
   startCall: async (otherUser) => {
+    // Initialize call as the caller and set up WebRTC connection
     set({ role: 'caller', otherUser });
     await get().setupMedia();
     const pc = get().createPeer();
+    // Create and send WebRTC offer to establish connection
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
     get().sendSignal({ type: 'OFFER', sdp: offer.sdp });
 
+    // Open call window in new tab and set up broadcast channel for communication
     const bc = get().broadcastChannel;
     window.open('/call', '_blank');
 
+    // Send restore message every 500ms until the call window is ready
     const interval = setInterval(() => {
       bc.postMessage({ type: 'restore', role: 'caller', otherUser });
     }, 500);
@@ -117,18 +129,24 @@ export const useCallStore = create((set, get) => ({
     };
   },
   setupMedia: async () => {
+    // Request access to user's camera and microphone for video call
     const local = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
     set({ localStream: local });
   },
 
   createPeer: () => {
+    // Create WebRTC peer connection with STUN server for NAT traversal
     const state = get();
     const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+    // Add local media tracks to the peer connection
     state.localStream.getTracks().forEach((track) => pc.addTrack(track, state.localStream));
+    // Handle incoming remote stream
     pc.ontrack = (event) => set({ remoteStream: event.streams[0] });
+    // Send ICE candidates for connection establishment
     pc.onicecandidate = (event) => {
       if (event.candidate) state.sendSignal({ type: 'ICE', candidate: event.candidate });
     };
+    // Handle connection state changes and end call on failure
     pc.onconnectionstatechange = () => {
       if (pc.connectionState === 'failed') {
         get().endCall();

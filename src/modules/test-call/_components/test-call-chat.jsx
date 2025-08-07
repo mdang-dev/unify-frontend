@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { cn } from '@/src/lib/utils';
 
+
 export default function TestCallChat({ isOpen, onClose }) {
   const [messages, setMessages] = useState([
     {
@@ -56,7 +57,10 @@ export default function TestCallChat({ isOpen, onClose }) {
       id: Date.now(),
       sender: 'You',
       message: newMessage,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: new Date().toLocaleTimeString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
       isLocal: true,
       avatar: '/images/avatar.png'
     };

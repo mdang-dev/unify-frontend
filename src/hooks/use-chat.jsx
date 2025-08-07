@@ -7,6 +7,7 @@ import { QUERY_KEYS } from '../constants/query-keys.constant';
 import { chatQueryApi } from '../apis/chat/query/chat.query.api';
 import { getCookie } from '../utils/cookies.util';
 import { COOKIE_KEYS } from '../constants/cookie-keys.constant';
+import { getVietnamTimeISO } from '../utils/timezone.util';
 
 export const useChat = (user, chatPartner) => {
   const [chatMessages, setChatMessages] = useState([]);
@@ -102,13 +103,16 @@ export const useChat = (user, chatPartner) => {
       reconnectDelay: 1000, // Faster reconnection
       maxWebSocketFrameSize: 32 * 1024, // Larger frame size for faster data transfer
       onConnect: () => {
-        console.log('✅ WebSocket connected');
+        // WebSocket successfully connected - set up message subscriptions
         setIsConnected(true);
+        // Subscribe to incoming messages for real-time chat updates
         client.subscribe(`/user/${user?.id}/queue/messages`, handleIncomingMessage);
+        // Subscribe to chat list updates for real-time UI updates
         client.subscribe(`/user/${user?.id}/queue/chat-list-update`, handleChatListUpdate);
-        client.subscribe(`/user/${user?.id}/queue/errors`, (error) =>
+        // Subscribe to error messages for debugging
+        client.subscribe(`/user/${user?.id}/queue/errors`, (error) => {
           console.error('❌ WS error:', error)
-        );
+        });
       },
       onStompError: () => setIsConnected(false),
       onWebSocketClose: () => {
@@ -130,7 +134,7 @@ export const useChat = (user, chatPartner) => {
     };
   }, [connectWebSocket]);
 
-  // Incoming message
+  // Handle incoming real-time messages from WebSocket
   const handleIncomingMessage = useCallback((message) => {
     try {
       const newMessage = JSON.parse(message.body);
@@ -310,7 +314,8 @@ export const useChat = (user, chatPartner) => {
     
     // ✅ OPTIMISTIC: Create message with optimistic ID
     const optimisticId = `optimistic_${Date.now()}_${Math.random()}`;
-    const currentTime = new Date().toISOString();
+    // Sử dụng timezone Việt Nam thay vì UTC
+    const currentTime = getVietnamTimeISO();
     const optimisticMessage = {
       id: optimisticId,
       sender: user.id,
@@ -494,7 +499,6 @@ export const useChat = (user, chatPartner) => {
       }
       
       if (process.env.NODE_ENV === 'development') {
-        console.log('✅ Message sent via HTTP successfully');
       }
     } catch (error) {
       throw new Error(`HTTP send failed: ${error.message}`);

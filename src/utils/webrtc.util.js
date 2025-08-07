@@ -14,7 +14,9 @@ export const getUserMedia = async (constraints = { video: true, audio: true }) =
   try {
     return await navigator.mediaDevices.getUserMedia(constraints);
   } catch (error) {
-    console.error('Error accessing media devices:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error accessing media devices:', error);
+    }
     throw new Error('Failed to access camera/microphone');
   }
 };
