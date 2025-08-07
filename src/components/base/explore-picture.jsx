@@ -77,7 +77,7 @@ export default function Picture({ post, url }) {
               {/* <Image src={url ? url : testImg} width={100} height={100} className={"w-[568px] my-auto"} alt="PostImage" /> */}
               <Slider srcs={post.media} />
             </div>
-            <div className={'flex w-[500] flex-col justify-between dark:bg-black dark:text-white'}>
+            <div className={'flex w-[500px] flex-col justify-between dark:bg-black dark:text-white'}>
               <div
                 className={
                   'flex h-[60px] items-center justify-between rounded-lg border-b border-l px-4 py-3'
