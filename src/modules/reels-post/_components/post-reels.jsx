@@ -77,7 +77,7 @@ const PostReels = forwardRef(
           }}
           muted={muted}
           loop={loop}
-          className="h-full w-[430] rounded-md bg-black"
+          className="h-full w-[430px] rounded-md bg-black"
           playsInline
           onError={(e) => console.error('Video error:', e)}
         >

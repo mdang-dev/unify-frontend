@@ -194,7 +194,7 @@ const Message = ({ messages, messagesEndRef, avatar, onRetryMessage }) => {
             <div
               className={`flex max-w-[75%] flex-col ${
                 isCurrentUser ? 'items-end' : 'items-start'
-              } ${!isCurrentUser && !isFirstOfGroup ? 'pl-[50]' : ''}`}
+              } ${!isCurrentUser && !isFirstOfGroup ? 'pl-[50px]' : ''}`}
             >
               {message.fileUrls?.length > 0 && (
                 <div className="mb-3 mt-2 flex flex-wrap gap-2">
