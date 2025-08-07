@@ -128,7 +128,7 @@ const PostItem = ({ post }) => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
-        className="w-full overflow-hidden rounded-lg bg-white shadow-md transition-all duration-300 hover:shadow-lg dark:bg-neutral-900"
+        className="w-full overflow-hidden rounded-lg bg-white shadow-md transition-shadow duration-300 hover:shadow-lg dark:bg-neutral-900"
       >
         <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-neutral-800">
           <User user={post.user} />

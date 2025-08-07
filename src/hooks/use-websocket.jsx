@@ -39,7 +39,9 @@ export const useWebSocket = (userId) => {
         csrfToken = data.token;
       }
     } catch (error) {
-      console.warn('Failed to fetch CSRF token:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Failed to fetch CSRF token:', error);
+      }
       // Continue without CSRF token if fetch fails
     }
 
@@ -64,34 +66,33 @@ export const useWebSocket = (userId) => {
       heartbeatIncoming: 15000,
       heartbeatOutgoing: 15000,
       debug: (str) => {
-        // Disable STOMP debug logs in production to reduce console noise
-        // Only show debug info during development for troubleshooting
-        if (process.env.NODE_ENV === 'development') {
-          console.log('STOMP Debug:', str);
+        // Only log critical STOMP errors in development
+        if (process.env.NODE_ENV === 'development' && str.includes('error')) {
+          console.warn('STOMP Error:', str);
         }
       },
       // ✅ PERFORMANCE: Optimized connection settings
       reconnectDelay: 3000, // Faster reconnection
       maxWebSocketFrameSize: 16 * 1024, // 16KB frame size
       onConnect: () => {
-        // WebSocket successfully connected - update state and reset retry counter
         setConnected(true);
         setError(null);
-        retryCountRef.current = 0; // Reset retry count on successful connection
+        retryCountRef.current = 0;
       },
       onDisconnect: () => {
         // WebSocket disconnected - update connection state
         setConnected(false);
       },
       onStompError: (frame) => {
-        console.error('❌ STOMP Error:', frame);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('STOMP Error:', frame);
+        }
         setError(`STOMP Error: ${frame.headers.message || 'Connection failed'}`);
         setConnected(false);
         
-        // Implement exponential backoff retry strategy for STOMP errors
         if (retryCountRef.current < maxRetries) {
           retryCountRef.current++;
-          const delay = Math.pow(2, retryCountRef.current) * 1000; // Exponential backoff: 2s, 4s, 8s, etc.
+          const delay = Math.pow(2, retryCountRef.current) * 1000;
           
           retryTimeoutRef.current = setTimeout(async () => {
             if (clientRef.current) {
@@ -163,7 +164,9 @@ export const useWebSocket = (userId) => {
         try {
           stompClient.activate();
         } catch (err) {
-          console.error('Error activating WebSocket client:', err);
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Error activating WebSocket client:', err);
+          }
           setError(`Failed to connect: ${err.message}`);
         }
       }
@@ -180,7 +183,9 @@ export const useWebSocket = (userId) => {
         try {
           clientRef.current.deactivate();
         } catch (err) {
-          console.error('Error deactivating WebSocket client:', err);
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('Error deactivating WebSocket client:', err.message);
+          }
         }
       }
     };
@@ -198,7 +203,9 @@ export const useWebSocket = (userId) => {
       try {
         clientRef.current.deactivate();
       } catch (err) {
-        console.error('Error deactivating during manual reconnect:', err);
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Error deactivating during manual reconnect:', err.message);
+        }
       }
     }
     
