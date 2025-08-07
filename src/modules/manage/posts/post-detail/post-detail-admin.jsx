@@ -316,7 +316,7 @@ const PostDetailAdmin = () => {
               <CardBody>
                 <User
                   avatarProps={{
-                    src: post.user?.avatar?.url || '/images/unify_icon_2.svg',
+                    src: post.user?.avatar?.url || '/images/unify_icon_2.png',
                     size: 'lg',
                   }}
                   description={post.user?.email || 'No email provided'}

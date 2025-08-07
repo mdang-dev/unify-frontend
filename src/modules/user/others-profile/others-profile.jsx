@@ -7,7 +7,7 @@ import Image from 'next/image';
 import ProfileTabs from '../_components/profile-tab';
 import { addToast, ToastProvider } from '@heroui/toast';
 import { useFollow } from '@/src/hooks/use-follow';
-import AvatarDefault from '@/public/images/unify_icon_2.svg';
+import AvatarDefault from '@/public/images/unify_icon_2.png';
 import ReportUserModal from '../_components/report-user-modal';
 import { FollowButton } from '@/src/components/button';
 import { useCreateReport } from '@/src/hooks/use-report';
@@ -120,7 +120,7 @@ const OthersProfile = () => {
                 />
               ) : (
                 <Image
-                  src="/images/unify_icon_2.svg"
+                  src="/images/unify_icon_2.png"
                   alt="Default Avatar"
                   width={154}
                   height={154}

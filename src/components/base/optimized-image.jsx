@@ -9,7 +9,7 @@ export const OptimizedImage = ({
   width = 40, 
   height = 40, 
   className = '',
-  fallbackSrc = '/images/default-avatar.png',
+  fallbackSrc = '/images/unify_icon_2.png',
   priority = false,
   ...props 
 }) => {

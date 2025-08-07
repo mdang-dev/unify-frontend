@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ReportModal, CommentItem, CommentInput, Skeleton } from '@/src/components/base';
 import { addToast, ToastProvider } from '@heroui/toast';
-import Avatar from '@/public/images/unify_icon_2.svg';
+import Avatar from '@/public/images/unify_icon_2.png';
 import iconVideo from '@/public/vds.svg';
 import iconImage from '@/public/imgs.svg';
 import { useAuthStore } from '@/src/stores/auth.store';

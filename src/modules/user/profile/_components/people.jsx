@@ -61,7 +61,7 @@ const People = () => {
             >
               <div className="relative h-[70px] w-[70px] overflow-hidden rounded-full border-2 border-gray-200 transition-colors group-hover:border-pink-500 dark:border-gray-700">
                 <Image
-                  src={user?.avatar?.url || '/images/unify_icon_2.svg'}
+                  src={user?.avatar?.url || '/images/unify_icon_2.png'}
                   alt="Avatar"
                   width={70}
                   height={70}

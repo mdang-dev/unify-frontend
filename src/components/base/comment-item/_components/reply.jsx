@@ -4,7 +4,7 @@ import Content from './content';
 import { formatDistanceToNow } from 'date-fns';
 import { useState, useEffect, useRef } from 'react';
 import { addToast } from '@heroui/react';
-import defaultAvatar from '@/public/images/unify_icon_2.svg';
+import defaultAvatar from '@/public/images/unify_icon_2.png';
 import CommentReportModal from './comment-report-modal';
 import DeleteCommentModal from './delete-comment-modal';
 import { reportsCommandApi } from '@/src/apis/reports/command/report.command.api';

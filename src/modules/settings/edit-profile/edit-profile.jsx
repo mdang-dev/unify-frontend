@@ -14,7 +14,7 @@ import { useRouter } from 'next/navigation';
 
 const EditProfile = () => {
   const router = useRouter();
-  const defaultAvatar = '/images/unify_icon_2.svg';
+  const defaultAvatar = '/images/unify_icon_2.png';
   const [avatar, setAvatar] = useState(defaultAvatar);
   const fileInputRef = useRef(null);
   const [daysInMonth, setDaysInMonth] = useState(31);
@@ -199,6 +199,17 @@ const EditProfile = () => {
 
     if (!file) return;
 
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      addToast({
+        title: 'File too large',
+        description: 'Image size must be less than 5MB.',
+        timeout: 3000,
+        color: 'warning',
+      });
+      return;
+    }
+
     if (!allowedTypes.includes(file.type)) {
       addToast({
         title: 'Invalid file type',
@@ -217,6 +228,14 @@ const EditProfile = () => {
         avatar: { url: reader.result, file },
       }));
     };
+    reader.onerror = () => {
+      addToast({
+        title: 'Error',
+        description: 'Failed to read image file.',
+        timeout: 3000,
+        color: 'danger',
+      });
+    };
     reader.readAsDataURL(file);
   };
 
@@ -230,20 +249,38 @@ const EditProfile = () => {
     const formData = new FormData();
     formData.append('files', userData.avatar.file);
 
-    const res = await fetch('/api/upload', {
-      method: 'POST',
-      body: formData,
-    });
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
 
-    if (!res.ok) {
-      const errorText = await res.text();
-      console.error('Avatar upload error:', errorText);
-      throw new Error(`Failed to upload avatar: ${errorText}`);
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('Avatar upload error:', errorText);
+        throw new Error(`Failed to upload avatar: ${errorText}`);
+      }
+
+      const data = await res.json();
+      
+      if (!data.files || data.files.length === 0) {
+        throw new Error('No files uploaded');
+      }
+      
+      const uploadedFile = data.files[0];
+      setAvatar(uploadedFile.url);
+      
+      // Update userData with new avatar URL
+      setUserData(prev => ({
+        ...prev,
+        avatar: { url: uploadedFile.url }
+      }));
+      
+      return uploadedFile;
+    } catch (error) {
+      console.error('Avatar upload failed:', error);
+      throw error;
     }
-
-    const data = await res.json();
-    setAvatar(data.files[0].url);
-    return data.files[0];
   };
 
   const handleSubmit = async (event) => {
@@ -260,8 +297,10 @@ const EditProfile = () => {
       if (userData.avatar.file instanceof File) {
         const uploadedFile = await handleUploadAvatar();
         avatarData = { url: uploadedFile.url };
+      } else if (userData.avatar?.url && userData.avatar.url !== defaultAvatar) {
+        avatarData = { url: userData.avatar.url };
       } else {
-        avatarData = { url: userData.avatar?.url || defaultAvatar };
+        avatarData = null; // Use default avatar
       }
     } catch (error) {
       console.error('Avatar upload failed:', error);
@@ -298,12 +337,23 @@ const EditProfile = () => {
     };
 
     console.log('Sending request data:', requestData);
+    console.log('Avatar data:', avatarData);
 
     updateUser(requestData, {
-      onSuccess: () => {
+      onSuccess: (response) => {
+        // Update local user state with new data
+        if (response && setUser) {
+          setUser({
+            ...user,
+            ...response,
+            avatar: avatarData, // Update avatar in local state
+          });
+        }
+        
         queryClient.invalidateQueries({
           queryKey: [QUERY_KEYS.USER_PROFILE],
         });
+        
         addToast({
           title: 'Success',
           description: 'Profile update successful.',

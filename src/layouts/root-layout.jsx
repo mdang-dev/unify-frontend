@@ -1,5 +1,6 @@
 import { Geist, Geist_Mono, Montserrat } from 'next/font/google';
 import '../styles/globals.css';
+import '../styles/fonts.css'; // Import optimized font loading
 import Head from 'next/head';
 import QueryProvider from '../query-client';
 import '@fortawesome/fontawesome-free/css/all.min.css';

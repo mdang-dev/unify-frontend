@@ -7,7 +7,7 @@ const User = ({ user }) => {
     <div className="flex items-center gap-3">
       <div className="h-10 w-10 overflow-hidden rounded-full border border-gray-200 dark:border-neutral-700">
         <Image
-          src={user.avatar?.url || '/images/default-avatar.png'}
+          src={user.avatar?.url || '/images/unify_icon_2.png'}
           alt="Avatar"
           width={40}
           height={40}

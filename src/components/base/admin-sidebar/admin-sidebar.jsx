@@ -30,7 +30,7 @@ const AdminSidebar = () => {
   const router = useRouter();
   const pathname = usePathname();
   const { user, setUser } = useAuthStore();
-  const defaultAvatar = '/images/unify_icon_2.svg';
+  const defaultAvatar = '/images/unify_icon_2.png';
   const queryClient = useQueryClient();
 
   const logoutUser = async () => {

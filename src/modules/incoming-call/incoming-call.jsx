@@ -158,7 +158,7 @@ const IncomingCall = () => {
         <div className="relative">
           <div className="absolute inset-0 animate-ping rounded-full border-4 border-[#2b65ae] opacity-40" />
           <img
-            src={callData.callerAvatar || '/images/default-avatar.png'}
+                          src={callData.callerAvatar || '/images/unify_icon_2.png'}
             alt="Caller Avatar"
             className="relative z-10 h-16 w-16 rounded-full border-4 border-[#2b65ae] object-cover"
           />

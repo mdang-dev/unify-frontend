@@ -6,7 +6,7 @@ const ParticipantAvatar = ({ trackReference, isSpeaking }) => {
   const [isImageLoaded, setIsImageLoaded] = useState(false);
 
   const avatar =
-    JSON.parse(trackReference.participant?.metadata || '{}').avatar || '/images/unify_icon_2.svg';
+    JSON.parse(trackReference.participant?.metadata || '{}').avatar || '/images/unify_icon_2.png';
 
   return (
     <div className="lk-participant-placeholder relative flex items-center justify-center bg-transparent">

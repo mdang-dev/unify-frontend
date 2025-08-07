@@ -199,7 +199,7 @@ const Slider = ({ srcs = [], onImageClick }) => {
           ) : (
             <div className="relative h-full w-full">
               <Image
-                src={srcs[currentIndex]?.url && typeof srcs[currentIndex].url === 'string' ? srcs[currentIndex].url : '/images/unify_icon_lightmode.svg'}
+                src={srcs[currentIndex]?.url && typeof srcs[currentIndex].url === 'string' ? srcs[currentIndex].url : '/images/unify_icon_2.png'}
                 alt={`Post media ${currentIndex + 1}`}
                 fill
                 className="cursor-pointer object-cover"

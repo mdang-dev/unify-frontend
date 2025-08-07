@@ -10,7 +10,7 @@ const UserInfo = ({ user }) => {
             <img src={user.avatar.url} alt="Avatar" className="h-full w-full object-cover" />
           ) : (
             <img
-              src="/images/unify_icon_2.svg"
+              src="/images/unify_icon_2.png"
               alt="Default Avatar"
               className="h-full w-full object-cover"
             />
