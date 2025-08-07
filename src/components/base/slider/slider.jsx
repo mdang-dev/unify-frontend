@@ -104,39 +104,46 @@ const Slider = ({ srcs = [], onImageClick }) => {
     };
   }, [srcs, currentIndex]);
 
-  // Function to calculate aspect ratio
+  // Function to calculate aspect ratio with consistent sizing
   const calculateAspectRatio = useCallback((media) => {
     if (!media) return 4 / 5;
 
     if (media.width && media.height) {
       const ratio = media.width / media.height;
-      // For videos, use the actual aspect ratio
-      if (isVideo(media)) {
-        return ratio;
+      // Use consistent aspect ratios to prevent layout shifts
+      if (ratio >= 1.5) {
+        return 16 / 9; // Landscape
+      } else if (ratio <= 0.75) {
+        return 3 / 4; // Portrait
+      } else {
+        return 4 / 5; // Square-ish
       }
-      // For images, use responsive ratios
-      return ratio >= 1.5 ? 16 / 9 : 4 / 5;
     }
 
-    return 4 / 5;
-  }, [isVideo]);
+    return 4 / 5; // Default fallback
+  }, []);
 
   useEffect(() => {
     if (srcs[currentIndex]) {
-      setMediaAspectRatio(calculateAspectRatio(srcs[currentIndex]));
+      const newAspectRatio = calculateAspectRatio(srcs[currentIndex]);
+      // Only update if the change is significant to prevent micro-adjustments
+      if (Math.abs(newAspectRatio - mediaAspectRatio) > 0.1) {
+        setMediaAspectRatio(newAspectRatio);
+      }
     }
-  }, [currentIndex, srcs, calculateAspectRatio]);
+  }, [currentIndex, srcs, calculateAspectRatio, mediaAspectRatio]);
 
+  // Consistent container style to prevent layout shifts
   const containerStyle = {
-    aspectRatio: isVideo(srcs[currentIndex]) ? mediaAspectRatio : mediaAspectRatio,
-    minHeight: isVideo(srcs[currentIndex]) ? '300px' : '300px',
-    maxHeight: isVideo(srcs[currentIndex]) ? '80vh' : '80vh',
+    aspectRatio: mediaAspectRatio,
+    minHeight: '300px',
+    maxHeight: '600px', // Fixed max height instead of viewport-based
   };
 
   return (
     <div
       ref={sliderRef}
-      className="relative w-full"
+      className="relative w-full overflow-hidden"
       style={containerStyle}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -195,7 +202,7 @@ const Slider = ({ srcs = [], onImageClick }) => {
                 src={srcs[currentIndex]?.url && typeof srcs[currentIndex].url === 'string' ? srcs[currentIndex].url : '/images/unify_icon_lightmode.svg'}
                 alt={`Post media ${currentIndex + 1}`}
                 fill
-                className="cursor-pointer object-contain"
+                className="cursor-pointer object-cover"
                 onClick={onImageClick}
                 onLoad={() => setLoading(false)}
                 onError={() => {
@@ -204,6 +211,7 @@ const Slider = ({ srcs = [], onImageClick }) => {
                 }}
                 unoptimized
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                priority={currentIndex === 0}
               />
             </div>
           )}

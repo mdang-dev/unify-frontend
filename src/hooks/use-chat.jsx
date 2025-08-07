@@ -23,23 +23,29 @@ export const useChat = (user, chatPartner) => {
   }, [chatMessages]);
 
   // ✅ PERFORMANCE: Optimized chat list query with better caching
-  const { data: chatList, isLoading: isLoadingChatList } = useQuery({
+  const { data: chatList, isLoading: isLoadingChatList, error: chatListError } = useQuery({
     queryKey: [QUERY_KEYS.CHAT_LIST, user?.id],
     queryFn: () => chatQueryApi.getChatList(user?.id),
     enabled: !!user?.id,
     keepPreviousData: true,
-    staleTime: 30000, // 30 seconds - reduce unnecessary refetches
-    cacheTime: 300000, // 5 minutes - keep in cache longer
+    staleTime: 10000,
+    cacheTime: 60000,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
     onSuccess: (data) => {
-      const sortedData = [...data].sort((a, b) => {
+      const safeData = Array.isArray(data) ? data : [];
+      const sortedData = [...safeData].sort((a, b) => {
         const timeA = new Date(a.lastUpdated || 0).getTime();
         const timeB = new Date(b.lastUpdated || 0).getTime();
-        return timeB - timeA; // Descending order (newest first)
+        return timeB - timeA;
       });
       
       queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user?.id], sortedData);
-      
-      // Only log critical errors in development
+    },
+    onError: (error) => {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Chat list fetch error:', error.message);
+      }
     },
   });
 
@@ -510,6 +516,7 @@ export const useChat = (user, chatPartner) => {
     sendMessage,
     chatList,
     isLoadingChatList,
+    chatListError,
     messagesEndRef,
     isConnected,
   };

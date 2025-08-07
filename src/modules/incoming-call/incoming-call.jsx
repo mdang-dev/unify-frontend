@@ -11,27 +11,82 @@ const IncomingCall = () => {
   const audioRef = useRef(null);
 
   useEffect(() => {
-    if (!connected || !client) return;
+    if (!client || !user?.id) {
+      return;
+    }
 
-    const subscription = client.subscribe(`/topic/call/${user?.id}`, (message) => {
-      const data = JSON.parse(message.body);
-      if (
-        typeof data === 'object' &&
-        data !== null &&
-        data.type !== 'accept' &&
-        data.type !== 'reject'
-      ) {
-        setCallData(data);
+    const checkConnection = () => {
+      try {
+        if (!client.connected) {
+          return false;
+        }
+
+        const subscription = client.subscribe(`/topic/call/${user?.id}`, (message) => {
+          try {
+            const data = JSON.parse(message.body);
+            if (
+              typeof data === 'object' &&
+              data !== null &&
+              data.type !== 'accept' &&
+              data.type !== 'reject'
+            ) {
+              setCallData(data);
+            }
+          } catch (parseError) {
+            if (process.env.NODE_ENV === 'development') {
+              console.error('Error parsing incoming call message:', parseError);
+            }
+          }
+        });
+
+        const cleanup = () => {
+          try {
+            subscription?.unsubscribe();
+          } catch (unsubscribeError) {
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('Error unsubscribing from call topic:', unsubscribeError);
+            }
+          }
+        };
+
+        return cleanup;
+      } catch (subscriptionError) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error subscribing to call topic:', subscriptionError);
+        }
+        return false;
       }
-    });
+    };
 
-    return () => subscription?.unsubscribe();
-  }, [connected, client, user?.id]);
+    let cleanup = null;
+    const pollInterval = setInterval(() => {
+      cleanup = checkConnection();
+      if (cleanup) {
+        clearInterval(pollInterval);
+      }
+    }, 500);
+
+    const timeoutId = setTimeout(() => {
+      clearInterval(pollInterval);
+    }, 10000);
+
+    return () => {
+      clearInterval(pollInterval);
+      clearTimeout(timeoutId);
+      if (cleanup) {
+        cleanup();
+      }
+    };
+  }, [client, user?.id]);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (callData && audio) {
-      audio.play().catch((e) => console.warn('Cannot play ringtone:', e));
+      audio.play().catch((e) => {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Cannot play ringtone:', e);
+        }
+      });
     } else if (audio) {
       audio.pause();
       audio.currentTime = 0;
@@ -39,8 +94,15 @@ const IncomingCall = () => {
   }, [callData]);
 
   const handleAccept = () => {
-    if (!connected || !client || !user) return;
-    if (callData) {
+    if (!connected || !client || !user?.id || !callData) {
+      return;
+    }
+
+    try {
+      if (!client.connected) {
+        return;
+      }
+
       client.publish({
         destination: '/app/call.accept',
         body: JSON.stringify({
@@ -50,20 +112,39 @@ const IncomingCall = () => {
       });
       setCallData(null);
       window.open(`/call?room=${callData.room}`, '_blank');
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error accepting call:', error);
+      }
+      setCallData(null);
     }
   };
 
   const handleReject = () => {
-    if (!connected || !client || !user) return;
-    client.publish({
-      destination: '/app/call.reject',
-      body: JSON.stringify({
-        room: callData?.room,
-        callerId: callData?.callerId,
-        calleeId: user?.id,
-      }),
-    });
-    setCallData(null);
+    if (!connected || !client || !user?.id) {
+      return;
+    }
+
+    try {
+      if (!client.connected) {
+        return;
+      }
+
+      client.publish({
+        destination: '/app/call.reject',
+        body: JSON.stringify({
+          room: callData?.room,
+          callerId: callData?.callerId,
+          calleeId: user?.id,
+        }),
+      });
+      setCallData(null);
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error rejecting call:', error);
+      }
+      setCallData(null);
+    }
   };
 
   if (!callData) return null;
