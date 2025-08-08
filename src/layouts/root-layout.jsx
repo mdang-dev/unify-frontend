@@ -4,6 +4,8 @@ import '../styles/fonts.css'; // Import optimized font loading
 import QueryProvider from '../query-client';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import React from 'react';
+import DebugAuth from '../components/debug-auth';
+import ProductionSecurity from '../components/security/production-security';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -31,7 +33,11 @@ export default async function RootLayout({ children }) {
         suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} ${montserrat.className} flex w-full`}
       >
-        <QueryProvider>{children}</QueryProvider>
+        <QueryProvider>
+          {children}
+          {process.env.NODE_ENV === 'development' && <DebugAuth />}
+          <ProductionSecurity />
+        </QueryProvider>
       </body>
     </html>
   );

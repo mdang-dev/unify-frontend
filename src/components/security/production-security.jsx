@@ -116,7 +116,7 @@ export default function ProductionSecurity() {
 
   // Hiển thị thông báo debug
   return (
-    <div className="fixed bottom-4 left-4 bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-2 rounded z-50">
+    <div className="fixed bottom-4 left-24 bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-2 rounded z-50">
       <div className="text-sm">
         🔒 Production Security: <strong>DISABLED</strong> (Development Mode)
       </div>
