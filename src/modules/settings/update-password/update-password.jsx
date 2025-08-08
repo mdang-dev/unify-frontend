@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { addToast, ToastProvider } from '@heroui/toast';
+import React, { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Loader2, Shield } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
@@ -17,24 +17,15 @@ const UpdatePassword = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const getPasswordError = (password) => {
-    if (password.length < 8) {
-      return 'Password must be at least 8 characters long';
-    }
-    if (!/[A-Z]/.test(password)) {
-      return 'Password must contain at least one uppercase letter';
-    }
-    if (!/[a-z]/.test(password)) {
-      return 'Password must contain at least one lowercase letter';
-    }
-    if (!/[0-9]/.test(password)) {
-      return 'Password must contain at least one number';
-    }
-    if (!/[!@#$%^&*]/.test(password)) {
-      return 'Password must contain at least one special character (!@#$%^&*)';
-    }
-    return '';
-  };
+  const passwordRules = useMemo(() => {
+    const lengthOk = newPassword.length >= 8;
+    const upperOk = /[A-Z]/.test(newPassword);
+    const lowerOk = /[a-z]/.test(newPassword);
+    const numberOk = /[0-9]/.test(newPassword);
+    const specialOk = /[!@#$%^&*]/.test(newPassword);
+    const allOk = lengthOk && upperOk && lowerOk && numberOk && specialOk;
+    return { lengthOk, upperOk, lowerOk, numberOk, specialOk, allOk };
+  }, [newPassword]);
 
   const { mutate: changePassword } = useMutation({
     mutationFn: ({ currentPassword, newPassword }) =>
@@ -50,9 +41,8 @@ const UpdatePassword = () => {
       return;
     }
 
-    const passwordError = getPasswordError(newPassword);
-    if (passwordError) {
-      setErrors((prev) => ({ ...prev, newPassword: passwordError }));
+    if (!passwordRules.allOk) {
+      setErrors((prev) => ({ ...prev, newPassword: 'Password does not meet all requirements' }));
       return;
     }
 
@@ -69,23 +59,13 @@ const UpdatePassword = () => {
       },
       {
         onSuccess: () => {
-          addToast({
-            title: 'Success',
-            description: 'Password updated successfully',
-            type: 'success',
-             color: 'success',
-          });
+          toast.success('Password updated successfully', { duration: 3000 });
           setCurrentPassword('');
           setNewPassword('');
           setConfirmPassword('');
         },
         onError: () => {
-          addToast({
-            title: 'Error',
-            description: 'Failed to update password',
-            type: 'error',
-             color: 'danger',
-          });
+          toast.error('Failed to update password', { duration: 3000 });
         },
         onSettled: () => setLoading(false),
       }
@@ -94,7 +74,7 @@ const UpdatePassword = () => {
 
   return (
     <>
-      <ToastProvider placement="top-right" />
+      {/* Sonner Toaster is already mounted in layout */}
       <div className="min-h-screen bg-white dark:bg-black">
         <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
           <motion.div
@@ -118,29 +98,37 @@ const UpdatePassword = () => {
 
             {/* Password Requirements */}
             <div className="border-b border-neutral-200 bg-neutral-50 px-6 py-4 dark:border-neutral-700 dark:bg-neutral-800/50">
-              <h2 className="mb-2 text-sm font-medium text-black dark:text-white">
-                Password Requirements
-              </h2>
-              <ul className="space-y-1 text-sm text-neutral-600 dark:text-neutral-300">
+              <h2 className="mb-2 text-sm font-medium text-black dark:text-white">Password Requirements</h2>
+              <ul className="space-y-1 text-sm">
                 <li className="flex items-center">
-                  <i className="fa-solid fa-check-circle mr-2 text-black dark:text-white"></i>
-                  At least 8 characters long
+                  <i className={`fa-solid fa-check-circle mr-2 ${passwordRules.lengthOk ? 'text-green-600' : 'text-neutral-400 dark:text-neutral-500'}`}></i>
+                  <span className={passwordRules.lengthOk ? 'text-green-700 dark:text-green-400' : 'text-neutral-600 dark:text-neutral-300'}>
+                    At least 8 characters long
+                  </span>
                 </li>
                 <li className="flex items-center">
-                  <i className="fa-solid fa-check-circle mr-2 text-black dark:text-white"></i>
-                  Contains at least one uppercase letter
+                  <i className={`fa-solid fa-check-circle mr-2 ${passwordRules.upperOk ? 'text-green-600' : 'text-neutral-400 dark:text-neutral-500'}`}></i>
+                  <span className={passwordRules.upperOk ? 'text-green-700 dark:text-green-400' : 'text-neutral-600 dark:text-neutral-300'}>
+                    Contains at least one uppercase letter
+                  </span>
                 </li>
                 <li className="flex items-center">
-                  <i className="fa-solid fa-check-circle mr-2 text-black dark:text-white"></i>
-                  Contains at least one lowercase letter
+                  <i className={`fa-solid fa-check-circle mr-2 ${passwordRules.lowerOk ? 'text-green-600' : 'text-neutral-400 dark:text-neutral-500'}`}></i>
+                  <span className={passwordRules.lowerOk ? 'text-green-700 dark:text-green-400' : 'text-neutral-600 dark:text-neutral-300'}>
+                    Contains at least one lowercase letter
+                  </span>
                 </li>
                 <li className="flex items-center">
-                  <i className="fa-solid fa-check-circle mr-2 text-black dark:text-white"></i>
-                  Contains at least one number
+                  <i className={`fa-solid fa-check-circle mr-2 ${passwordRules.numberOk ? 'text-green-600' : 'text-neutral-400 dark:text-neutral-500'}`}></i>
+                  <span className={passwordRules.numberOk ? 'text-green-700 dark:text-green-400' : 'text-neutral-600 dark:text-neutral-300'}>
+                    Contains at least one number
+                  </span>
                 </li>
                 <li className="flex items-center">
-                  <i className="fa-solid fa-check-circle mr-2 text-black dark:text-white"></i>
-                  Contains at least one special character (!@#$%^&*)
+                  <i className={`fa-solid fa-check-circle mr-2 ${passwordRules.specialOk ? 'text-green-600' : 'text-neutral-400 dark:text-neutral-500'}`}></i>
+                  <span className={passwordRules.specialOk ? 'text-green-700 dark:text-green-400' : 'text-neutral-600 dark:text-neutral-300'}>
+                    Contains at least one special character (!@#$%^&*)
+                  </span>
                 </li>
               </ul>
             </div>
