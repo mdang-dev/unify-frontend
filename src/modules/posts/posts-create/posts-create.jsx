@@ -308,6 +308,24 @@ const PostsCreate = () => {
 
       const data = await response.json();
       
+      // Clear previous AI-generated data before processing new data
+      setCaption('');
+      setAudience('PUBLIC');
+      setIsCommentVisible(false);
+      setIsLikeVisible(false);
+      // Clear previous AI-generated images
+      const aiGeneratedIndices = [];
+      files.forEach((file, index) => {
+        if (file.name && file.name.includes('ai-generated-image')) {
+          aiGeneratedIndices.push(index);
+        }
+      });
+      // Remove AI-generated images in reverse order to maintain correct indices
+      aiGeneratedIndices.reverse().forEach(index => {
+        setPreviews(prev => prev.filter((_, i) => i !== index));
+        setFiles(prev => prev.filter((_, i) => i !== index));
+      });
+      
       // Handle the new response format with array structure
       if (Array.isArray(data) && data.length > 0) {
         // Find the parse action response
@@ -649,10 +667,7 @@ const PostsCreate = () => {
 
   const handleExamplePrompt = (examplePrompt) => {
     setPrompt(examplePrompt);
-    // Automatically submit the example prompt
-    setTimeout(() => {
-      handlePromptSubmit();
-    }, 100);
+    // Only fill the prompt box, don't auto-submit
   };
 
 
