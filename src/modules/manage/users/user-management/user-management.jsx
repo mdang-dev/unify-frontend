@@ -110,7 +110,6 @@ const UserManagement = () => {
 
   const handleClearFilters = () => {
     const emptyFilters = {
-      birthDay: '',
       email: '',
       status: '',
       username: '',
@@ -218,18 +217,6 @@ const UserManagement = () => {
           <div className="rounded-lg border bg-card p-6">
             <h2 className="mb-4 text-lg font-semibold">Filter Criteria</h2>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {/* Birthday Filter */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Birthday</label>
-                <Input
-                  type="date"
-                  placeholder="Select date"
-                  value={localFilters.birthDay}
-                  onChange={(e) => handleFilterChange('birthDay', e.target.value)}
-                  className="w-full"
-                />
-              </div>
-
               {/* Email Filter */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Email</label>
@@ -247,16 +234,16 @@ const UserManagement = () => {
                 <label className="text-sm font-medium">Status</label>
                 <Select
                   placeholder="Select status"
-                  value={localFilters.status}
-                  onChange={(e) => handleFilterChange('status', e.target.value)}
+                  selectedKeys={localFilters.status !== '' && localFilters.status !== undefined && localFilters.status !== null ? [String(localFilters.status)] : []}
+                  onSelectionChange={(keys) => {
+                    const value = Array.from(keys)[0] ?? '';
+                    handleFilterChange('status', value);
+                  }}
                   className="w-full"
                 >
-                  {/* status = 0; Normal */}
-                  <SelectItem key="0" value="0">Normal</SelectItem>
-                  {/* status = 1; Temporarily Banned */}
-                  <SelectItem key="1" value="1">Temporarily Banned</SelectItem>
-                  {/* status = 2; Permanently Banned */}
-                  <SelectItem key="2" value="2">Permanently Banned</SelectItem>
+                  <SelectItem key="0">Normal</SelectItem>
+                  <SelectItem key="1">Temporarily Banned</SelectItem>
+                  <SelectItem key="2">Permanently Banned</SelectItem>
                 </Select>
               </div>
 
@@ -336,14 +323,17 @@ const UserManagement = () => {
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Items per page:</span>
               <Select
-                value={localItemsPerPage.toString()}
-                onChange={(e) => handleItemsPerPageChange(e.target.value)}
+                selectedKeys={[String(localItemsPerPage)]}
+                onSelectionChange={(keys) => {
+                  const value = Array.from(keys)[0] ?? String(localItemsPerPage);
+                  handleItemsPerPageChange(value);
+                }}
                 className="w-20"
               >
-                <SelectItem key="5" value="5">5</SelectItem>
-                <SelectItem key="10" value="10">10</SelectItem>
-                <SelectItem key="20" value="20">20</SelectItem>
-                <SelectItem key="50" value="50">50</SelectItem>
+                <SelectItem key="5">5</SelectItem>
+                <SelectItem key="10">10</SelectItem>
+                <SelectItem key="20">20</SelectItem>
+                <SelectItem key="50">50</SelectItem>
               </Select>
             </div>
           </div>

@@ -4,6 +4,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { RadioGroup, RadioGroupItem } from '@/src/components/ui/radio-group';
 import { addToast } from '@heroui/toast';
+import { ModalDialog } from '@/src/components/base';
+import { useModalStore } from '@/src/stores/modal.store';
 import { useAuthStore } from '@/src/stores/auth.store';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { userCommandApi } from '@/src/apis/user/command/user.command.api';
@@ -25,6 +27,7 @@ const EditProfile = () => {
   const defaultBirthday = { day: '', month: '', year: '' };
   const defaultAvatarObj = { url: defaultAvatar };
   const queryClient = useQueryClient();
+  const { openModal, closeModal } = useModalStore();
 
   const { mutate: updateUser } = useMutation({
     mutationFn: (data) => userCommandApi.updateUser(data),
@@ -385,6 +388,11 @@ const EditProfile = () => {
     if (fileInputRef.current) fileInputRef.current.value = null;
   };
 
+  const confirmRemoveAvatar = () => {
+    handleDeleteAvatar();
+    closeModal();
+  };
+
   return (
     <>
       <div className="min-h-screen bg-gray-50 dark:bg-neutral-900">
@@ -402,6 +410,14 @@ const EditProfile = () => {
 
               </div>
             </div>
+
+            <ModalDialog
+              title="Remove avatar?"
+              buttonText="Remove"
+              handleClick={confirmRemoveAvatar}
+            >
+              <p className="mt-3 text-sm text-gray-600">This action will remove your current avatar and revert to the default image.</p>
+            </ModalDialog>
 
             <form
               onSubmit={handleSubmit}
@@ -441,7 +457,7 @@ const EditProfile = () => {
                     </button>
                     <button
                       type="button"
-                      onClick={handleDeleteAvatar}
+                      onClick={openModal}
                       className="inline-flex items-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:text-red-400 dark:hover:bg-red-900/20"
                     >
                       <i className="fa-solid fa-trash mr-2"></i>

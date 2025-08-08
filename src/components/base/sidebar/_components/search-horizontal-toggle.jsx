@@ -49,7 +49,7 @@ const SearchHorizontalToggle = ({ children, isOpen, searchComponentRef }) => {
         <div>{children}</div>
         <div
           ref={searchComponentRef}
-          className={`absolute z-50 overflow-hidden rounded-r-lg border-l-1 border-neutral-300 dark:border-neutral-700 dark:bg-black ${
+          className={`absolute z-50 overflow-hidden rounded-r-lg border-l border-neutral-300 dark:border-transparent dark:bg-neutral-900 ${
             isOpen && 'animate-fadeScale shadow-right-left'
           } ${
             !isOpen && 'animate-fadeOut'
@@ -61,7 +61,7 @@ const SearchHorizontalToggle = ({ children, isOpen, searchComponentRef }) => {
             <div className={`relative`}>
               <Input
                 type={`search`}
-                className={`relative mt-3 border-gray-300 py-5 pl-10 text-black placeholder-black dark:border-neutral-500 dark:text-white`}
+                className={`relative mt-3 border-gray-300 py-5 pl-10 text-black placeholder-black dark:border-transparent dark:text-white`}
                 placeholder={'Search users...'}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -69,7 +69,7 @@ const SearchHorizontalToggle = ({ children, isOpen, searchComponentRef }) => {
               <Search className={`absolute left-2 top-1/2 -translate-y-1/2`} color={`gray`} />
             </div>
           </div>
-          <hr className="border-t-1 border-gray-300 dark:border-neutral-500" />
+        <hr className="border-t border-gray-300 dark:border-transparent" />
 
           <div className="h-[calc(100vh-120px)] overflow-y-auto">
             {isLoading ? (

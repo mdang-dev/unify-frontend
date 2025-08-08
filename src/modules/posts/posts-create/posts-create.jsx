@@ -4,11 +4,19 @@ import { PhotoIcon } from '@heroicons/react/24/solid';
 import { ModalDialog } from '@/src/components/base';
 import { useModalStore } from '@/src/stores/modal.store';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import { Select, SelectItem, Textarea, Spinner } from '@heroui/react';
+import { Spinner, Textarea } from '@heroui/react';
+import {
+  Select as ShSelect,
+  SelectTrigger as ShSelectTrigger,
+  SelectContent as ShSelectContent,
+  SelectItem as ShSelectItem,
+  SelectValue as ShSelectValue,
+} from '@/src/components/ui/select';
+import { Textarea as ShTextarea } from '@/src/components/ui/textarea';
 import PostSwitch from '../_components/post-switch';
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/src/lib/utils';
-import { addToast, ToastProvider } from '@heroui/toast';
+import { toast } from 'sonner';
 import { useAuthStore } from '@/src/stores/auth.store';
 import { postsCommandApi } from '@/src/apis/posts/command/posts.command.api';
 import { hashtagCommandApi } from '@/src/apis/hashtag/command/hashtag.command.api';
@@ -34,11 +42,9 @@ const PostsCreate = () => {
   const savePostMutation = useMutation({
     mutationFn: postsCommandApi.savedPost,
     onError: (error) => {
-      addToast({
-        title: 'Post failed',
+      toast.error('Post failed', {
         description: error.message || 'An error occurred while saving your post.',
-        timeout: 3000,
-        color: 'danger',
+        duration: 3000,
       });
     },
   });
@@ -46,11 +52,9 @@ const PostsCreate = () => {
   const insertHashtagsMutation = useMutation({
     mutationFn: hashtagCommandApi.insertHashtags,
     onError: (error) => {
-      addToast({
-        title: 'Hashtag failed',
+      toast.error('Hashtag failed', {
         description: error.message || 'Could not save hashtags.',
-        timeout: 3000,
-        color: 'danger',
+        duration: 3000,
       });
     },
   });
@@ -58,11 +62,9 @@ const PostsCreate = () => {
   const insertHashtagDetailsMutation = useMutation({
     mutationFn: hashtagCommandApi.insertHashtagDetails,
     onError: (error) => {
-      addToast({
-        title: 'Hashtag details failed',
+      toast.error('Hashtag details failed', {
         description: error.message || 'Could not link hashtags to post.',
-        timeout: 3000,
-        color: 'danger',
+        duration: 3000,
       });
     },
   });
@@ -70,11 +72,9 @@ const PostsCreate = () => {
   const saveMediaMutation = useMutation({
     mutationFn: (media) => mediaCommandApi.savedMedia(media),
     onError: (error) => {
-      addToast({
-        title: 'Media save failed',
+      toast.error('Media save failed', {
         description: error.message || 'Upload succeeded but media saving failed.',
-        timeout: 3000,
-        color: 'danger',
+        duration: 3000,
       });
     },
   });
@@ -101,12 +101,9 @@ const PostsCreate = () => {
 
     // Check file count
     if (files.length + selectedFiles.length > maxFiles) {
-      addToast({
-        title: 'Too many files',
+      toast.warning('Too many files', {
         description: `You can only upload up to ${maxFiles} files.`,
-        timeout: 3000,
-
-        color: 'warning',
+        duration: 3000,
       });
       return;
     }
@@ -114,23 +111,17 @@ const PostsCreate = () => {
     // Validate files
     const validFiles = selectedFiles.filter((file) => {
       if (!allowedTypes.includes(file.type)) {
-        addToast({
-          title: 'Invalid file type',
+        toast.warning('Invalid file type', {
           description: `${file.name} is not a supported file type.`,
-          timeout: 3000,
-
-          color: 'warning',
+          duration: 3000,
         });
         return false;
       }
 
       if (file.size > maxFileSize) {
-        addToast({
-          title: 'File too large',
+        toast.warning('File too large', {
           description: `${file.name} exceeds the 10MB size limit.`,
-          timeout: 3000,
-
-          color: 'warning',
+          duration: 3000,
         });
         return false;
       }
@@ -151,12 +142,9 @@ const PostsCreate = () => {
 
   const handleUpload = async () => {
     if (files.length === 0) {
-      addToast({
-        title: 'No files selected',
+      toast.warning('No files selected', {
         description: 'Please select at least one media file to upload.',
-        timeout: 3000,
-
-        color: 'warning',
+        duration: 3000,
       });
       return null;
     }
@@ -175,12 +163,9 @@ const PostsCreate = () => {
       const data = await res.json();
       return data;
     } catch (error) {
-      addToast({
-        title: 'Upload failed',
+      toast.error('Upload failed', {
         description: 'Failed to upload media files. Please try again.',
-        timeout: 3000,
-
-        color: 'danger',
+        duration: 3000,
       });
       return null;
     }
@@ -190,12 +175,9 @@ const PostsCreate = () => {
     setLoading(true);
 
     if (files.length === 0) {
-      addToast({
-        title: 'No files selected',
+      toast.warning('No files selected', {
         description: 'Please select at least one media file to upload.',
-        timeout: 3000,
-        color: 'warning',
-     
+        duration: 3000,
       });
       setLoading(false);
       return;
@@ -241,22 +223,16 @@ const PostsCreate = () => {
       }
 
       // Final success toast
-      addToast({
-        title: 'Post created!',
+      toast.success('Post created!', {
         description: 'Your post was published successfully.',
-        timeout: 3000,
-        color: 'success',
-     
+        duration: 3000,
       });
 
       refreshPost();
     } catch (error) {
-      addToast({
-        title: 'Unexpected Error',
+      toast.error('Unexpected Error', {
         description: error.message || 'Something went wrong. Please try again.',
-        timeout: 3000,
-        color: 'danger',
-     
+        duration: 3000,
       });
     } finally {
       setLoading(false);
@@ -359,11 +335,9 @@ const PostsCreate = () => {
               await addMultipleImagesFromUrls(responseData.imageUrls, 'ai-generated-image');
             } catch (error) {
               console.error('Failed to add AI-generated images:', error);
-              addToast({
-                title: 'Images failed',
+              toast.warning('Images failed', {
                 description: 'AI suggested images but failed to add them to your post.',
-                timeout: 3000,
-                color: 'warning',
+                duration: 3000,
               });
             }
           }
@@ -373,20 +347,16 @@ const PostsCreate = () => {
               await addImageFromUrl(responseData.imageUrl, 'ai-generated-image.jpg');
             } catch (error) {
               console.error('Failed to add AI-generated image:', error);
-              addToast({
-                title: 'Image failed',
+              toast.warning('Image failed', {
                 description: 'AI suggested an image but failed to add it to your post.',
-                timeout: 3000,
-                color: 'warning',
+                duration: 3000,
               });
             }
           }
         } else {
-          addToast({
-            title: 'Invalid response format',
+          toast.warning('Invalid response format', {
             description: 'Received unexpected response format from AI service.',
-            timeout: 3000,
-            color: 'warning',
+            duration: 3000,
           });
         }
       } else if (data && typeof data === 'object') {
@@ -445,21 +415,17 @@ const PostsCreate = () => {
           }
         }
       } else {
-        addToast({
-          title: 'Prompt processed',
+        toast.success('Prompt processed', {
           description: 'Your prompt has been processed.',
-          timeout: 3000,
-          color: 'success',
+          duration: 3000,
         });
       }
       
     } catch (error) {
       console.error('Error sending prompt:', error);
-      addToast({
-        title: 'Prompt failed',
+      toast.error('Prompt failed', {
         description: error.message || 'Failed to send prompt. Please try again.',
-        timeout: 3000,
-        color: 'danger',
+        duration: 3000,
       });
     } finally {
       setPromptLoading(false);
@@ -493,11 +459,9 @@ const PostsCreate = () => {
       
       return file;
     } catch (error) {
-      addToast({
-        title: 'Conversion failed',
+      toast.error('Conversion failed', {
         description: 'Failed to convert base64 image to file.',
-        timeout: 3000,
-        color: 'danger',
+        duration: 3000,
       });
       return null;
     }
@@ -509,11 +473,9 @@ const PostsCreate = () => {
 
     // Check file count
     if (files.length >= maxFiles) {
-      addToast({
-        title: 'Too many files',
+      toast.warning('Too many files', {
         description: `You can only upload up to ${maxFiles} files.`,
-        timeout: 3000,
-        color: 'warning',
+        duration: 3000,
       });
       return;
     }
@@ -524,11 +486,9 @@ const PostsCreate = () => {
 
     // Check file size
     if (file.size > maxFileSize) {
-      addToast({
-        title: 'File too large',
+      toast.warning('File too large', {
         description: `${filename} exceeds the 10MB size limit.`,
-        timeout: 3000,
-        color: 'warning',
+        duration: 3000,
       });
       return;
     }
@@ -555,11 +515,9 @@ const PostsCreate = () => {
     const imagesToAdd = base64Array.slice(0, remainingSlots);
     
     if (imagesToAdd.length < base64Array.length) {
-      addToast({
-        title: 'Some images skipped',
+      toast.warning('Some images skipped', {
         description: `Only ${remainingSlots} images were added due to file limit.`,
-        timeout: 3000,
-        color: 'warning',
+        duration: 3000,
       });
     }
 
@@ -606,11 +564,9 @@ const PostsCreate = () => {
         img.src = imageUrl;
       });
     } catch (error) {
-      addToast({
-        title: 'Conversion failed',
+      toast.error('Conversion failed', {
         description: 'Failed to convert image URL to base64.',
-        timeout: 3000,
-        color: 'danger',
+        duration: 3000,
       });
       return null;
     }
@@ -623,11 +579,9 @@ const PostsCreate = () => {
         addBase64Image(base64String, filename, mimeType);
       }
     } catch (error) {
-      addToast({
-        title: 'URL conversion failed',
+      toast.error('URL conversion failed', {
         description: error.message || 'Failed to process image from URL.',
-        timeout: 3000,
-        color: 'danger',
+        duration: 3000,
       });
     }
   };
@@ -744,7 +698,7 @@ const PostsCreate = () => {
                     Upload photos or videos to share
                   </p>
                 </div>
-                <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-500 dark:bg-neutral-700 dark:text-gray-400">
+                <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-500 dark:bg-neutral-700 dark:text-gray-300">
                   {previews.length}/12 files
                 </span>
               </div>
@@ -882,12 +836,11 @@ const PostsCreate = () => {
                   <label className="mb-2 block text-sm font-medium text-gray-900 dark:text-gray-100">
                     Caption
                   </label>
-                  <Textarea
+                  <ShTextarea
                     value={caption}
                     onChange={(e) => setCaption(e.target.value)}
                     placeholder="Write your caption here..."
-                    minRows={4}
-                    className="w-full"
+                    className="w-full bg-white text-gray-900 dark:bg-neutral-800 dark:text-gray-100 placeholder:text-neutral-500 dark:placeholder:text-neutral-400"
                   />
                 </div>
 
@@ -895,21 +848,15 @@ const PostsCreate = () => {
                   <label className="mb-2 block text-sm font-medium text-gray-900 dark:text-gray-100">
                     Audience
                   </label>
-                  <Select
-                    selectedKeys={[audience]}
-                    onSelectionChange={(keys) => setAudience(Array.from(keys)[0])}
-                    className="w-full"
-                  >
-                    <SelectItem
-                      key="PUBLIC"
-                      startContent={<i className="fa-solid fa-earth-asia"></i>}
-                    >
-                      Public
-                    </SelectItem>
-                    <SelectItem key="PRIVATE" startContent={<i className="fa-solid fa-lock"></i>}>
-                      Private
-                    </SelectItem>
-                  </Select>
+                  <ShSelect value={audience} onValueChange={setAudience}>
+                    <ShSelectTrigger className="w-full bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100">
+                      <ShSelectValue placeholder="Select audience" />
+                    </ShSelectTrigger>
+                    <ShSelectContent className="bg-white dark:bg-neutral-800">
+                      <ShSelectItem value="PUBLIC">Public</ShSelectItem>
+                      <ShSelectItem value="PRIVATE">Private</ShSelectItem>
+                    </ShSelectContent>
+                  </ShSelect>
                 </div>
 
                 <div className="space-y-4">

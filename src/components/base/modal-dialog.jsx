@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { useModalStore } from '@/src/stores/modal.store';
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
@@ -12,7 +13,13 @@ export default function ModalDialog({
   buttonText = 'Confirm',
   children,
 }) {
-  const { isOpen, closeModal } = useModalStore(); // Access modal state and control functions
+  const { isOpen, closeModal } = useModalStore();
+
+  const renderIcon = () => {
+    if (React.isValidElement(icon)) return icon;
+    const IconComp = icon;
+    return <IconComp className="h-6 w-6 text-red-500" />;
+  };
 
   return (
     <Dialog open={isOpen} onClose={closeModal} className="relative z-10">
@@ -20,7 +27,7 @@ export default function ModalDialog({
       <div className="fixed inset-0 z-10 flex items-center justify-center">
         <DialogPanel className="rounded bg-white p-6 shadow-lg">
           <div className="flex items-center">
-            {icon}
+            {renderIcon()}
             <DialogTitle className="ml-3 text-lg font-semibold">{title}</DialogTitle>
           </div>
           <div>{children}</div>
