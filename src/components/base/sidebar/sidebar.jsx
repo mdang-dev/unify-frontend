@@ -85,7 +85,7 @@ const Sidebar = () => {
   return (
     <SearchHorizontalToggle isOpen={openSearch} searchComponentRef={searchComponentRef}>
       <div className="relative flex flex-row">
-        <div className="fixed left-0 top-0 z-50 flex h-screen flex-col border-r-1 border-neutral-400 dark:border-neutral-700">
+        <div className="fixed left-0 top-0 z-50 flex h-screen flex-col border-r border-neutral-200 dark:border-transparent">
           <UnifyLogoIcon />
           <NotificationModal
             isNotificationOpen={isNotificationOpen}

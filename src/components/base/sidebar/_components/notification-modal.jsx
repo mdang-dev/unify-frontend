@@ -59,12 +59,12 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
   }
 
   return (
-    <div className="fixed left-20 z-50 flex justify-start border-l-1 bg-black bg-opacity-50 dark:border-neutral-700">
+    <div className="fixed left-20 z-50 flex justify-start border-l bg-black bg-opacity-50 dark:border-transparent">
       <div
         ref={modalRef}
-        className={`h-screen max-w-lg overflow-hidden border-r-1 bg-white text-black shadow-lg dark:bg-black dark:text-white ${
+        className={`h-screen max-w-lg overflow-hidden border-r border-neutral-200 bg-white text-black shadow-lg dark:border-transparent dark:bg-neutral-900 dark:text-white ${
           isNotificationOpen ? 'animate-fadeScale' : 'animate-fadeOut'
-        } transition-all duration-300 ease-in-out dark:border-neutral-700`}
+        } transition-all duration-300 ease-in-out`}
         style={{
           width: modalWidth,
         }}
