@@ -77,7 +77,7 @@ const Post = () => {
   }
 
   return (
-    <div className="mx-auto max-w-[580px] px-4 py-4">
+    <div className="mx-auto max-w-[580px] px-4 py-4 w-full">
       <AnimatePresence mode="wait">
         {data?.pages.map((page, pageIndex) => (
           <motion.div
@@ -94,7 +94,7 @@ const Post = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3, delay: index * 0.1 }}
-                className="mb-4"
+                className="mb-4 w-full"
               >
                 <PostItem post={post} />
               </motion.div>

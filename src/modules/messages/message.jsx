@@ -15,7 +15,7 @@ import Picker from 'emoji-picker-react';
 import { Smile, Send, Plus } from 'lucide-react';
 import { useChat } from '@/src/hooks/use-chat';
 import { useSearchParams } from 'next/navigation';
-import AvatarDefault from '@/public/images/unify_icon_2.svg';
+import AvatarDefault from '@/public/images/unify_icon_2.png';
 import { useAuthStore } from '@/src/stores/auth.store';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
@@ -25,6 +25,18 @@ import { addToast } from '@heroui/react';
 const Messages = () => {
   const user = useAuthStore((s) => s.user);
   const [chatPartner, setChatPartner] = useState(null);
+  
+  // ✅ PRODUCTION FIX: Add loading state to handle user hydration
+  const [isUserHydrated, setIsUserHydrated] = useState(false);
+  
+  // ✅ PRODUCTION FIX: Ensure user is hydrated before proceeding
+  useEffect(() => {
+    if (user?.id) {
+      setIsUserHydrated(true);
+    } else {
+      setIsUserHydrated(false);
+    }
+  }, [user]);
   const [opChat, setOpChat] = useState({
     userId: '',
     avatar: '',
@@ -33,7 +45,7 @@ const Messages = () => {
   });
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const { chatMessages, sendMessage, chatList } = useChat(user, chatPartner);
+  const { chatMessages, sendMessage, chatList, isLoadingChatList, chatListError } = useChat(user, chatPartner);
   
   // Silent chat list updates - only log errors
   
@@ -291,10 +303,16 @@ const Messages = () => {
 
           {/* Chat List */}
           <div className="flex-1 overflow-y-scroll border-r-1 px-4 py-1 scrollbar-hide dark:border-r-neutral-700 dark:bg-black">
-            {!chatList ? (
+            {!isUserHydrated ? (
               <div className="flex h-full items-center justify-center">
                 <p className="text-lg text-gray-500 dark:text-neutral-400">
-                  Loading chats...
+                  Loading user...
+                </p>
+              </div>
+            ) : !chatList ? (
+              <div className="flex h-full items-center justify-center">
+                <p className="text-lg text-gray-500 dark:text-neutral-400">
+                  {chatListError ? 'Error loading chats. Please refresh.' : 'Loading chats...'}
                 </p>
               </div>
             ) : filteredChatList?.length > 0 ? (

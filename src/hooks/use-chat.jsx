@@ -7,6 +7,7 @@ import { QUERY_KEYS } from '../constants/query-keys.constant';
 import { chatQueryApi } from '../apis/chat/query/chat.query.api';
 import { getCookie } from '../utils/cookies.util';
 import { COOKIE_KEYS } from '../constants/cookie-keys.constant';
+import { getVietnamTimeISO } from '../utils/timezone.util';
 
 export const useChat = (user, chatPartner) => {
   const [chatMessages, setChatMessages] = useState([]);
@@ -22,23 +23,29 @@ export const useChat = (user, chatPartner) => {
   }, [chatMessages]);
 
   // ✅ PERFORMANCE: Optimized chat list query with better caching
-  const { data: chatList, isLoading: isLoadingChatList } = useQuery({
+  const { data: chatList, isLoading: isLoadingChatList, error: chatListError } = useQuery({
     queryKey: [QUERY_KEYS.CHAT_LIST, user?.id],
     queryFn: () => chatQueryApi.getChatList(user?.id),
     enabled: !!user?.id,
     keepPreviousData: true,
-    staleTime: 30000, // 30 seconds - reduce unnecessary refetches
-    cacheTime: 300000, // 5 minutes - keep in cache longer
+    staleTime: 10000,
+    cacheTime: 60000,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
     onSuccess: (data) => {
-      const sortedData = [...data].sort((a, b) => {
+      const safeData = Array.isArray(data) ? data : [];
+      const sortedData = [...safeData].sort((a, b) => {
         const timeA = new Date(a.lastUpdated || 0).getTime();
         const timeB = new Date(b.lastUpdated || 0).getTime();
-        return timeB - timeA; // Descending order (newest first)
+        return timeB - timeA;
       });
       
       queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user?.id], sortedData);
-      
-      // Only log critical errors in development
+    },
+    onError: (error) => {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Chat list fetch error:', error.message);
+      }
     },
   });
 
@@ -61,24 +68,41 @@ export const useChat = (user, chatPartner) => {
   const connectWebSocket = useCallback(async () => {
     if (!user?.id) return;
 
-    // Fetch CSRF token for WebSocket connection
+    // Fetch CSRF token for WebSocket connection with better error handling
     let csrfToken = null;
     try {
       const token = getCookie(COOKIE_KEYS.AUTH_TOKEN);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/csrf`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
       
       if (response.ok) {
         const data = await response.json();
         csrfToken = data.token;
+      } else {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(`CSRF token fetch failed with status: ${response.status}`);
+        }
       }
     } catch (error) {
-      console.warn('Failed to fetch CSRF token for chat:', error);
+      if (process.env.NODE_ENV === 'development') {
+        if (error.name === 'AbortError') {
+          console.warn('CSRF token fetch timed out');
+        } else {
+          console.warn('Failed to fetch CSRF token for chat:', error.message);
+        }
+      }
+      // Continue without CSRF token if fetch fails
     }
 
     const socket = new SockJS(
@@ -102,13 +126,16 @@ export const useChat = (user, chatPartner) => {
       reconnectDelay: 1000, // Faster reconnection
       maxWebSocketFrameSize: 32 * 1024, // Larger frame size for faster data transfer
       onConnect: () => {
-        console.log('✅ WebSocket connected');
+        // WebSocket successfully connected - set up message subscriptions
         setIsConnected(true);
+        // Subscribe to incoming messages for real-time chat updates
         client.subscribe(`/user/${user?.id}/queue/messages`, handleIncomingMessage);
+        // Subscribe to chat list updates for real-time UI updates
         client.subscribe(`/user/${user?.id}/queue/chat-list-update`, handleChatListUpdate);
-        client.subscribe(`/user/${user?.id}/queue/errors`, (error) =>
+        // Subscribe to error messages for debugging
+        client.subscribe(`/user/${user?.id}/queue/errors`, (error) => {
           console.error('❌ WS error:', error)
-        );
+        });
       },
       onStompError: () => setIsConnected(false),
       onWebSocketClose: () => {
@@ -130,20 +157,18 @@ export const useChat = (user, chatPartner) => {
     };
   }, [connectWebSocket]);
 
-  // Incoming message
+  // Handle incoming real-time messages from WebSocket
   const handleIncomingMessage = useCallback((message) => {
     try {
       const newMessage = JSON.parse(message.body);
       
       // Validate incoming message structure
       if (!newMessage || typeof newMessage !== 'object') {
-        console.error('Invalid message format received:', newMessage);
         return;
       }
       
       // Ensure required fields are present and valid
       if (!newMessage.sender || !newMessage.receiver || typeof newMessage.sender !== 'string' || typeof newMessage.receiver !== 'string') {
-        console.error('Invalid message sender/receiver:', newMessage);
         return;
       }
       
@@ -177,77 +202,125 @@ export const useChat = (user, chatPartner) => {
         return prev;
       });
       
-      updateChatListCache(newMessage);
-    } catch (error) {
-      console.error('❌ handleIncomingMessage error:', error);
-    }
-  }, []);
-
-  const updateChatListCache = useCallback(
-    (newMessage) => {
+      // ✅ FIX: Update chat list immediately for incoming messages
       const otherUserId = newMessage?.sender === user?.id ? newMessage?.receiver : newMessage?.sender;
       const oldList = queryClient.getQueryData([QUERY_KEYS.CHAT_LIST, user?.id]) || [];
       
-      // ✅ FIX: Check if chat already exists
       const existingChatIndex = oldList.findIndex(chat => chat.userId === otherUserId);
       
       let updated;
       if (existingChatIndex >= 0) {
-        // ✅ FIX: Update existing chat
         updated = oldList.map((chat, index) =>
           index === existingChatIndex
             ? {
                 ...chat,
                 lastMessage: newMessage.content || (newMessage.fileUrls?.length ? 'Đã gửi file' : ''),
-                lastUpdated: newMessage.timestamp,
+                lastUpdated: newMessage.timestamp || new Date().toISOString(),
+                hasNewMessage: true,
               }
             : chat
         );
+        
+        if (existingChatIndex > 0) {
+          const chatToMove = updated[existingChatIndex];
+          updated.splice(existingChatIndex, 1);
+          updated.unshift(chatToMove);
+        }
       } else {
-        // ✅ FIX: Add new chat if it doesn't exist
         const newChat = {
           userId: otherUserId,
-          fullname: 'Unknown User', // Will be updated by backend
+          fullname: 'Unknown User',
           username: 'unknown',
           avatar: '',
           lastMessage: newMessage.content || (newMessage.fileUrls?.length ? 'Đã gửi file' : ''),
-          lastUpdated: newMessage.timestamp,
+          lastUpdated: newMessage.timestamp || new Date().toISOString(),
+          hasNewMessage: true,
         };
-        updated = [...oldList, newChat];
+        updated = [newChat, ...oldList];
       }
 
-      // ✅ FIX: Sort by latest message time (newest first)
-      const sorted = updated.sort((a, b) => {
-        const timeA = new Date(a.lastUpdated || 0).getTime();
-        const timeB = new Date(b.lastUpdated || 0).getTime();
-        return timeB - timeA; // Descending order (newest first)
-      });
+      queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user?.id], updated);
+    } catch (error) {
+      // Silent error handling
+    }
+  }, [user?.id, queryClient]);
 
-      queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user?.id], sorted);
-      
-      // Silent update - only log errors
-    },
-    [queryClient, user?.id]
-  );
+
   
   // ✅ REAL-TIME: Handle chat list updates from WebSocket
   const handleChatListUpdate = useCallback((message) => {
     try {
-      const updatedChatList = JSON.parse(message.body);
-      // ✅ FIX: Sort the updated chat list by latest message time
-      const sortedChatList = [...updatedChatList].sort((a, b) => {
-        const timeA = new Date(a.lastUpdated || 0).getTime();
-        const timeB = new Date(b.lastUpdated || 0).getTime();
-        return timeB - timeA; // Descending order (newest first)
-      });
+      const updateData = JSON.parse(message.body);
       
-      // Update React Query cache with sorted chat list
-      queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user?.id], sortedChatList);
+      // ✅ FIX: Handle notification instead of full chat list
+      if (updateData.type === 'chat-list-update') {
+        // This is just a notification, not a full chat list
+        // We don't need to update anything since optimistic updates are already in place
+        return;
+      }
+      
+      // Fallback: if it's still a full chat list (for backward compatibility)
+      if (Array.isArray(updateData)) {
+        const currentList = queryClient.getQueryData([QUERY_KEYS.CHAT_LIST, user?.id]) || [];
+        
+        // Create a map of current chat data to preserve timestamps
+        const currentChatMap = new Map();
+        currentList.forEach(chat => {
+          currentChatMap.set(chat.userId, {
+            lastMessage: chat.lastMessage,
+            lastUpdated: chat.lastUpdated,
+            hasNewMessage: chat.hasNewMessage
+          });
+        });
+        
+        // Merge backend data with current data, preserving timestamps
+        const mergedList = updateData.map(backendChat => {
+          const currentChat = currentChatMap.get(backendChat.userId);
+          
+          if (currentChat) {
+            // Check if current chat has recent optimistic updates (within 5 seconds)
+            const optimisticTime = new Date(currentChat.lastUpdated).getTime();
+            const now = new Date().getTime();
+            const isRecentOptimistic = currentChat.hasNewMessage && (now - optimisticTime) < 5000;
+            
+            if (isRecentOptimistic) {
+              // Keep optimistic data
+              return {
+                ...backendChat,
+                lastMessage: currentChat.lastMessage,
+                lastUpdated: currentChat.lastUpdated,
+                hasNewMessage: currentChat.hasNewMessage
+              };
+            } else {
+              // Use backend data but preserve timestamp if it's more recent
+              const backendTime = new Date(backendChat.lastMessageTime || 0).getTime();
+              const currentTime = new Date(currentChat.lastUpdated || 0).getTime();
+              
+              return {
+                ...backendChat,
+                lastMessage: backendChat.lastMessage || currentChat.lastMessage,
+                lastUpdated: backendTime > currentTime ? 
+                  new Date(backendChat.lastMessageTime).toISOString() : 
+                  currentChat.lastUpdated,
+                hasNewMessage: false
+              };
+            }
+          } else {
+            // New chat from backend
+            return {
+              ...backendChat,
+              lastUpdated: backendChat.lastMessageTime ? 
+                new Date(backendChat.lastMessageTime).toISOString() : 
+                new Date().toISOString(),
+            };
+          }
+        });
+        
+        queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user?.id], mergedList);
+      }
       
     } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('❌ Error parsing chat list update:', error);
-      }
+      // Silent error handling
     }
   }, [queryClient, user?.id]);
 
@@ -264,12 +337,14 @@ export const useChat = (user, chatPartner) => {
     
     // ✅ OPTIMISTIC: Create message with optimistic ID
     const optimisticId = `optimistic_${Date.now()}_${Math.random()}`;
+    // Sử dụng timezone Việt Nam thay vì UTC
+    const currentTime = getVietnamTimeISO();
     const optimisticMessage = {
       id: optimisticId,
       sender: user.id,
       receiver: target,
       content: content || '',
-      timestamp: new Date().toISOString(),
+      timestamp: currentTime,
       fileUrls: [],
       isOptimistic: true, // Flag to identify optimistic messages
     };
@@ -277,11 +352,61 @@ export const useChat = (user, chatPartner) => {
     // ✅ OPTIMISTIC: Add message to UI immediately
     setChatMessages(prev => [...prev, optimisticMessage]);
     
-    // ✅ OPTIMISTIC: Update chat list immediately
-    updateChatListCache(optimisticMessage);
+    // ✅ OPTIMISTIC: Update chat list immediately with new message
+    const otherUserId = optimisticMessage.receiver;
+    const oldList = queryClient.getQueryData([QUERY_KEYS.CHAT_LIST, user?.id]) || [];
+    
+    const existingChatIndex = oldList.findIndex(chat => chat.userId === otherUserId);
+    
+    let updated;
+    if (existingChatIndex >= 0) {
+      updated = oldList.map((chat, index) =>
+        index === existingChatIndex
+          ? {
+              ...chat,
+              lastMessage: optimisticMessage.content || (optimisticMessage.fileUrls?.length ? 'Đã gửi file' : ''),
+              lastUpdated: currentTime, // Use the same timestamp
+              hasNewMessage: true,
+            }
+          : chat
+      );
+      
+      if (existingChatIndex > 0) {
+        const chatToMove = updated[existingChatIndex];
+        updated.splice(existingChatIndex, 1);
+        updated.unshift(chatToMove);
+      }
+    } else {
+      const newChat = {
+        userId: otherUserId,
+        fullname: 'Unknown User',
+        username: 'unknown',
+        avatar: '',
+        lastMessage: optimisticMessage.content || (optimisticMessage.fileUrls?.length ? 'Đã gửi file' : ''),
+        lastUpdated: currentTime, // Use the same timestamp
+        hasNewMessage: true,
+      };
+      updated = [newChat, ...oldList];
+    }
+
+    queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user?.id], updated);
+    
+    // ✅ FIX: Clear optimistic flag after a delay to prevent conflicts
+    setTimeout(() => {
+      const currentList = queryClient.getQueryData([QUERY_KEYS.CHAT_LIST, user?.id]) || [];
+      const cleanedList = currentList.map(chat => {
+        if (chat.userId === otherUserId && chat.hasNewMessage) {
+          return { ...chat, hasNewMessage: false };
+        }
+        return chat;
+      });
+      queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user?.id], cleanedList);
+    }, 3000); // Clear after 3 seconds
     
     // ✅ OPTIMISTIC: Scroll to bottom immediately
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
     
     try {
       // ✅ OPTIMISTIC: Upload files in background
@@ -302,7 +427,25 @@ export const useChat = (user, chatPartner) => {
       );
       
       // ✅ OPTIMISTIC: Update chat list with final message
-      updateChatListCache(finalMessage);
+      const otherUserId = finalMessage.receiver;
+      const oldList = queryClient.getQueryData([QUERY_KEYS.CHAT_LIST, user?.id]) || [];
+      
+      const existingChatIndex = oldList.findIndex(chat => chat.userId === otherUserId);
+      
+      if (existingChatIndex >= 0) {
+        const updated = oldList.map((chat, index) =>
+          index === existingChatIndex
+            ? {
+                ...chat,
+                lastMessage: finalMessage.content || (finalMessage.fileUrls?.length ? 'Đã gửi file' : ''),
+                lastUpdated: currentTime, // Use the same timestamp
+                hasNewMessage: true,
+              }
+            : chat
+        );
+        
+        queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user?.id], updated);
+      }
       
               // ✅ PERFORMANCE: Ultra-fast message sending
         if (isConnected && stompClientRef.current?.connected) {
@@ -379,7 +522,6 @@ export const useChat = (user, chatPartner) => {
       }
       
       if (process.env.NODE_ENV === 'development') {
-        console.log('✅ Message sent via HTTP successfully');
       }
     } catch (error) {
       throw new Error(`HTTP send failed: ${error.message}`);
@@ -391,6 +533,7 @@ export const useChat = (user, chatPartner) => {
     sendMessage,
     chatList,
     isLoadingChatList,
+    chatListError,
     messagesEndRef,
     isConnected,
   };

@@ -6,7 +6,7 @@ const ProfileHeader = ({ user, stats, onEdit, onViewArchive }) => (
     <div className="h-36 w-36 flex-shrink-0 sm:h-48 sm:w-48">
       <div className="relative h-full w-full overflow-hidden rounded-full border-2 border-gray-300 dark:border-neutral-700">
         <Image
-          src={user?.avatar?.url || '/images/unify_icon_2.svg'}
+          src={user?.avatar?.url || '/images/unify_icon_2.png'}
           alt={user?.username || 'Default Avatar'}
           width={154}
           height={154}

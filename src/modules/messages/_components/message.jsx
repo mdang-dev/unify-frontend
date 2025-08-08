@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { useState, useEffect } from 'react';
 import { postsQueryApi } from '@/src/apis/posts/query/posts.query.api';
 
+
 const PostDetailModal = dynamic(() => import('@/src/components/base/post-detail-modal'), { ssr: false });
 
 const POST_LINK_REGEX = /https?:\/\/localhost:3000\/posts\/([0-9a-fA-F\-]{36})/g;
@@ -193,7 +194,7 @@ const Message = ({ messages, messagesEndRef, avatar, onRetryMessage }) => {
             <div
               className={`flex max-w-[75%] flex-col ${
                 isCurrentUser ? 'items-end' : 'items-start'
-              } ${!isCurrentUser && !isFirstOfGroup ? 'pl-[50]' : ''}`}
+              } ${!isCurrentUser && !isFirstOfGroup ? 'pl-[50px]' : ''}`}
             >
               {message.fileUrls?.length > 0 && (
                 <div className="mb-3 mt-2 flex flex-wrap gap-2">

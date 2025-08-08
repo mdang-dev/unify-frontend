@@ -31,26 +31,41 @@ export const useCallStore = create((set, get) => ({
       }
     };
 
-    // Fetch CSRF token for WebSocket connection
+    // Fetch CSRF token for WebSocket connection with better error handling
     let csrfToken = null;
     try {
       const token = getCookie(COOKIE_KEYS.AUTH_TOKEN);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/auth/csrf`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
       
       if (response.ok) {
         const data = await response.json();
         csrfToken = data.token;
+      } else {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(`CSRF token fetch failed with status: ${response.status}`);
+        }
       }
     } catch (error) {
       if (process.env.NODE_ENV === 'development') {
-        console.warn('Failed to fetch CSRF token for call:', error);
+        if (error.name === 'AbortError') {
+          console.warn('CSRF token fetch timed out');
+        } else {
+          console.warn('Failed to fetch CSRF token for call:', error.message);
+        }
       }
+      // Continue without CSRF token if fetch fails
     }
 
     const client = Stomp.over(
@@ -82,29 +97,41 @@ export const useCallStore = create((set, get) => ({
   },
 
   sendSignal: (msg) => {
+    // Send WebRTC signaling messages through STOMP WebSocket
     const { signalingClient, otherUser } = get();
     if (signalingClient && signalingClient.connected) {
+      // Send signaling message to the other user's call endpoint
       signalingClient.send(
         `/app/call/${otherUser}`,
         {},
         JSON.stringify({ ...msg, from: get().userId })
       );
-      console.log('[STOMP] Signal sent', msg);
+      if (process.env.NODE_ENV === 'development') {
+        // Log successful signal transmission for debugging
+        console.log('[STOMP] Signal sent', msg);
+      }
     } else {
-      console.warn('[STOMP] Not connected, cannot send');
+      if (process.env.NODE_ENV === 'development') {
+        // Log connection issue for debugging
+        console.warn('[STOMP] Not connected, cannot send');
+      }
     }
   },
   startCall: async (otherUser) => {
+    // Initialize call as the caller and set up WebRTC connection
     set({ role: 'caller', otherUser });
     await get().setupMedia();
     const pc = get().createPeer();
+    // Create and send WebRTC offer to establish connection
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
     get().sendSignal({ type: 'OFFER', sdp: offer.sdp });
 
+    // Open call window in new tab and set up broadcast channel for communication
     const bc = get().broadcastChannel;
     window.open('/call', '_blank');
 
+    // Send restore message every 500ms until the call window is ready
     const interval = setInterval(() => {
       bc.postMessage({ type: 'restore', role: 'caller', otherUser });
     }, 500);
@@ -117,18 +144,24 @@ export const useCallStore = create((set, get) => ({
     };
   },
   setupMedia: async () => {
+    // Request access to user's camera and microphone for video call
     const local = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
     set({ localStream: local });
   },
 
   createPeer: () => {
+    // Create WebRTC peer connection with STUN server for NAT traversal
     const state = get();
     const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+    // Add local media tracks to the peer connection
     state.localStream.getTracks().forEach((track) => pc.addTrack(track, state.localStream));
+    // Handle incoming remote stream
     pc.ontrack = (event) => set({ remoteStream: event.streams[0] });
+    // Send ICE candidates for connection establishment
     pc.onicecandidate = (event) => {
       if (event.candidate) state.sendSignal({ type: 'ICE', candidate: event.candidate });
     };
+    // Handle connection state changes and end call on failure
     pc.onconnectionstatechange = () => {
       if (pc.connectionState === 'failed') {
         get().endCall();

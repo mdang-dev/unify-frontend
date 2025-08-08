@@ -70,7 +70,7 @@ const FollowerModal = ({ isOpen, onClose, userId, currentUserId }) => {
                   >
                     <div className="h-10 w-10 overflow-hidden rounded-full">
                       <Image
-                        src={follower.avatar?.url || '/images/unify_icon_2.svg'}
+                        src={follower.avatar?.url || '/images/unify_icon_2.png'}
                         alt={follower.username}
                         width={40}
                         height={40}

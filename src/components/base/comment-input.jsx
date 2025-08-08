@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { Smile, Send } from 'lucide-react';
 import Picker from 'emoji-picker-react';
-import defaultAvatar from 'public/images/unify_icon_2.svg';
+import defaultAvatar from '@/public/images/unify_icon_2.png';
 import { useAuthStore } from '@/src/stores/auth.store';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { commentsCommandApi } from '@/src/apis/comments/command/comments.command.api';

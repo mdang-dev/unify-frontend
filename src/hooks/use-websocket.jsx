@@ -22,32 +22,48 @@ export const useWebSocket = (userId) => {
       return null;
     }
 
-    // Fetch CSRF token for WebSocket connection
+    // Fetch CSRF token for WebSocket connection with better error handling
     let csrfToken = null;
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
       const response = await fetch(`${apiUrl}/auth/csrf`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
       
       if (response.ok) {
         const data = await response.json();
         csrfToken = data.token;
+      } else {
+        // Log specific error for debugging
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(`CSRF token fetch failed with status: ${response.status}`);
+        }
       }
     } catch (error) {
-      console.warn('Failed to fetch CSRF token:', error);
+      if (process.env.NODE_ENV === 'development') {
+        if (error.name === 'AbortError') {
+          console.warn('CSRF token fetch timed out');
+        } else {
+          console.warn('Failed to fetch CSRF token:', error.message);
+        }
+      }
       // Continue without CSRF token if fetch fails
     }
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
     const wsUrl = `${apiUrl}/ws?token=${token}`;
     
-    console.log('Creating WebSocket connection:', wsUrl);
-    
+    // Create STOMP client with optimized settings for real-time communication
     return new Client({
       webSocketFactory: () => {
         return new SockJS(wsUrl, null, {
@@ -65,33 +81,33 @@ export const useWebSocket = (userId) => {
       heartbeatIncoming: 15000,
       heartbeatOutgoing: 15000,
       debug: (str) => {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('STOMP Debug:', str);
+        // Only log critical STOMP errors in development
+        if (process.env.NODE_ENV === 'development' && str.includes('error')) {
+          console.warn('STOMP Error:', str);
         }
       },
       // ✅ PERFORMANCE: Optimized connection settings
       reconnectDelay: 3000, // Faster reconnection
       maxWebSocketFrameSize: 16 * 1024, // 16KB frame size
       onConnect: () => {
-        console.log('✅ WebSocket Connected Successfully');
         setConnected(true);
         setError(null);
-        retryCountRef.current = 0; // Reset retry count on successful connection
+        retryCountRef.current = 0;
       },
       onDisconnect: () => {
-        console.log('❌ WebSocket Disconnected');
+        // WebSocket disconnected - update connection state
         setConnected(false);
       },
       onStompError: (frame) => {
-        console.error('❌ STOMP Error:', frame);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('STOMP Error:', frame);
+        }
         setError(`STOMP Error: ${frame.headers.message || 'Connection failed'}`);
         setConnected(false);
         
-        // Retry logic for STOMP errors
         if (retryCountRef.current < maxRetries) {
           retryCountRef.current++;
-          const delay = Math.pow(2, retryCountRef.current) * 1000; // Exponential backoff
-          console.log(`🔄 Retrying connection in ${delay}ms (attempt ${retryCountRef.current}/${maxRetries})`);
+          const delay = Math.pow(2, retryCountRef.current) * 1000;
           
           retryTimeoutRef.current = setTimeout(async () => {
             if (clientRef.current) {
@@ -109,11 +125,10 @@ export const useWebSocket = (userId) => {
         setError(`WebSocket Error: ${event.message || 'Connection failed'}`);
         setConnected(false);
         
-        // Retry logic for WebSocket errors
+        // Implement exponential backoff retry strategy for WebSocket errors
         if (retryCountRef.current < maxRetries) {
           retryCountRef.current++;
-          const delay = Math.pow(2, retryCountRef.current) * 1000;
-          console.log(`🔄 Retrying WebSocket connection in ${delay}ms (attempt ${retryCountRef.current}/${maxRetries})`);
+          const delay = Math.pow(2, retryCountRef.current) * 1000; // Exponential backoff: 2s, 4s, 8s, etc.
           
           retryTimeoutRef.current = setTimeout(async () => {
             if (clientRef.current) {
@@ -127,14 +142,13 @@ export const useWebSocket = (userId) => {
         }
       },
       onWebSocketClose: (event) => {
-        console.log('🔌 WebSocket Closed:', event);
+        // WebSocket connection closed - update connection state
         setConnected(false);
         
-        // Only retry if it's not a normal closure
+        // Only retry reconnection if it's not a normal closure (code 1000 = normal close)
         if (event.code !== 1000 && retryCountRef.current < maxRetries) {
           retryCountRef.current++;
-          const delay = Math.pow(2, retryCountRef.current) * 1000;
-          console.log(`🔄 Retrying after WebSocket close in ${delay}ms (attempt ${retryCountRef.current}/${maxRetries})`);
+          const delay = Math.pow(2, retryCountRef.current) * 1000; // Exponential backoff: 2s, 4s, 8s, etc.
           
           retryTimeoutRef.current = setTimeout(async () => {
             const newClient = await createStompClient();
@@ -165,7 +179,9 @@ export const useWebSocket = (userId) => {
         try {
           stompClient.activate();
         } catch (err) {
-          console.error('Error activating WebSocket client:', err);
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Error activating WebSocket client:', err);
+          }
           setError(`Failed to connect: ${err.message}`);
         }
       }
@@ -182,7 +198,9 @@ export const useWebSocket = (userId) => {
         try {
           clientRef.current.deactivate();
         } catch (err) {
-          console.error('Error deactivating WebSocket client:', err);
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('Error deactivating WebSocket client:', err.message);
+          }
         }
       }
     };
@@ -200,7 +218,9 @@ export const useWebSocket = (userId) => {
       try {
         clientRef.current.deactivate();
       } catch (err) {
-        console.error('Error deactivating during manual reconnect:', err);
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Error deactivating during manual reconnect:', err.message);
+        }
       }
     }
     

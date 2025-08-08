@@ -71,31 +71,44 @@ export const useNotification = (userId) => {
           return;
         }
         
-        // Fetch CSRF token for WebSocket connection
+        // Fetch CSRF token for WebSocket connection with better error handling
         let csrfToken = null;
         try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+          
           const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/csrf`, {
             method: 'GET',
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json',
             },
+            signal: controller.signal,
           });
+          
+          clearTimeout(timeoutId);
           
           if (response.ok) {
             const data = await response.json();
             csrfToken = data.token;
-            console.log('CSRF token fetched for notifications');
           } else {
-            console.warn('Failed to fetch CSRF token, status:', response.status);
+            if (process.env.NODE_ENV === 'development') {
+              console.warn(`CSRF token fetch failed with status: ${response.status}`);
+            }
           }
         } catch (error) {
-          console.warn('Failed to fetch CSRF token for notifications:', error);
+          if (process.env.NODE_ENV === 'development') {
+            if (error.name === 'AbortError') {
+              console.warn('CSRF token fetch timed out');
+            } else {
+              console.warn('CSRF token fetch error - continue without it:', error.message);
+            }
+          }
+          // Continue without CSRF token if fetch fails
         }
 
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Setting up WebSocket connection for notifications...');
-        }
+
+        // Create WebSocket connection for real-time notifications
         const socket = new SockJS(`${process.env.NEXT_PUBLIC_API_URL}/ws?token=${token}`, null, {
           transports: ['websocket'], // ✅ PERFORMANCE: WebSocket only
           timeout: 8000, // ✅ PERFORMANCE: Faster timeout
@@ -113,10 +126,8 @@ export const useNotification = (userId) => {
           heartbeatOutgoing: 15000,
           onConnect: () => {
             try {
+              // Subscribe to user-specific notification queue for real-time updates
               client.subscribe(`/user/${userId}/queue/notifications`, handleWebSocketMessage);
-              if (process.env.NODE_ENV === 'development') {
-                console.log('✅ WebSocket connected for notifications');
-              }
             } catch (error) {
               if (process.env.NODE_ENV === 'development') {
                 console.error('❌ Failed to subscribe to notifications:', error);
@@ -124,31 +135,25 @@ export const useNotification = (userId) => {
             }
           },
           onStompError: (frame) => {
-            console.error('❌ STOMP error in notifications:', frame);
-            console.error('Error details:', frame.headers?.message || 'Unknown error');
-            console.error('Error headers:', frame.headers);
+            // Handle STOMP protocol errors silently to avoid console spam
           },
           onWebSocketError: (event) => {
-            console.error('❌ WebSocket error in notifications:', event);
-            console.error('Error type:', event.type);
-            console.error('Error target:', event.target);
+            // Handle WebSocket errors silently to avoid console spam
           },
           onWebSocketClose: (event) => {
-            console.log('🔌 WebSocket closed for notifications:', event);
-            console.log('Close code:', event.code);
-            console.log('Close reason:', event.reason);
+            // Handle WebSocket close events silently to avoid console spam
           },
         });
 
         try {
+          // Activate the STOMP client to start listening for notifications
           client.activate();
           stompClientRef.current = client;
-          console.log('WebSocket client activated for notifications');
         } catch (error) {
-          console.error('❌ Failed to activate WebSocket client for notifications:', error);
+          // Client activation failed - handle silently
         }
       } catch (error) {
-        console.error('❌ Failed to setup WebSocket for notifications:', error);
+        // WebSocket setup failed - handle silently
       }
     };
 

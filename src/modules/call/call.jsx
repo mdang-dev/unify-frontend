@@ -106,7 +106,7 @@ export default function Call() {
         <div className="fixed right-6 top-6 z-50 flex items-center gap-4 rounded-xl bg-white/10 px-6 py-4 text-white shadow-xl ring-1 ring-white/20 backdrop-blur-lg">
           <div className="relative h-12 w-12">
             <img
-              src={data?.calleeAvatar ?? '/default-avatar.png'}
+              src={data?.calleeAvatar ?? '/images/unify_icon_2.png'}
               alt="User Avatar"
               className="h-12 w-12 rounded-full object-cover ring-2 ring-white"
             />

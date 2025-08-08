@@ -19,7 +19,7 @@ const User = ({ href = '', username = '', firstname = '', lastname = '', avatar 
       <div className="flex items-center p-2">
         <div className="relative h-14 w-14">
           <img
-            src={avatar || '/default-avatar.png'}
+                          src={avatar || '/images/unify_icon_2.png'}
             alt={username}
             className="h-full w-full rounded-full border border-gray-300 transition-transform hover:scale-105 dark:border-neutral-700"
           />

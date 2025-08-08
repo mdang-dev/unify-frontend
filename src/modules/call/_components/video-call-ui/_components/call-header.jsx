@@ -28,7 +28,7 @@ export default function CallHeader({ participants, isScreenSharing }) {
             className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1"
           >
             <img
-              src={participant.avatar || '/default-avatar.png'}
+              src={participant.avatar || '/images/unify_icon_2.png'}
               alt={participant.name}
               className="h-6 w-6 rounded-full object-cover"
             />

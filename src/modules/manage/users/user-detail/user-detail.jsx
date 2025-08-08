@@ -215,7 +215,7 @@ const UserDetail = () => {
           <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="flex items-center gap-4">
               <Avatar
-                src={user.avatar?.url || '/images/default-avatar.png'}
+                src={user.avatar?.url || '/images/unify_icon_2.png'}
                 name={`${user.firstName} ${user.lastName}`}
                 size="lg"
                 className="flex-shrink-0"

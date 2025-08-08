@@ -5,7 +5,7 @@ import { CommentItem, CommentInput } from '..';
 import Cookies from 'js-cookie';
 import Link from 'next/link';
 import Image from 'next/image';
-import Avatar from '@/public/images/unify_icon_2.svg';
+import Avatar from '@/public/images/unify_icon_2.png';
 import OptionsPostModal from './_components/options-post-modal';
 import DeletePostModal from './_components/delete-post-modal';
 import ArchivePostModal from './_components/archive-post-modal';
@@ -17,7 +17,7 @@ import { commentsQueryApi } from '@/src/apis/comments/query/comments.query.api';
 import { postsQueryApi } from '@/src/apis/posts/query/posts.query.api';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import NavButton from './_components/nav-button';
-
+import Bookmark from '@/src/components/base/bookmark';
 const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete }) => {
   const [openList, setOpenList] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -254,7 +254,14 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete }) => {
                 {postData.user?.username}
               </span>
             </div>
+            <div className="flex items-center">
+             <Bookmark
+                          postId={postData.id}
+                          className="!text-xl transition-opacity hover:opacity-90 mr-3"
+                          classNameIcon="text-gray-900 dark:text-gray-100"
+                        />
             <NavButton onClick={() => setOpenList(true)} content="•••" className="text-2xl" />
+            </div>            
             {openList && (
               <OptionsPostModal
                 isOwner={isOwner}

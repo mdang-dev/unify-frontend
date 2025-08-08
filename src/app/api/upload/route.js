@@ -40,7 +40,9 @@ export async function POST(req) {
 
     return NextResponse.json({ files: allFiles });
   } catch (error) {
-    console.error('Upload Error:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Upload Error:', error);
+    }
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
   }
 }

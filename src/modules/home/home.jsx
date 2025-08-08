@@ -11,7 +11,7 @@ export default function Home() {
       <div className="flex">
         <div className="h-screen basis-3/4">
           <div id="newsfeed" className="no-scrollbar bg-[#f5f5f5] h-full overflow-y-scroll py-8">
-            <div className="mx-auto flex flex-col w-full ">
+            <div className="mx-auto flex flex-col w-full max-w-full">
               <Post />
             </div>
           </div>

@@ -1,6 +1,6 @@
 import { X } from 'lucide-react';
 import Image from 'next/image';
-import Avatar from '@/public/images/unify_icon_2.svg';
+import Avatar from '@/public/images/unify_icon_2.png';
 
 const UserHistorySearch = ({ user, onClick, onDelete, isHistory = false }) => {
   return (

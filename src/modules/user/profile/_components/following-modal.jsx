@@ -70,7 +70,7 @@ const FollowingModal = ({ isOpen, onClose, userId, currentUserId }) => {
                   >
                     <div className="h-10 w-10 overflow-hidden rounded-full">
                       <Image
-                        src={user.avatar?.url || '/images/unify_icon_2.svg'}
+                        src={user.avatar?.url || '/images/unify_icon_2.png'}
                         alt={user.username}
                         width={40}
                         height={40}

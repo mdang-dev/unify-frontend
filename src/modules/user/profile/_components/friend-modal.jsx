@@ -70,7 +70,7 @@ const FriendModal = ({ isOpen, onClose, userId, currentUserId }) => {
                   >
                     <div className="h-10 w-10 overflow-hidden rounded-full">
                       <Image
-                        src={friend.avatar?.url || '/images/unify_icon_2.svg'}
+                        src={friend.avatar?.url || '/images/unify_icon_2.png'}
                         alt={friend.username}
                         width={40}
                         height={40}
