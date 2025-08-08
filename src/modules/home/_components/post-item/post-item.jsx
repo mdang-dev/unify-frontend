@@ -128,9 +128,9 @@ const PostItem = ({ post }) => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
-        className="w-full overflow-hidden rounded-lg bg-white shadow-md transition-shadow duration-300 hover:shadow-lg dark:bg-neutral-900"
+        className="w-full overflow-hidden rounded-lg bg-white shadow-md transition-shadow duration-300 hover:shadow-lg dark:bg-neutral-800"
       >
-        <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-neutral-800">
+        <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-neutral-700">
           <User user={post.user} />
           <div className="flex items-center gap-2">
             <button
@@ -158,7 +158,7 @@ const PostItem = ({ post }) => {
           postId={post.id}
         />
 
-        <div className="w-full bg-white dark:bg-neutral-900">
+        <div className="w-full bg-white dark:bg-neutral-800">
           <div className="relative overflow-hidden">
             <Slider srcs={post.media} onImageClick={() => setShowFullImage(true)} />
           </div>
