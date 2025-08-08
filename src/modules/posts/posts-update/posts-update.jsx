@@ -4,13 +4,21 @@ import { PhotoIcon } from '@heroicons/react/24/solid';
 import { ModalDialog } from '@/src/components/base';
 import { useModalStore } from '@/src/stores/modal.store';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import { Select, SelectItem, Textarea } from '@heroui/react';
+import { Select as HerouiSelect, SelectItem as HerouiSelectItem, Textarea as HerouiTextarea, Textarea } from '@heroui/react';
 import PostSwitch from '../_components/post-switch';
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/src/lib/utils';
 import { addToast, ToastProvider } from '@heroui/toast';
 import { redirect, useParams } from 'next/navigation';
 import { Spinner } from '@heroui/react';
+import {
+  Select as ShSelect,
+  SelectTrigger as ShSelectTrigger,
+  SelectContent as ShSelectContent,
+  SelectItem as ShSelectItem,
+  SelectValue as ShSelectValue,
+} from '@/src/components/ui/select';
+import { Textarea as ShTextarea } from '@/src/components/ui/textarea';
 import MediaPreview from '../_components/media-preview';
 import User from './_components/user';
 import { useAuthStore } from '@/src/stores/auth.store';
@@ -35,6 +43,8 @@ const PostsUpdate = () => {
   const { postId } = useParams();
   const [existingFiles, setExistingFiles] = useState([]);
   const { user } = useAuthStore();
+  const [prompt, setPrompt] = useState('');
+  const [promptLoading, setPromptLoading] = useState(false);
 
   const updatePostMutation = useMutation({
     mutationFn: postsCommandApi.updatePost,
@@ -202,57 +212,48 @@ const PostsUpdate = () => {
     setAudience('PUBLIC');
   };
 
-  const handleSave = async () => {
-    try {
-      setLoading(true);
+  const handleExamplePrompt = (examplePrompt) => {
+    setPrompt(examplePrompt);
+  };
 
-      // Validate media
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      // Validate at least one media remains/added
       if (files.length === 0 && existingFiles.length === 0) {
         addToast({
           title: 'No files uploaded',
           description: 'Please upload at least one media file (image/video).',
           timeout: 3000,
-
           color: 'warning',
         });
+        setLoading(false);
         return;
       }
 
-      // Extract hashtags from caption
-      const hashtagList = caption
-        .toString()
-        .split(/(\#[a-zA-Z0-9_]+)/g)
-        .filter((word) => word.startsWith('#'));
-
-      if (hashtagList.length > 0) {
-        const newHashtags = hashtagList.map((h) => ({ content: h }));
-
-        const savedHashtags = await insertHashtagsMutation.mutateAsync(newHashtags);
-        if (!savedHashtags) return;
-
-        const hashtagDetails = savedHashtags.map((h) => ({
-          hashtag: h,
-          post: post,
-        }));
-
-        if (hashtagDetails.length > 0) {
-          const savedDetails = await insertHashtagDetailsMutation.mutateAsync(hashtagDetails);
-          if (!savedDetails) return;
-        }
+      // Extract hashtags from caption (same pattern as create page)
+      const hashtagList = caption.match(/#[a-zA-Z0-9_]+/g) || [];
+      const savedHashtags = hashtagList.length
+        ? await insertHashtagsMutation.mutateAsync(hashtagList.map((h) => ({ content: h })))
+        : [];
+      if (savedHashtags.length > 0) {
+        await insertHashtagDetailsMutation.mutateAsync(
+          savedHashtags.map((h) => ({ hashtag: h, post }))
+        );
       }
 
-      const fetchedFiles = await handleUpload();
-
+      // Upload only when there are new files selected
       let savedMedia = [];
-      if (fetchedFiles?.files?.length > 0) {
+      if (files.length > 0) {
+        const fetchedFiles = await handleUpload();
+        if (!fetchedFiles?.files?.length) throw new Error('Failed to upload media');
         const newMedia = fetchedFiles.files.map((file) => ({
-          post: post,
+          post,
           url: file.url,
           fileType: file.file_type,
           size: file.size,
           mediaType: file.media_type.toUpperCase(),
         }));
-
         savedMedia = await saveMediaMutation.mutateAsync(newMedia);
       }
 
@@ -272,15 +273,14 @@ const PostsUpdate = () => {
 
       addToast({
         title: 'Success',
-        description:
-          'Your post is updated successfully. Other users can now interact with your post.',
+        description: 'Your post was updated successfully.',
         timeout: 3000,
         color: 'success',
       });
     } catch (error) {
       addToast({
         title: 'Encountered an error',
-        description: 'Error: ' + error.message || error,
+        description: 'Error: ' + (error?.message || error),
         timeout: 3000,
         color: 'danger',
       });
@@ -293,6 +293,188 @@ const PostsUpdate = () => {
     setPreviews((prevPreviews) => prevPreviews.filter((item) => item.url !== value.url));
     setFiles((prevFiles) => prevFiles.filter((item) => item.url !== value.url));
     setExistingFiles((prevFiles) => prevFiles.filter((item) => item.url !== value.url));
+  };
+
+  // AI Assistant helpers (mirroring Create Post)
+  const convertBase64ToFile = (base64String, filename = 'image.jpg', mimeType = 'image/jpeg') => {
+    try {
+      const base64Data = base64String.replace(/^data:image\/[a-z]+;base64,/, '');
+      const byteCharacters = atob(base64Data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) byteNumbers[i] = byteCharacters.charCodeAt(i);
+      const byteArray = new Uint8Array(byteNumbers);
+      return new File([byteArray], filename, { type: mimeType });
+    } catch (error) {
+      addToast({ title: 'Conversion failed', description: 'Failed to convert base64 image to file.', timeout: 3000, color: 'danger' });
+      return null;
+    }
+  };
+
+  const addBase64Image = (base64String, filename = 'image.jpg', mimeType = 'image/jpeg') => {
+    const maxFiles = 12;
+    const maxFileSize = 10 * 1024 * 1024;
+    if (files.length >= maxFiles) {
+      addToast({ title: 'Too many files', description: `You can only upload up to ${maxFiles} files.`, timeout: 3000, color: 'warning' });
+      return;
+    }
+    const file = convertBase64ToFile(base64String, filename, mimeType);
+    if (!file) return;
+    if (file.size > maxFileSize) {
+      addToast({ title: 'File too large', description: `${filename} exceeds the 10MB size limit.`, timeout: 3000, color: 'warning' });
+      return;
+    }
+    setFiles((prev) => [...prev, file]);
+    const newPreview = { url: URL.createObjectURL(file), type: file.type };
+    setPreviews((prev) => [...prev, newPreview]);
+  };
+
+  const addMultipleBase64Images = (base64Array, filenamePrefix = 'image') => {
+    const maxFiles = 12;
+    const remainingSlots = maxFiles - files.length;
+    if (base64Array.length === 0) return;
+    const imagesToAdd = base64Array.slice(0, remainingSlots);
+    if (imagesToAdd.length < base64Array.length) {
+      addToast({ title: 'Some images skipped', description: `Only ${remainingSlots} images were added due to file limit.`, timeout: 3000, color: 'warning' });
+    }
+    imagesToAdd.forEach((base64String, index) => {
+      const filename = `${filenamePrefix}_${index + 1}.jpg`;
+      addBase64Image(base64String, filename);
+    });
+  };
+
+  const convertUrlToBase64 = async (imageUrl, filename = 'image.jpg', mimeType = 'image/jpeg') => {
+    try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      return new Promise((resolve, reject) => {
+        img.onload = () => {
+          try {
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+            const base64String = canvas.toDataURL(mimeType, 0.8);
+            resolve(base64String);
+          } catch (error) {
+            reject(new Error('Failed to convert image to base64'));
+          }
+        };
+        img.onerror = () => reject(new Error('Failed to load image from URL'));
+        img.src = imageUrl;
+      });
+    } catch (error) {
+      addToast({ title: 'Conversion failed', description: 'Failed to convert image URL to base64.', timeout: 3000, color: 'danger' });
+      return null;
+    }
+  };
+
+  const addImageFromUrl = async (imageUrl, filename = 'image.jpg', mimeType = 'image/jpeg') => {
+    try {
+      const base64String = await convertUrlToBase64(imageUrl, filename, mimeType);
+      if (base64String) addBase64Image(base64String, filename, mimeType);
+    } catch (error) {
+      addToast({ title: 'URL conversion failed', description: error.message || 'Failed to process image from URL.', timeout: 3000, color: 'danger' });
+    }
+  };
+
+  const addMultipleImagesFromUrls = async (urlArray, filenamePrefix = 'image') => {
+    const maxFiles = 12;
+    const remainingSlots = maxFiles - files.length;
+    if (urlArray.length === 0) return;
+    const imagesToAdd = urlArray.slice(0, remainingSlots);
+    if (imagesToAdd.length < urlArray.length) {
+      addToast({ title: 'Some images skipped', description: `Only ${remainingSlots} images were added due to file limit.`, timeout: 3000, color: 'warning' });
+    }
+    for (let i = 0; i < imagesToAdd.length; i++) {
+      const url = imagesToAdd[i];
+      const filename = `${filenamePrefix}_${i + 1}.jpg`;
+      try {
+        await addImageFromUrl(url, filename);
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      } catch (error) {
+        console.error(`Failed to process image ${i + 1}:`, error);
+      }
+    }
+  };
+
+  const handlePromptSubmit = async () => {
+    if (!prompt.trim()) return;
+    setPromptLoading(true);
+    try {
+      const response = await fetch(`https://unify-mobile.app.n8n.cloud/webhook/generate-post`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: prompt.trim() }),
+      });
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
+
+      // Reset AI-driven fields
+      setCaption('');
+      setAudience('PUBLIC');
+      setIsCommentVisible(false);
+      setIsLikeVisible(false);
+
+      if (Array.isArray(data) && data.length > 0) {
+        const parseAction = data.find((item) => item.action === 'parse');
+        if (parseAction && parseAction.response && parseAction.response.output) {
+          const responseData = parseAction.response.output;
+          if (responseData.captions) setCaption(responseData.captions);
+          if (responseData.audience) setAudience(responseData.audience);
+          if (typeof responseData.isCommentVisible === 'boolean') setIsCommentVisible(!responseData.isCommentVisible);
+          if (typeof responseData.isLikeVisible === 'boolean') setIsLikeVisible(!responseData.isLikeVisible);
+          if (responseData.imageUrls && Array.isArray(responseData.imageUrls)) {
+            try {
+              await addMultipleImagesFromUrls(responseData.imageUrls, 'ai-generated-image');
+            } catch (error) {
+              addToast({ title: 'Images failed', description: 'AI suggested images but failed to add them to your post.', timeout: 3000, color: 'warning' });
+            }
+          } else if (responseData.imageUrl) {
+            try {
+              await addImageFromUrl(responseData.imageUrl, 'ai-generated-image.jpg');
+            } catch (error) {
+              addToast({ title: 'Image failed', description: 'AI suggested an image but failed to add it to your post.', timeout: 3000, color: 'warning' });
+            }
+          }
+        } else {
+          addToast({ title: 'Invalid response format', description: 'Received unexpected response format from AI service.', timeout: 3000, color: 'warning' });
+        }
+      } else {
+        let responseData = data;
+        if (data && typeof data === 'object' && data.output && typeof data.output === 'object') {
+          responseData = data.output;
+        }
+        if (responseData?.captions) setCaption(responseData.captions);
+        if (responseData?.audience) setAudience(responseData.audience);
+        if (typeof responseData?.isCommentVisible === 'boolean') setIsCommentVisible(!responseData.isCommentVisible);
+        if (typeof responseData?.isLikeVisible === 'boolean') setIsLikeVisible(!responseData.isLikeVisible);
+        if (responseData?.imageUrls && Array.isArray(responseData.imageUrls)) {
+          try {
+            await addMultipleImagesFromUrls(responseData.imageUrls, 'ai-generated-image');
+          } catch (error) {
+            addToast({ title: 'Images failed', description: 'AI suggested images but failed to add them to your post.', timeout: 3000, color: 'warning' });
+          }
+        } else if (responseData?.imageUrl) {
+          try {
+            await addImageFromUrl(responseData.imageUrl, 'ai-generated-image.jpg');
+          } catch (error) {
+            addToast({ title: 'Image failed', description: 'AI suggested an image but failed to add it to your post.', timeout: 3000, color: 'warning' });
+          }
+        }
+      }
+    } catch (error) {
+      addToast({ title: 'Prompt failed', description: error.message || 'Failed to send prompt. Please try again.', timeout: 3000, color: 'danger' });
+    } finally {
+      setPromptLoading(false);
+    }
+  };
+
+  const handlePromptKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handlePromptSubmit();
+    }
   };
 
   useEffect(() => {
@@ -420,16 +602,94 @@ const PostsUpdate = () => {
                 <div className="flex items-center justify-between border-b border-gray-200 pb-4 dark:border-neutral-700">
                   <User user={user} />
                 </div>
+                   {/* AI Prompt Section - Above Caption */}
+                <div className="rounded-lg bg-gradient-to-r from-purple-50 to-blue-50 p-3 shadow-sm dark:from-purple-900/20 dark:to-blue-900/20">
+                  <div className="mb-2 flex items-center gap-2">
+                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-r from-purple-500 to-blue-500">
+                      <i className="fa-solid fa-robot text-xs text-white"></i>
+                    </div>
+                    <span className="text-xs font-medium text-gray-900 dark:text-gray-100">AI Assistant</span>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Textarea
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.target.value)}
+                      onKeyPress={handlePromptKeyPress}
+                      placeholder="Ask AI for help with your post..."
+                      minRows={1}
+                      className="flex-1"
+                      disabled={promptLoading}
+                      classNames={{
+                        input: "bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm text-xs",
+                        inputWrapper: "border border-transparent bg-gradient-to-r from-purple-200/50 to-blue-200/50 dark:from-purple-700/30 dark:to-blue-700/30 backdrop-blur-sm hover:from-purple-300/50 hover:to-blue-300/50 dark:hover:from-purple-600/30 dark:hover:to-blue-600/30 transition-all duration-300"
+                      }}
+                    />
+                    <button
+                      onClick={handlePromptSubmit}
+                      disabled={promptLoading || !prompt.trim()}
+                      className={cn(
+                        'flex h-6 w-6 items-center justify-center rounded-md',
+                        'bg-gradient-to-r from-purple-500 to-blue-500 text-white',
+                        'hover:from-purple-600 hover:to-blue-600',
+                        'disabled:cursor-not-allowed disabled:opacity-50',
+                        'transition-all duration-300 shadow-sm hover:shadow-md',
+                        'transform hover:scale-105 active:scale-95'
+                      )}
+                    >
+                      {promptLoading ? (
+                        <Spinner size="sm" color="white" />
+                      ) : (
+                        <i className="fa-solid fa-paper-plane text-xs"></i>
+                      )}
+                    </button>
+                  </div>
+                  
+                  {/* Example Prompts */}
+                  <div className="mt-3 pt-3 border-t border-purple-200/50 dark:border-purple-700/30">
+                    <div className="mb-2 flex items-center gap-2">
+                      <i className="fa-solid fa-lightbulb text-xs text-purple-500"></i>
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Try these examples:</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => handleExamplePrompt("A cat playing on the grass")}
+                        disabled={promptLoading}
+                        className={cn(
+                          'px-3 py-1 text-xs font-medium rounded-full transition-all duration-200',
+                          'bg-purple-100 text-purple-700 hover:bg-purple-200',
+                          'dark:bg-purple-900/30 dark:text-purple-300 dark:hover:bg-purple-900/50',
+                          'disabled:cursor-not-allowed disabled:opacity-50',
+                          'transform hover:scale-105 active:scale-95'
+                        )}
+                      >
+                        🐱 A cat playing on the grass
+                      </button>
+                      <button
+                        onClick={() => handleExamplePrompt("A beautiful sunset over the ocean")}
+                        disabled={promptLoading}
+                        className={cn(
+                          'px-3 py-1 text-xs font-medium rounded-full transition-all duration-200',
+                          'bg-blue-100 text-blue-700 hover:bg-blue-200',
+                          'dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50',
+                          'disabled:cursor-not-allowed disabled:opacity-50',
+                          'transform hover:scale-105 active:scale-95'
+                        )}
+                      >
+                        🌅 A beautiful sunset over the ocean
+                      </button>
+                    </div>
+                  </div>
+                </div>
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-900 dark:text-gray-100">
                     Caption
                   </label>
-                  <Textarea
+                  <ShTextarea
                     value={caption}
                     onChange={(e) => setCaption(e.target.value)}
                     placeholder="Write your caption here..."
-                    minRows={4}
-                    className="w-full"
+                    className="w-full bg-white text-gray-900 dark:bg-neutral-800 dark:text-gray-100 placeholder:text-neutral-500 dark:placeholder:text-neutral-400"
                   />
                 </div>
 
@@ -437,21 +697,15 @@ const PostsUpdate = () => {
                   <label className="mb-2 block text-sm font-medium text-gray-900 dark:text-gray-100">
                     Audience
                   </label>
-                  <Select
-                    selectedKeys={[audience]}
-                    onSelectionChange={(keys) => setAudience(Array.from(keys)[0])}
-                    className="w-full"
-                  >
-                    <SelectItem
-                      key="PUBLIC"
-                      startContent={<i className="fa-solid fa-earth-asia"></i>}
-                    >
-                      Public
-                    </SelectItem>
-                    <SelectItem key="PRIVATE" startContent={<i className="fa-solid fa-lock"></i>}>
-                      Private
-                    </SelectItem>
-                  </Select>
+                  <ShSelect value={audience} onValueChange={setAudience}>
+                    <ShSelectTrigger className="w-full bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100">
+                      <ShSelectValue placeholder="Select audience" />
+                    </ShSelectTrigger>
+                    <ShSelectContent className="bg-white dark:bg-neutral-800">
+                      <ShSelectItem value="PUBLIC">Public</ShSelectItem>
+                      <ShSelectItem value="PRIVATE">Private</ShSelectItem>
+                    </ShSelectContent>
+                  </ShSelect>
                 </div>
 
                 <div className="space-y-4">

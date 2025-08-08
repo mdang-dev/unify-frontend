@@ -14,6 +14,7 @@ async function fetchJson(url, token) {
 }
 
 export default async function Page({ params }) {
+  const { postId } = await params;
   const token = (await cookies()).get('token')?.value;
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
@@ -22,7 +23,7 @@ export default async function Page({ params }) {
 
   try {
     const [post, me] = await Promise.all([
-      fetchJson(`${baseUrl}/posts/post_detail/${params.postId}`, token),
+      fetchJson(`${baseUrl}/posts/post_detail/${postId}`, token),
       fetchJson(`${baseUrl}/users/my-info`, token),
     ]);
 
