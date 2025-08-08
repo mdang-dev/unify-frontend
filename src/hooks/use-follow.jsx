@@ -14,8 +14,23 @@ export const useFollow = (userId, followingId) => {
 
   const toggleFollowMutation = useMutation({
     mutationFn: async (newStatus) => {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Follow mutation called:', { followingId, newStatus });
+      }
+      
       const method = newStatus ? 'post' : 'delete';
-      await followCommandApi.toggleFollow(followingId, method);
+      const response = await followCommandApi.toggleFollow(followingId, method);
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Follow API response:', response);
+      }
+      
+      // Check if response contains error message
+      if (response && typeof response === 'string' && (response.includes('error') || response.includes('Error'))) {
+        throw new Error(response);
+      }
+      
+      return response;
     },
 
     onMutate: async () => {
@@ -42,6 +57,9 @@ export const useFollow = (userId, followingId) => {
     },
 
     onError: (err, _, context) => {
+      console.error('Follow toggle error:', err.message);
+      
+      // Revert optimistic updates
       if (context?.previousIsFollowing !== undefined) {
         queryClient.setQueryData(
           [QUERY_KEYS.IS_FOLLOWING, userId, followingId],
@@ -50,6 +68,11 @@ export const useFollow = (userId, followingId) => {
       }
       if (context?.previousCount !== undefined) {
         queryClient.setQueryData([QUERY_KEYS.COUNT_FOLLOWERS, followingId], context.previousCount);
+      }
+      
+      // Show user-friendly error message
+      if (err.message.includes('not authenticated')) {
+        console.error('Authentication error - user not logged in');
       }
     },
 
@@ -74,7 +97,23 @@ export const useFollow = (userId, followingId) => {
 
   return {
     isFollowing,
-    toggleFollow: () => toggleFollowMutation.mutate(!isFollowing),
+    toggleFollow: () => {
+      // Add validation
+      if (!userId || !followingId) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Missing userId or followingId:', { userId, followingId });
+        }
+        return;
+      }
+      
+      // Ensure isFollowing is boolean
+      const currentStatus = Boolean(isFollowing);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Toggling follow:', { userId, followingId, currentStatus, newStatus: !currentStatus });
+      }
+      
+      toggleFollowMutation.mutate(!currentStatus);
+    },
     isToggleLoading: toggleFollowMutation.isPending,
     followersCount,
     followingCount,

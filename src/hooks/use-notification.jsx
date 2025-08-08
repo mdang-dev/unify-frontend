@@ -1,6 +1,6 @@
 'use client';
 
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { notificationsCommandApi } from '../apis/notifications/command/notifications.command.api';
 import { useEffect, useRef, useCallback } from 'react';
 import { Client } from '@stomp/stompjs';
@@ -8,31 +8,58 @@ import SockJS from 'sockjs-client';
 import { QUERY_KEYS } from '../constants/query-keys.constant';
 import { getCookie } from '../utils/cookies.util';
 import { COOKIE_KEYS } from '../constants/cookie-keys.constant';
+import { useRouter } from 'next/navigation';
+import { useDesktopNotifications } from './use-desktop-notifications';
 
 export const useNotification = (userId) => {
   const queryClient = useQueryClient();
   const stompClientRef = useRef(null);
+  const router = useRouter();
+  const { showNotificationByType } = useDesktopNotifications();
+
+  // ✅ NEW: Fetch unread count separately for performance
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: [QUERY_KEYS.NOTIFICATIONS_UNREAD_COUNT, userId],
+    queryFn: () => notificationsCommandApi.getUnreadCount(userId),
+    enabled: !!userId,
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
 
   // 🔄 Fetch notifications using React Query (with infinite scroll support)
   const { data, fetchNextPage, hasNextPage, isFetching, refetch } = useInfiniteQuery({
     queryKey: [QUERY_KEYS.NOTIFICATIONS, userId],
     enabled: !!userId, // Only run query if userId exists
-    queryFn: ({ pageParam = 1 }) => notificationsCommandApi.fetch(userId, pageParam),
-    getNextPageParam: (lastPage, pages) => (lastPage.length > 0 ? pages.length + 1 : undefined),
+    queryFn: ({ pageParam = 0 }) => notificationsCommandApi.fetch(userId, pageParam),
+    getNextPageParam: (lastPage, pages) => {
+      // Check if there are more pages based on the new API response structure
+      if (lastPage && lastPage.totalPages && lastPage.currentPage < lastPage.totalPages - 1) {
+        return lastPage.currentPage + 1;
+      }
+      return undefined;
+    },
   });
 
-  const notifications = data?.pages?.flat() || [];
+  // Extract notifications from the new API response structure
+  const notifications = data?.pages?.flatMap(page => page.notifications || []) || [];
 
   // ✅ Mark a single notification as read
   const { mutate: markAsRead } = useMutation({
     mutationFn: ({ notificationId }) => notificationsCommandApi.markAsRead(notificationId, userId),
-    onSuccess: () => queryClient.invalidateQueries([QUERY_KEYS.NOTIFICATIONS, userId]), // Refetch after success
+    onSuccess: () => {
+      // Invalidate both notifications and unread count
+      queryClient.invalidateQueries([QUERY_KEYS.NOTIFICATIONS, userId]);
+      queryClient.invalidateQueries([QUERY_KEYS.NOTIFICATIONS_UNREAD_COUNT, userId]);
+    },
   });
 
   // ✅ Mark all notifications as read
   const { mutate: markAllAsRead } = useMutation({
     mutationFn: () => notificationsCommandApi.markAllAsRead(userId),
-    onSuccess: () => queryClient.invalidateQueries([QUERY_KEYS.NOTIFICATIONS, userId]), // Refetch after success
+    onSuccess: () => {
+      // Invalidate both notifications and unread count
+      queryClient.invalidateQueries([QUERY_KEYS.NOTIFICATIONS, userId]);
+      queryClient.invalidateQueries([QUERY_KEYS.NOTIFICATIONS_UNREAD_COUNT, userId]);
+    },
   });
 
   // 📩 Handle incoming WebSocket messages
@@ -40,21 +67,69 @@ export const useNotification = (userId) => {
     (message) => {
       try {
         const parsed = JSON.parse(message.body);
+        
+        // ✅ PERFORMANCE: Update notifications list with duplicate handling
         queryClient.setQueryData([QUERY_KEYS.NOTIFICATIONS, userId], (oldData) => {
           if (!oldData) return oldData;
-          const exists = oldData.pages[0]?.find((n) => n.id === parsed.id);
-          if (exists) return oldData;
+          
+          // Check if notification already exists (by sender, type, and recent timestamp)
+          const now = new Date();
+          const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+          
+          const existingIndex = oldData.pages.findIndex(page => 
+            page.notifications?.some(n => 
+              n.sender?.id === parsed.sender?.id && 
+              n.type === parsed.type &&
+              new Date(n.timestamp) > fiveMinutesAgo
+            )
+          );
+
+          if (existingIndex !== -1) {
+            // Replace existing notification with new one
+            const newPages = [...oldData.pages];
+            const pageIndex = existingIndex;
+            const notificationIndex = newPages[pageIndex].notifications.findIndex(n => 
+              n.sender?.id === parsed.sender?.id && 
+              n.type === parsed.type &&
+              new Date(n.timestamp) > fiveMinutesAgo
+            );
+            
+            if (notificationIndex !== -1) {
+              newPages[pageIndex] = {
+                ...newPages[pageIndex],
+                notifications: [
+                  ...newPages[pageIndex].notifications.slice(0, notificationIndex),
+                  parsed,
+                  ...newPages[pageIndex].notifications.slice(notificationIndex + 1)
+                ]
+              };
+              return { ...oldData, pages: newPages };
+            }
+          }
 
           // Insert the new notification to the first page
           const newPages = [...oldData.pages];
-          newPages[0] = [parsed, ...newPages[0]];
+          if (newPages[0] && newPages[0].notifications) {
+            newPages[0] = {
+              ...newPages[0],
+              notifications: [parsed, ...newPages[0].notifications]
+            };
+          }
           return { ...oldData, pages: newPages };
         });
+
+        // Update unread count
+        queryClient.setQueryData([QUERY_KEYS.NOTIFICATIONS_UNREAD_COUNT, userId], (oldCount) => {
+          return (oldCount || 0) + 1;
+        });
+
+        // ✅ NEW: Show desktop notification for new notifications
+        showNotificationByType(parsed);
       } catch (err) {
         console.error('❌ Failed to parse WebSocket message:', err);
       }
     },
-    [queryClient, userId]
+    [queryClient, userId, showNotificationByType]
   );
 
   // 🔌 Set up WebSocket connection and subscription
@@ -101,14 +176,12 @@ export const useNotification = (userId) => {
             if (error.name === 'AbortError') {
               console.warn('CSRF token fetch timed out');
             } else {
-              console.warn('CSRF token fetch error - continue without it:', error.message);
+              console.warn('Failed to fetch CSRF token for notifications:', error.message);
             }
           }
           // Continue without CSRF token if fetch fails
         }
 
-
-        // Create WebSocket connection for real-time notifications
         const socket = new SockJS(`${process.env.NEXT_PUBLIC_API_URL}/ws?token=${token}`, null, {
           transports: ['websocket'], // ✅ PERFORMANCE: WebSocket only
           timeout: 8000, // ✅ PERFORMANCE: Faster timeout
@@ -159,17 +232,63 @@ export const useNotification = (userId) => {
 
     setupWebSocket();
 
+    // Cleanup function
     return () => {
-      stompClientRef.current?.deactivate(); // Disconnect on unmount
+      if (stompClientRef.current) {
+        try {
+          stompClientRef.current.deactivate();
+        } catch (error) {
+          // Handle cleanup errors silently
+        }
+      }
     };
-  }, [userId, handleWebSocketMessage, refetch]);
+  }, [userId, refetch, handleWebSocketMessage]);
+
+  // 🧭 Navigation function for notification clicks
+  const handleNotificationClick = useCallback((notification) => {
+    if (!notification) return;
+
+    // Mark notification as read
+    markAsRead({ notificationId: notification.id });
+
+    // Navigate based on notification type and link
+    if (notification.link) {
+      router.push(notification.link);
+    } else {
+      // Fallback navigation based on notification type
+      switch (notification.type?.toLowerCase()) {
+        case 'follow':
+          if (notification.sender?.id) {
+            router.push(`/profile/${notification.sender.id}`);
+          }
+          break;
+        case 'like':
+        case 'comment':
+          if (notification.link) {
+            router.push(notification.link);
+          }
+          break;
+        case 'tag':
+          // Navigate to the tagged post
+          if (notification.link) {
+            router.push(notification.link);
+          }
+          break;
+        default:
+          console.log('Unknown notification type:', notification.type);
+      }
+    }
+  }, [markAsRead, router]);
 
   return {
     notifications,
-    loading: isFetching,
-    hasMore: hasNextPage,
-    loadMore: fetchNextPage,
+    unreadCount,
+    fetchNextPage,
+    hasNextPage,
+    isFetching,
     markAsRead,
     markAllAsRead,
+    refetch,
+    handleNotificationClick, // ✅ NEW: Navigation function
   };
 };

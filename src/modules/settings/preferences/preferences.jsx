@@ -2,6 +2,7 @@ import React from 'react';
 import ModeSwitch from '@/src/components/base/mode-switch/mode-switch';
 import SelectMenu from './_components/select-menu';
 import PreferenceSection from './_components/preference-section';
+import NotificationSettings from '@/src/components/base/notification-settings';
 
 const Preferences = () => {
   return (
@@ -42,28 +43,7 @@ const Preferences = () => {
           title="Notifications"
           description="Manage how you receive notifications and updates."
         >
-          <div className="space-y-4">
-            <div className="flex items-center justify-between rounded-lg bg-neutral-50 p-4 dark:bg-neutral-800/50">
-              <div className="flex items-center space-x-3">
-                <i className="fa-solid fa-bell text-xl text-primary"></i>
-                <span className="font-medium">Push Notifications</span>
-              </div>
-              <label className="relative inline-flex cursor-pointer items-center">
-                <input type="checkbox" className="peer sr-only" />
-                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-neutral-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:border-neutral-600 dark:bg-neutral-700"></div>
-              </label>
-            </div>
-            <div className="flex items-center justify-between rounded-lg bg-neutral-50 p-4 dark:bg-neutral-800/50">
-              <div className="flex items-center space-x-3">
-                <i className="fa-solid fa-envelope text-xl text-primary"></i>
-                <span className="font-medium">Email Notifications</span>
-              </div>
-              <label className="relative inline-flex cursor-pointer items-center">
-                <input type="checkbox" className="peer sr-only" />
-                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-neutral-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:border-neutral-600 dark:bg-neutral-700"></div>
-              </label>
-            </div>
-          </div>
+          <NotificationSettings />
         </PreferenceSection>
 
         <PreferenceSection

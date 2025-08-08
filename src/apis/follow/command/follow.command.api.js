@@ -6,7 +6,7 @@ export const followCommandApi = {
   toggleFollow: async (followingId, method) => {
     const res = await httpClient.request({
       url: `${url}/${followingId}`,
-      method: method
+      method: method.toUpperCase()
     });
     return res.data;
   },
