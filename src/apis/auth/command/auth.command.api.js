@@ -15,6 +15,11 @@ export const authCommandApi = {
     const res = await httpClient.post(`${url}/logout`);
     return res.data;
   },
+  // Send OTP to email for forgot password flow
+  sendOtp: async (email) => {
+    const res = await httpClient.post(`${url}/forgot-password/send-mail`, { email });
+    return res.data;
+  },
   resetPassword: async (email, newPassword) => {
     const res = await httpClient.post(`${url}/forgot-password/reset-password`, {
       email,
@@ -26,7 +31,7 @@ export const authCommandApi = {
     const res = await httpClient.post(`${url}/forgot-password/otp-verification`, { email, otp });
     return res.data;
   },
-    changePassword: async (currentPassword, newPassword) => {
+  changePassword: async (currentPassword, newPassword) => {
     const res = await httpClient.post(`${url}/change-password`, { currentPassword, newPassword });
     return res.data;
   },

@@ -216,10 +216,7 @@ export default function LoginPage() {
             </div>
 
             <div className="text-sm">
-              <Link
-                href="/password/reset/confirm"
-                className="font-medium text-black hover:underline dark:text-white"
-              >
+              <Link href="/password/reset" className="font-medium text-black hover:underline dark:text-white">
                 Forgot your password?
               </Link>
             </div>
