@@ -1,13 +1,15 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import Image from 'next/image';
 import TectNetwork from '@/public/images/tech_network.png';
 import DataSecurity from '@/public/images/data_security.png';
 import Community from '@/public/images/community.png';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import gsap from 'gsap';
 import { useRouter } from 'next/navigation';
+import { ScrollArea } from '@/src/components/ui/scroll-area';
 
 export default function Landing() {
   const canvasRef = useRef(null);
@@ -190,148 +192,112 @@ export default function Landing() {
       </div>
 
       <div className="relative z-10 w-full py-12">
-        <div className="mx-auto max-w-4xl px-4">
-          <div className="terms-section terms-card mb-12 flex translate-y-20 rotate-2 scale-95 flex-col items-center p-6 opacity-0 md:flex-row">
-            <div className="mb-6 text-white md:mb-0 md:w-1/2 md:pr-6">
+        <div className="mx-auto max-w-6xl px-4">
+          {/* Section 1: Terms of Service with collapsible items and scrollable content */}
+          <div className="terms-section terms-card mb-12 grid translate-y-20 rotate-1 scale-100 grid-cols-1 items-start gap-6 p-6 opacity-0 md:grid-cols-2">
+            <div className="text-white">
               <h2 className="terms-heading mb-4 text-2xl font-bold">Terms of Service</h2>
-              <p className="mb-4">
-                Workaholics creates technologies and services to help people connect with each
-                other, build communities, and grow businesses. These Terms of Service (&quot;Terms&quot;)
-                govern your access to and use of Unify, as well as other products, websites,
-                features, applications, services, technologies, and software we offer (collectively,
-                the &quot;Products&quot;), unless we explicitly state that separate terms apply (and
-                these Terms do not). These Products are provided to you by Workaholics. These Terms
-                constitute an agreement between you and Workaholics. If you do not agree to these
-                Terms, please do not access or use Unify or any other products and services covered
-                by these Terms.
-              </p>
-              <p className="mb-4">
-                These Terms constitute the entire agreement between you and Workaholics regarding
-                your use of our Products. These Terms supersede any prior agreements.
-              </p>
-              <p className="mb-4">
-                You do not incur fees for using Unify or other products and services covered by
-                these Terms, unless otherwise specified by us. By using our Products, you agree to
-                allow us to display advertisements that we believe may be relevant to you and your
-                interests. We use your personal data to determine which personalized advertisements
-                to show you.
-              </p>
-              <p className="mb-4">
-                We do not sell your personal data to advertisers, nor do we share information that
-                directly identifies you (such as your name, email address, or other contact
-                information) with these entities, unless you explicitly grant permission. Instead,
-                advertisers may provide us with information about the type of audience they want to
-                target, and we display those ads to people who might be interested. We provide
-                advertisers with performance metrics to help them understand how people interact
-                with their content.
-              </p>
+              <div className="space-y-3 text-sm text-gray-200">
+                <details className="rounded-lg bg-white/5 p-4 shadow-sm backdrop-blur-md">
+                  <summary className="cursor-pointer list-none font-semibold text-white">Overview</summary>
+                  <p className="mt-2 leading-relaxed">
+                    Workaholics creates technologies to help people connect and grow businesses. These Terms govern your use of Unify and other products unless separate terms apply.
+                  </p>
+                </details>
+                <details className="rounded-lg bg-white/5 p-4 shadow-sm backdrop-blur-md">
+                  <summary className="cursor-pointer list-none font-semibold text-white">Agreement</summary>
+                  <p className="mt-2 leading-relaxed">
+                    These Terms constitute an agreement between you and Workaholics. If you do not agree, please do not use our services.
+                  </p>
+                </details>
+                <details className="rounded-lg bg-white/5 p-4 shadow-sm backdrop-blur-md">
+                  <summary className="cursor-pointer list-none font-semibold text-white">Fees & Ads</summary>
+                  <p className="mt-2 leading-relaxed">
+                    You do not incur fees for using Unify unless specified. We display relevant ads based on your data preferences.
+                  </p>
+                </details>
+                <details className="rounded-lg bg-white/5 p-4 shadow-sm backdrop-blur-md">
+                  <summary className="cursor-pointer list-none font-semibold text-white">Data Use</summary>
+                  <ScrollArea className="mt-2 max-h-48 rounded-md border border-white/10 p-3">
+                    <div className="space-y-2 text-sm leading-relaxed">
+                      <p>
+                        We do not sell your personal data. We do not share information that directly identifies you unless you grant permission.
+                      </p>
+                      <p>
+                        Advertisers provide audience preferences. We show their ads to people who might be interested and provide performance metrics.
+                      </p>
+                      <p>
+                        We may update these practices over time. Please review this section regularly.
+                      </p>
+                    </div>
+                  </ScrollArea>
+                </details>
+              </div>
             </div>
-            <img
-              src={TectNetwork.src}
-              alt="Tech Network"
-              className="terms-image h-96 object-cover md:w-1/2"
-            />
+            <Image src={TectNetwork} alt="Tech Network" className="terms-image h-80 w-full rounded-xl object-cover" />
           </div>
+
           <div className="divider mb-12"></div>
 
-          <div className="terms-section terms-card mb-12 flex translate-y-20 rotate-2 scale-95 flex-col items-center p-6 opacity-0 md:flex-row-reverse">
-            <div className="mb-6 text-white md:mb-0 md:w-1/2 md:pl-6">
+          {/* Section 2: Privacy Policy */}
+          <div className="terms-section terms-card mb-12 grid translate-y-20 rotate-1 scale-100 grid-cols-1 items-start gap-6 p-6 opacity-0 md:grid-cols-2">
+            <div className="order-2 text-white md:order-1">
               <h2 className="terms-heading mb-4 text-2xl font-bold">Privacy Policy</h2>
-              <p className="mb-4">
-                Workaholics wants you to understand the types of information we collect, as well as
-                how we use and share that information. Therefore, you should read our Privacy
-                Policy. This will help you use our services in a way that suits you.
-              </p>
-              <p className="mb-4">
-                The Privacy Policy explains how we collect, use, share, store, and transfer
-                information. We also inform you about your rights. Each section of the Policy
-                includes helpful examples and uses simpler language to make our practices easier to
-                understand. Additionally, we’ve included links to resources and information so you
-                can learn more about privacy topics that interest you.
-              </p>
-              <p className="mb-4">
-                We believe you should have control over your privacy. Therefore, we also show you
-                where you can manage your information in the settings of the Workaholics Products
-                you use. You can shape your experience accordingly.
-              </p>
+              <div className="space-y-3 text-sm text-gray-200">
+                <p className="leading-relaxed">
+                  Understand the types of information we collect and how we use and share that information.
+                </p>
+                <ul className="list-inside list-disc space-y-1">
+                  <li>How we collect, use, share, store, and transfer information</li>
+                  <li>Your rights and where to manage your information</li>
+                  <li>Examples to make our practices clear and accessible</li>
+                </ul>
+                <ScrollArea className="max-h-48 rounded-md border border-white/10 p-3">
+                  <div className="space-y-2 text-sm leading-relaxed">
+                    <p>
+                      You can shape your experience by adjusting privacy settings in the products you use.
+                    </p>
+                    <p>
+                      We include links to resources so you can learn more about topics that interest you.
+                    </p>
+                  </div>
+                </ScrollArea>
+              </div>
             </div>
-            <img
-              src={DataSecurity.src}
-              alt="Data Security"
-              className="terms-image h-96 object-cover md:w-1/2"
-            />
+            <Image src={DataSecurity} alt="Data Security" className="order-1 h-80 w-full rounded-xl object-cover md:order-2" />
           </div>
+
           <div className="divider mb-12"></div>
 
-          <div className="terms-section terms-card translate-y- mb-12 flex flex-col items-center p-6 opacity-0 md:flex-row">
-            <div className="mb-6 text-white md:mb-0 md:w-1/2 md:pr-6">
+          {/* Section 3: Community Standards */}
+          <div className="terms-section terms-card mb-12 grid translate-y-20 rotate-1 scale-100 grid-cols-1 items-start gap-6 p-6 opacity-0 md:grid-cols-2">
+            <div className="text-white">
               <h2 className="terms-heading mb-4 text-2xl font-bold">Community Standards</h2>
-              <p className="mb-4">
-                Every day, people use Unify to share experiences and lessons, connect with family
-                and friends, and build communities. Our services enable people to freely express
-                themselves, their knowledge, and their experiences.
+              <p className="mb-2 text-sm leading-relaxed text-gray-200">
+                Our standards outline what content is allowed and not allowed on our services.
               </p>
-              <p className="mb-4">
-                At the same time, we are serious about our role in preventing abusive behavior on
-                our services. That’s why we establish standards outlining what content is allowed
-                and not allowed on these services.
-              </p>
-              <p className="mb-4">
-                These standards are based on feedback from people, as well as advice from experts in
-                fields such as technology, public safety, and human rights. To ensure everyone’s
-                voice is valued, we strive to create standards that encompass diverse perspectives
-                and beliefs, especially those of marginalized or overlooked individuals and
-                communities.
-              </p>
-              <h3 className="mb-2 text-xl font-semibold text-white">Community Standards</h3>
-              <p className="mb-4">
-                Our Community Standards apply to everyone worldwide and to all types of content,
-                including AI-generated content.
-              </p>
-              <p className="mb-4">
-                Each section of our Community Standards begins with a &quot;Reason for the Policy.&quot; This
-                outlines the policy’s objectives, followed by specific policy details stating:
-              </p>
-              <ul className="mb-4 list-disc pl-6 text-white">
-                <li>
-                  Content that is not allowed, content that requires additional information or
-                  context to enforce the policy, content that is allowed with a warning screen, or
-                  content that is allowed but only shown to adults aged 18 and older.
-                </li>
-              </ul>
-              <ul className="mb-4 list-disc pl-6 text-white">
-                <li>Coordinated Harm and Promotion of Crime</li>
-                <li>Dangerous Individuals and Organizations</li>
-                <li>Fraud, Scams, and Deception</li>
+              <ul className="mb-3 grid list-inside list-disc gap-1 text-sm text-gray-200 md:grid-cols-2">
                 <li>Violence and Incitement</li>
-                <li>Adult Sexual Exploitation</li>
                 <li>Bullying and Harassment</li>
-                <li>Child Nudity, Abuse, and Sexual Exploitation</li>
-                <li>Human Exploitation</li>
-                <li>Suicide, Self-Harm, and Eating Disorders</li>
-                <li>Adult Sexual Activities and Nudity</li>
-                <li>Adult Sexual Solicitation and Pornographic Language</li>
                 <li>Hateful Conduct</li>
                 <li>Privacy Violations</li>
-                <li>Violent and Graphic Content</li>
-                <li>Account Integrity</li>
-                <li>Commitment to Authentic Identity</li>
-                <li>Cybersecurity</li>
-                <li>Deceptive Behavior</li>
-                <li>Memorialization</li>
-                <li>Misinformation</li>
                 <li>Spam</li>
-                <li>Third-Party Intellectual Property Infringement</li>
-                <li>Use of Workaholics’ Licenses and Intellectual Property</li>
-                <li>Additional Protections for Minors</li>
-                <li>Content, Products, or Services Violating Local Laws</li>
+                <li>Misinformation</li>
+                <li>Cybersecurity</li>
+                <li>Account Integrity</li>
               </ul>
+              <details className="rounded-lg bg-white/5 p-4 shadow-sm backdrop-blur-md">
+                <summary className="cursor-pointer list-none font-semibold text-white">More details</summary>
+                <ScrollArea className="mt-2 max-h-48 rounded-md border border-white/10 p-3">
+                  <ul className="list-inside list-disc space-y-1 text-sm leading-relaxed">
+                    <li>Standards apply globally and to all content, including AI-generated.</li>
+                    <li>Some content may require additional context or age restrictions.</li>
+                    <li>We value diverse perspectives and work with experts to refine policies.</li>
+                  </ul>
+                </ScrollArea>
+              </details>
             </div>
-            <img
-              src={Community.src}
-              alt="Community"
-              className="terms-image h-96 object-cover md:w-1/2"
-            />
+            <Image src={Community} alt="Community" className="h-80 w-full rounded-xl object-cover" />
           </div>
         </div>
       </div>
