@@ -4,7 +4,15 @@ import { PhotoIcon } from '@heroicons/react/24/solid';
 import { ModalDialog } from '@/src/components/base';
 import { useModalStore } from '@/src/stores/modal.store';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import { Select, SelectItem, Textarea, Spinner } from '@heroui/react';
+import { Spinner, Textarea } from '@heroui/react';
+import {
+  Select as ShSelect,
+  SelectTrigger as ShSelectTrigger,
+  SelectContent as ShSelectContent,
+  SelectItem as ShSelectItem,
+  SelectValue as ShSelectValue,
+} from '@/src/components/ui/select';
+import { Textarea as ShTextarea } from '@/src/components/ui/textarea';
 import PostSwitch from '../_components/post-switch';
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/src/lib/utils';
@@ -690,7 +698,7 @@ const PostsCreate = () => {
                     Upload photos or videos to share
                   </p>
                 </div>
-                <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-500 dark:bg-neutral-700 dark:text-gray-400">
+                <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-500 dark:bg-neutral-700 dark:text-gray-300">
                   {previews.length}/12 files
                 </span>
               </div>
@@ -828,12 +836,11 @@ const PostsCreate = () => {
                   <label className="mb-2 block text-sm font-medium text-gray-900 dark:text-gray-100">
                     Caption
                   </label>
-                  <Textarea
+                  <ShTextarea
                     value={caption}
                     onChange={(e) => setCaption(e.target.value)}
                     placeholder="Write your caption here..."
-                    minRows={4}
-                    className="w-full"
+                    className="w-full bg-white text-gray-900 dark:bg-neutral-800 dark:text-gray-100 placeholder:text-neutral-500 dark:placeholder:text-neutral-400"
                   />
                 </div>
 
@@ -841,21 +848,15 @@ const PostsCreate = () => {
                   <label className="mb-2 block text-sm font-medium text-gray-900 dark:text-gray-100">
                     Audience
                   </label>
-                  <Select
-                    selectedKeys={[audience]}
-                    onSelectionChange={(keys) => setAudience(Array.from(keys)[0])}
-                    className="w-full"
-                  >
-                    <SelectItem
-                      key="PUBLIC"
-                      startContent={<i className="fa-solid fa-earth-asia"></i>}
-                    >
-                      Public
-                    </SelectItem>
-                    <SelectItem key="PRIVATE" startContent={<i className="fa-solid fa-lock"></i>}>
-                      Private
-                    </SelectItem>
-                  </Select>
+                  <ShSelect value={audience} onValueChange={setAudience}>
+                    <ShSelectTrigger className="w-full bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100">
+                      <ShSelectValue placeholder="Select audience" />
+                    </ShSelectTrigger>
+                    <ShSelectContent className="bg-white dark:bg-neutral-800">
+                      <ShSelectItem value="PUBLIC">Public</ShSelectItem>
+                      <ShSelectItem value="PRIVATE">Private</ShSelectItem>
+                    </ShSelectContent>
+                  </ShSelect>
                 </div>
 
                 <div className="space-y-4">
