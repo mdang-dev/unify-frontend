@@ -6,7 +6,6 @@ import Cookies from 'js-cookie';
 import Link from 'next/link';
 import Image from 'next/image';
 import Avatar from '@/public/images/unify_icon_2.png';
-import OptionsPostModal from './_components/options-post-modal';
 import DeletePostModal from './_components/delete-post-modal';
 import ArchivePostModal from './_components/archive-post-modal';
 import RestorePostModal from './_components/restore-post-modal';
@@ -16,10 +15,14 @@ import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
 import { commentsQueryApi } from '@/src/apis/comments/query/comments.query.api';
 import { postsQueryApi } from '@/src/apis/posts/query/posts.query.api';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import NavButton from './_components/nav-button';
 import Bookmark from '@/src/components/base/bookmark';
+import { Tooltip } from '@heroui/react';
+import { useRouter, usePathname } from 'next/navigation';
+import ReportModal from '../report-modal';
+import { useCreateReport } from '@/src/hooks/use-report';
+import { toast } from 'sonner';
 const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete }) => {
-  const [openList, setOpenList] = useState(false);
+  const [openList, setOpenList] = useState(false); // no longer used for dropdown; retained to avoid breaking
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [showRestoreModal, setShowRestoreModal] = useState(false);
@@ -33,6 +36,10 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete }) => {
   const currentUserId = user?.id;
   const isOwner = user?.id === post?.user.id;
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [isReportOpen, setIsReportOpen] = useState(false);
+  const { mutate: createReport } = useCreateReport();
 
   // Nếu chỉ có postId, fetch post detail
   useEffect(() => {
@@ -162,17 +169,41 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete }) => {
     setReplyingTo(null);
   }, []);
 
-  const handleOpenDeleteModal = () => {
-    setShowDeleteModal(true);
-    setOpenList(false);
+  const handleOpenDeleteModal = () => setShowDeleteModal(true);
+  const handleOpenArchiveModal = () => setShowArchiveModal(true);
+  const handleOpenRestoreModal = () => setShowRestoreModal(true);
+
+  const handleShare = async () => {
+    const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'Unify Post', url: shareUrl });
+      } else {
+        await navigator.clipboard.writeText(shareUrl);
+        toast.success('Link copied to clipboard');
+      }
+    } catch (_) {}
   };
-  const handleOpenArchiveModal = () => {
-    setShowArchiveModal(true);
-    setOpenList(false);
-  };
-  const handleOpenRestoreModal = () => {
-    setShowRestoreModal(true);
-    setOpenList(false);
+
+  const handleReportSubmit = (postId, reason) => {
+    createReport(
+      { endpoint: 'post', reportedId: postId, reason },
+      {
+        onSuccess: () => {
+          toast.success('Report submitted');
+          setIsReportOpen(false);
+        },
+        onError: (error) => {
+          const errorMessage = error?.message || 'Unknown error';
+          if (errorMessage === 'You have reported this content before.') {
+            toast.warning('You have reported this content before.');
+          } else {
+            toast.error('Failed to report: ' + errorMessage);
+          }
+          setIsReportOpen(false);
+        },
+      }
+    );
   };
 
   const handleClose = () => {
@@ -210,8 +241,8 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete }) => {
   if (!postData) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="flex h-[600px] w-[900px] flex-row overflow-hidden rounded-xl bg-white dark:bg-neutral-900">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={handleClose}>
+      <div className="flex h-[600px] w-[900px] flex-row overflow-hidden rounded-xl bg-white dark:bg-neutral-900" onClick={(e) => e.stopPropagation()}>
         {/* Media Section */}
         <div className="relative w-1/2 bg-black">
           <Slider srcs={postData.media || []} onImageClick={() => {}} />
@@ -254,28 +285,53 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete }) => {
                 {postData.user?.username}
               </span>
             </div>
-            <div className="flex items-center">
-             <Bookmark
-                          postId={postData.id}
-                          className="!text-xl transition-opacity hover:opacity-90 mr-3"
-                          classNameIcon="text-gray-900 dark:text-gray-100"
-                        />
-            <NavButton onClick={() => setOpenList(true)} content="•••" className="text-2xl" />
-            </div>            
-            {openList && (
-              <OptionsPostModal
-                isOwner={isOwner}
-                onOpenDeleteModal={handleOpenDeleteModal}
-                onOpenArchiveModal={handleOpenArchiveModal}
-                onOpenRestoreModal={handleOpenRestoreModal}
-                onClose={() => setOpenList(false)}
+            <div className="flex items-center gap-2">
+              <Bookmark
                 postId={postData.id}
-                onReport={() => {
-                  onReport(postData.id);
-                  setOpenList(false);
-                }}
+                className="!text-xl transition-opacity hover:opacity-90"
+                classNameIcon="text-gray-900 dark:text-gray-100"
               />
-            )}
+              {/* Top action icons */}
+              {isOwner ? (
+                <>
+                  <Tooltip content="Delete" placement="bottom">
+                    <button onClick={handleOpenDeleteModal} className="p-2 text-red-500 hover:opacity-80">
+                      <i className="fa-solid fa-trash"></i>
+                    </button>
+                  </Tooltip>
+                  <Tooltip content="Update" placement="bottom">
+                    <button onClick={() => router.push(`/posts/${postData.id}`)} className="p-2 hover:opacity-80">
+                      <i className="fa-solid fa-pen"></i>
+                    </button>
+                  </Tooltip>
+                  {pathname?.includes('/archive') ? (
+                    <Tooltip content="Restore" placement="bottom">
+                      <button onClick={handleOpenRestoreModal} className="p-2 hover:opacity-80">
+                        <i className="fa-solid fa-rotate-left"></i>
+                      </button>
+                    </Tooltip>
+                  ) : (
+                    <Tooltip content="Move to Archive" placement="bottom">
+                      <button onClick={handleOpenArchiveModal} className="p-2 hover:opacity-80">
+                        <i className="fa-solid fa-box-archive"></i>
+                      </button>
+                    </Tooltip>
+                  )}
+                </>
+              ) : (
+                <Tooltip content="Report" placement="bottom">
+                  <button onClick={() => setIsReportOpen(true)} className="p-2 text-red-500 hover:opacity-80">
+                    <i className="fa-solid fa-flag"></i>
+                  </button>
+                </Tooltip>
+              )}
+              <Tooltip content="Share" placement="bottom">
+                <button onClick={handleShare} className="p-2 hover:opacity-80">
+                  <i className="fa-solid fa-share-nodes"></i>
+                </button>
+              </Tooltip>
+            </div>
+
             <DeletePostModal
               isOpen={showDeleteModal}
               onClose={() => setShowDeleteModal(false)}
@@ -300,6 +356,14 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete }) => {
                 setShowRestoreModal(false);
               }}
             />
+            {isReportOpen && (
+              <ReportModal
+                isOpen={isReportOpen}
+                onClose={() => setIsReportOpen(false)}
+                onSubmit={handleReportSubmit}
+                postId={postData.id}
+              />
+            )}
           </div>
 
           {/* Comments Section */}
