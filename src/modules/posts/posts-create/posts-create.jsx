@@ -335,8 +335,22 @@ const PostsCreate = () => {
             setIsLikeVisible(!responseData.isLikeVisible); // Invert because our state is "hide like counts"
           }
           
-                    // Handle image URL if provided
-          if (responseData.imageUrl) {
+          // Handle imageUrls array if provided
+          if (responseData.imageUrls && Array.isArray(responseData.imageUrls)) {
+            try {
+              await addMultipleImagesFromUrls(responseData.imageUrls, 'ai-generated-image');
+            } catch (error) {
+              console.error('Failed to add AI-generated images:', error);
+              addToast({
+                title: 'Images failed',
+                description: 'AI suggested images but failed to add them to your post.',
+                timeout: 3000,
+                color: 'warning',
+              });
+            }
+          }
+          // Handle single imageUrl for backward compatibility
+          else if (responseData.imageUrl) {
             try {
               await addImageFromUrl(responseData.imageUrl, 'ai-generated-image.jpg');
             } catch (error) {
@@ -384,8 +398,22 @@ const PostsCreate = () => {
           setIsLikeVisible(!responseData.isLikeVisible);
         }
         
-        // Handle image URL if provided (legacy format)
-        if (responseData.imageUrl) {
+        // Handle imageUrls array if provided
+        if (responseData.imageUrls && Array.isArray(responseData.imageUrls)) {
+          try {
+            await addMultipleImagesFromUrls(responseData.imageUrls, 'ai-generated-image');
+          } catch (error) {
+            console.error('Failed to add AI-generated images:', error);
+            addToast({
+              title: 'Images failed',
+              description: 'AI suggested images but failed to add them to your post.',
+              timeout: 3000,
+              color: 'warning',
+            });
+          }
+        }
+        // Handle single imageUrl for backward compatibility
+        else if (responseData.imageUrl) {
           try {
             await addImageFromUrl(responseData.imageUrl, 'ai-generated-image.jpg');
           } catch (error) {
@@ -619,6 +647,14 @@ const PostsCreate = () => {
     }
   };
 
+  const handleExamplePrompt = (examplePrompt) => {
+    setPrompt(examplePrompt);
+    // Automatically submit the example prompt
+    setTimeout(() => {
+      handlePromptSubmit();
+    }, 100);
+  };
+
 
   return (
     <>
@@ -788,6 +824,42 @@ const PostsCreate = () => {
                         <i className="fa-solid fa-paper-plane text-xs"></i>
                       )}
                     </button>
+                  </div>
+                  
+                  {/* Example Prompts */}
+                  <div className="mt-3 pt-3 border-t border-purple-200/50 dark:border-purple-700/30">
+                    <div className="mb-2 flex items-center gap-2">
+                      <i className="fa-solid fa-lightbulb text-xs text-purple-500"></i>
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Try these examples:</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => handleExamplePrompt("A cat playing on the grass")}
+                        disabled={promptLoading}
+                        className={cn(
+                          'px-3 py-1 text-xs font-medium rounded-full transition-all duration-200',
+                          'bg-purple-100 text-purple-700 hover:bg-purple-200',
+                          'dark:bg-purple-900/30 dark:text-purple-300 dark:hover:bg-purple-900/50',
+                          'disabled:cursor-not-allowed disabled:opacity-50',
+                          'transform hover:scale-105 active:scale-95'
+                        )}
+                      >
+                        🐱 A cat playing on the grass
+                      </button>
+                      <button
+                        onClick={() => handleExamplePrompt("A beautiful sunset over the ocean")}
+                        disabled={promptLoading}
+                        className={cn(
+                          'px-3 py-1 text-xs font-medium rounded-full transition-all duration-200',
+                          'bg-blue-100 text-blue-700 hover:bg-blue-200',
+                          'dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50',
+                          'disabled:cursor-not-allowed disabled:opacity-50',
+                          'transform hover:scale-105 active:scale-95'
+                        )}
+                      >
+                        🌅 A beautiful sunset over the ocean
+                      </button>
+                    </div>
                   </div>
                 </div>
 
