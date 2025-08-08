@@ -6,9 +6,11 @@ import Image from 'next/image';
 import avatar from '@/public/images/unify_icon_2.png';
 import SearchHorizontalToggle from './_components/search-horizontal-toggle';
 import NotificationModal from './_components/notification-modal';
+import NotificationBadge from './_components/notification-badge';
 import UnifyLogoIcon from '../unify-logo-icon';
 import NavButton from '../../button/nav-button';
 import { useAuthStore } from '@/src/stores/auth.store';
+import { useNotification } from '@/src/hooks/use-notification';
 
 const Sidebar = () => {
   const { user } = useAuthStore();
@@ -19,6 +21,9 @@ const Sidebar = () => {
   const toggleRef = useRef(null);
   const [openSearch, setOpenSearch] = useState(false);
   const [isClient, setIsClient] = useState(false);
+
+  // ✅ NEW: Get notification data
+  const { unreadCount } = useNotification(user?.id);
 
   const toggleSearch = () => {
     setOpenSearch((prevState) => !prevState);
@@ -122,7 +127,7 @@ const Sidebar = () => {
               />
             </li>
 
-            <li className="h-16">
+            <li className="h-16 relative">
               <button
                 ref={buttonRef}
                 onClick={toggleNotification}
@@ -130,6 +135,8 @@ const Sidebar = () => {
                 title="Notifications"
               >
                 <i className="fa-solid fa-bell w-full"></i>
+                {/* ✅ NEW: Notification badge */}
+                <NotificationBadge count={unreadCount} />
               </button>
             </li>
             <li className="h-16">

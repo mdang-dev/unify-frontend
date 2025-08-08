@@ -1,0 +1,12 @@
+ignoredBuiltDependencies:
+  - bufferutil
+  - core-js
+  - es5-ext
+  - protobufjs
+  - sharp
+  - unrs-resolver
+
+onlyBuiltDependencies:
+  - '@firebase/util'
+  - '@heroui/shared-utils'
+  - utf-8-validate
