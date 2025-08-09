@@ -7,13 +7,15 @@ import LikeNotification from './like-notification';
 import CommentNotification from './comment-notification';
 import { useNotification } from '@/src/hooks/use-notification';
 import { useDesktopNotifications } from '@/src/hooks/use-desktop-notifications';
-import NotificationGroup from '../../notification-group';
 import NotificationQuickActions from '../../notification-quick-actions';
+import PostDetailModal from '../../post-detail-modal';
 
 const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
   const { notifications, unreadCount, markAllAsRead, isFetching, handleNotificationClick } = useNotification(userId);
   const { showNotificationByType, requestPermission, permission, isSupported } = useDesktopNotifications();
-  const [showGrouped, setShowGrouped] = useState(false);
+  const [postModalOpen, setPostModalOpen] = useState(false);
+  const [selectedPostId, setSelectedPostId] = useState(null);
+  const [selectedCommentId, setSelectedCommentId] = useState(null);
 
   const [modalWidth, setModalWidth] = useState(0);
 
@@ -22,6 +24,21 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
       console.warn('⚠️ Missing userId for NotificationModal');
     }
   }, [userId]);
+
+  // Listen for post modal events
+  useEffect(() => {
+    const handleOpenPostModal = (event) => {
+      const { postId, commentId } = event.detail;
+      setSelectedPostId(postId);
+      setSelectedCommentId(commentId);
+      setPostModalOpen(true);
+    };
+
+    window.addEventListener('openPostModal', handleOpenPostModal);
+    return () => {
+      window.removeEventListener('openPostModal', handleOpenPostModal);
+    };
+  }, []);
 
   useEffect(() => {
     if (isNotificationOpen) {
@@ -112,19 +129,7 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
                 </button>
               )}
               
-              {/* Grouping Toggle */}
-              <button
-                onClick={() => setShowGrouped(!showGrouped)}
-                className={`text-xs px-2 py-1 rounded ${
-                  showGrouped 
-                    ? 'bg-blue-500 text-white' 
-                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
-                title={showGrouped ? 'Show individual notifications' : 'Group notifications'}
-              >
-                <i className={`fa-solid ${showGrouped ? 'fa-list' : 'fa-layer-group'} mr-1`}></i>
-                {showGrouped ? 'List' : 'Group'}
-              </button>
+
               
               {/* Mark All as Read */}
               {unreadCount > 0 && (
@@ -157,31 +162,23 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
               <div className="text-gray-400 dark:text-gray-600">Loading notifications...</div>
             </div>
           ) : sortedNotifications.length > 0 ? (
-            showGrouped ? (
-              // Grouped view
-              <NotificationGroup 
-                notifications={sortedNotifications}
-                onNotificationClick={handleNotificationClick}
-              />
-            ) : (
-              // Individual view with quick actions
-              sortedNotifications.map((notification, index) => (
-                <div key={notification.id} className="space-y-2">
-                  {renderNotification(notification)}
-                  
-                  {/* Quick Actions */}
-                  <NotificationQuickActions
-                    notification={notification}
-                    currentUserId={userId}
-                    onActionComplete={handleActionComplete}
-                  />
-                  
-                  {index < sortedNotifications.length - 1 && (
-                    <hr className="my-5 border-white dark:border-black" />
-                  )}
-                </div>
-              ))
-            )
+            // Simple list view - notifications sorted by time
+            sortedNotifications.map((notification, index) => (
+              <div key={notification.id} className="space-y-2">
+                {renderNotification(notification)}
+                
+                {/* Quick Actions */}
+                <NotificationQuickActions
+                  notification={notification}
+                  currentUserId={userId}
+                  onActionComplete={handleActionComplete}
+                />
+                
+                {index < sortedNotifications.length - 1 && (
+                  <hr className="my-5 border-white dark:border-black" />
+                )}
+              </div>
+            ))
           ) : (
             <div className="flex flex-col items-center justify-center py-8">
               <i className="fa-solid fa-bell text-4xl text-gray-300 dark:text-gray-600 mb-4"></i>
@@ -195,6 +192,18 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
           )}
         </div>
       </div>
+
+      {/* Post Detail Modal */}
+      <PostDetailModal
+        isOpen={postModalOpen}
+        onClose={() => {
+          setPostModalOpen(false);
+          setSelectedPostId(null);
+          setSelectedCommentId(null);
+        }}
+        postId={selectedPostId}
+        scrollToCommentId={selectedCommentId}
+      />
     </div>
   );
 };

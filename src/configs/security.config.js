@@ -17,7 +17,7 @@ export const SECURITY_CONFIG = {
   production: {
     // Production environment - strict security
     csp: {
-      connectSrc: "'self' https://your-production-domain.com ws: wss:",
+      connectSrc: "'self' https://*.unify.qzz.io https://unify.qzz.io ws: wss: https:",
       mediaSrc: "'self' https://res.cloudinary.com data: blob:",
       imgSrc: "'self' https://res.cloudinary.com data: https:",
       upgradeInsecureRequests: true,

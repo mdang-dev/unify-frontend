@@ -251,32 +251,56 @@ export const useNotification = (userId) => {
     // Mark notification as read
     markAsRead({ notificationId: notification.id });
 
-    // Navigate based on notification type and link
-    if (notification.link) {
-      router.push(notification.link);
-    } else {
-      // Fallback navigation based on notification type
-      switch (notification.type?.toLowerCase()) {
-        case 'follow':
-          if (notification.sender?.id) {
-            router.push(`/profile/${notification.sender.id}`);
+    // Handle different notification types
+    switch (notification.type?.toLowerCase()) {
+      case 'follow':
+        if (notification.sender?.id) {
+          router.push(`/profile/${notification.sender.id}`);
+        }
+        break;
+      case 'like':
+      case 'comment':
+        // Extract post ID from link or notification data
+        let postId = null;
+        let commentId = null;
+        
+        if (notification.link) {
+          // Extract post ID from link like "/posts/123"
+          const match = notification.link.match(/\/posts\/([^\/]+)/);
+          if (match) {
+            postId = match[1];
           }
-          break;
-        case 'like':
-        case 'comment':
+        }
+        
+        // For comment notifications, extract comment ID if available
+        if (notification.type?.toLowerCase() === 'comment' && notification.data?.commentId) {
+          commentId = notification.data.commentId;
+        }
+        
+        if (postId) {
+          // Open post detail modal instead of navigating
+          // We'll need to pass this to the parent component
+          if (typeof window !== 'undefined') {
+            // Dispatch custom event to open modal
+            window.dispatchEvent(new CustomEvent('openPostModal', {
+              detail: { postId, commentId }
+            }));
+          }
+        } else {
+          // Fallback to navigation
           if (notification.link) {
             router.push(notification.link);
           }
-          break;
-        case 'tag':
-          // Navigate to the tagged post
-          if (notification.link) {
-            router.push(notification.link);
-          }
-          break;
-        default:
-          console.log('Unknown notification type:', notification.type);
-      }
+        }
+        break;
+      case 'tag':
+        // Navigate to the tagged post
+        if (notification.link) {
+          router.push(notification.link);
+        }
+        break;
+      default:
+        console.log('Unknown notification type:', notification.type);
     }
   }, [markAsRead, router]);
 
