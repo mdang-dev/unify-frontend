@@ -43,8 +43,11 @@ export default async function middleware(req) {
 
   // If authenticated, check user role for access control
   if (token) {
-    const { roles } = await getUser();
-    const roleId = roles[0]?.id;
+    const user = await getUser();
+    if (!user || !user.roles) {
+      return NextResponse.redirect(new URL('/page-not-found', req.nextUrl));
+    }
+    const roleId = user.roles[0]?.id;
 
     // If the user is a regular user (roleId === 2) and tries to access protected route, show not found
     if (isProtected && roleId === 2) {
