@@ -3,7 +3,8 @@ export const SECURITY_CONFIG = {
   development: {
     // Development environment - more permissive
     csp: {
-      connectSrc: "'self' http://localhost:8080 https://localhost:8080 ws: wss: http://localhost:3000",
+      // Allow all HTTP(S) and WS(S) connections in development to avoid CSP blocks
+      connectSrc: "'self' http: https: ws: wss:",
       mediaSrc: "'self' https://res.cloudinary.com data: blob:",
       imgSrc: "'self' https://res.cloudinary.com data: https:",
       upgradeInsecureRequests: false,
