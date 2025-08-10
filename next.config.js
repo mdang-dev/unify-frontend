@@ -5,42 +5,14 @@ const withNextIntl = createNextIntlPlugin();
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ['res.cloudinary.com'],
-  },
-  // Suppress source map warnings in development
-  webpack: (config, { dev }) => {
-    // Work around Windows + pnpm persistent cache snapshot issues during production builds
-    if (!dev) {
-      config.cache = false;
-    }
-    if (dev) {
-      config.ignoreWarnings = [
-        /Failed to parse source map/,
-        /Source map error/,
-      ];
-      // Disable source maps in development to prevent 404 errors
-      config.devtool = false;
-    }
-    return config;
-  },
-  // Optimize font loading and reduce preload warnings
-  experimental: {
-    // Font optimization is enabled by default in Next.js 15
-  },
-  async rewrites() {
-    return [
+    remotePatterns: [
       {
-        source: '/:locale/sounds/:path*',
-        destination: '/sounds/:path*',
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
       },
-      {
-        source: '/:locale/images/:path*',
-        destination: '/images/:path*',
-      },
-    ];
+    ],
   },
   eslint: {
-    // Avoid blocking builds on lint errors
     ignoreDuringBuilds: true,
   },
 };

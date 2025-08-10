@@ -28,18 +28,18 @@ export const useWebSocket = (userId) => {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-      
+
       const response = await fetch(`${apiUrl}/auth/csrf`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       if (response.ok) {
         const data = await response.json();
         csrfToken = data.token;
@@ -62,7 +62,7 @@ export const useWebSocket = (userId) => {
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
     const wsUrl = `${apiUrl}/ws?token=${token}`;
-    
+
     // Create STOMP client with optimized settings for real-time communication
     return new Client({
       webSocketFactory: () => {
@@ -104,11 +104,11 @@ export const useWebSocket = (userId) => {
         }
         setError(`STOMP Error: ${frame.headers.message || 'Connection failed'}`);
         setConnected(false);
-        
+
         if (retryCountRef.current < maxRetries) {
           retryCountRef.current++;
           const delay = Math.pow(2, retryCountRef.current) * 1000;
-          
+
           retryTimeoutRef.current = setTimeout(async () => {
             if (clientRef.current) {
               clientRef.current.deactivate();
@@ -124,12 +124,12 @@ export const useWebSocket = (userId) => {
         console.error('❌ WebSocket Error:', event);
         setError(`WebSocket Error: ${event.message || 'Connection failed'}`);
         setConnected(false);
-        
+
         // Implement exponential backoff retry strategy for WebSocket errors
         if (retryCountRef.current < maxRetries) {
           retryCountRef.current++;
           const delay = Math.pow(2, retryCountRef.current) * 1000; // Exponential backoff: 2s, 4s, 8s, etc.
-          
+
           retryTimeoutRef.current = setTimeout(async () => {
             if (clientRef.current) {
               clientRef.current.deactivate();
@@ -144,12 +144,12 @@ export const useWebSocket = (userId) => {
       onWebSocketClose: (event) => {
         // WebSocket connection closed - update connection state
         setConnected(false);
-        
+
         // Only retry reconnection if it's not a normal closure (code 1000 = normal close)
         if (event.code !== 1000 && retryCountRef.current < maxRetries) {
           retryCountRef.current++;
           const delay = Math.pow(2, retryCountRef.current) * 1000; // Exponential backoff: 2s, 4s, 8s, etc.
-          
+
           retryTimeoutRef.current = setTimeout(async () => {
             const newClient = await createStompClient();
             if (newClient) {
@@ -175,7 +175,7 @@ export const useWebSocket = (userId) => {
       if (stompClient) {
         clientRef.current = stompClient;
         setClient(stompClient);
-        
+
         try {
           stompClient.activate();
         } catch (err) {
@@ -193,7 +193,7 @@ export const useWebSocket = (userId) => {
       if (retryTimeoutRef.current) {
         clearTimeout(retryTimeoutRef.current);
       }
-      
+
       if (clientRef.current) {
         try {
           clientRef.current.deactivate();
@@ -210,10 +210,10 @@ export const useWebSocket = (userId) => {
     if (retryTimeoutRef.current) {
       clearTimeout(retryTimeoutRef.current);
     }
-    
+
     retryCountRef.current = 0;
     setError(null);
-    
+
     if (clientRef.current) {
       try {
         clientRef.current.deactivate();
@@ -223,7 +223,7 @@ export const useWebSocket = (userId) => {
         }
       }
     }
-    
+
     const newClient = createStompClient();
     if (newClient) {
       clientRef.current = newClient;

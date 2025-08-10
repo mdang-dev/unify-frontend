@@ -1,7 +1,7 @@
 import RootLayout from '../layouts/root-layout';
 
 export const metadata = {
-  title: 'Unify - Social Network',
+  title: 'Unify',
   description: 'Connect, Share, and Explore with Unify Social Network',
 };
 

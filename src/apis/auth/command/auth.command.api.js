@@ -7,12 +7,12 @@ export const authCommandApi = {
     const res = await httpClient.post(`${url}/login`, data);
     return res.data;
   },
-  register: async (data) => {
-    const res = await httpClient.post(`${url}/register`, data);
+  logout: async (data) => {
+    const res = await httpClient.post(`${url}/logout`, data);
     return res.data;
   },
-  logout: async () => {
-    const res = await httpClient.post(`${url}/logout`);
+  register: async (data) => {
+    const res = await httpClient.post(`${url}/register`, data);
     return res.data;
   },
   // Send OTP to email for forgot password flow
