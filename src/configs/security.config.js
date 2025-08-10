@@ -25,8 +25,8 @@ export const SECURITY_CONFIG = {
       strictTransportSecurity: true
     },
     productionSecurity: {
-      enabled: true, // Enable all production security features
-      debugMode: false
+      enabled: false, // Enable all production security features
+      debugMode: true
     }
   }
 };
