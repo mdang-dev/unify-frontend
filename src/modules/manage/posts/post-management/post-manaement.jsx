@@ -129,7 +129,6 @@ const PostManagement = () => {
       captions: '',
       status: '',
       audience: '',
-      postedAt: '',
       isCommentVisible: '',
       isLikeVisible: '',
       hashtags: '',
@@ -301,18 +300,6 @@ const PostManagement = () => {
                     </SelectItem>
                   ))}
                 </Select>
-              </div>
-
-              {/* Posted At Filter */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Posted At</label>
-                <Input
-                  type="datetime-local"
-                  placeholder="Select date and time"
-                  value={localFilters.postedAt}
-                  onChange={(e) => handleFilterChange('postedAt', e.target.value)}
-                  className="w-full"
-                />
               </div>
 
               {/* Comment Visibility Filter */}

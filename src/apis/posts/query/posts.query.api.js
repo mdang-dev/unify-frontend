@@ -65,25 +65,32 @@ export const postsQueryApi = {
   },
   getPostsWithFilters: async (filters) => {
     try {
-      // TODO: Replace with actual filter endpoint when backend is ready
-      // For now, use the personalized posts endpoint as a fallback
-      if (process.env.NODE_ENV === 'development') {
-        // Log fallback usage for debugging in development mode
-        console.log('Using fallback endpoint - filters:', filters);
-      }
-
-      const res = await httpClient(`${url}/personalized`, {
+      const res = await httpClient(`${url}/filter`, {
         params: {
+          captions: filters.captions || undefined,
+          status: filters.status || undefined,
+          audience: filters.audience || undefined,
+          postedAt: filters.postedAt || undefined,
+          isCommentVisible: filters.isCommentVisible || undefined,
+          isLikeVisible: filters.isLikeVisible || undefined,
+          commentCount: filters.commentCount || undefined,
+          commentCountOperator: filters.commentCountOperator || '=',
           page: filters.page || 0,
           size: filters.size || 10,
         },
       });
 
-      // Transform the response to match the expected format for filtered posts
+      const data = res?.data || {};
+      const content = Array.isArray(data.content) ? data.content : [];
+      const currentPage = typeof data.number === 'number' ? data.number : (filters.page || 0);
+      const totalPages = typeof data.totalPages === 'number' ? data.totalPages : 0;
+      const last = typeof data.last === 'boolean' ? data.last : (currentPage >= (totalPages - 1));
+
       return {
-        posts: res?.data?.posts ?? [],
-        hasNextPage: res?.data?.hasNextPage ?? false,
-        currentPage: filters.page || 0,
+        posts: content,
+        hasNextPage: !last,
+        currentPage,
+        totalPages,
       };
     } catch (error) {
       if (process.env.NODE_ENV === 'development') {
@@ -95,6 +102,7 @@ export const postsQueryApi = {
         posts: [],
         hasNextPage: false,
         currentPage: filters.page || 0,
+        totalPages: 0,
       };
     }
   },
