@@ -61,20 +61,16 @@ export const useWebSocket = (userId) => {
     }
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-    const wsUrl = `${apiUrl}/ws?token=${token}`;
+    const wsUrl = `${apiUrl}/ws`;
 
     // Create STOMP client with optimized settings for real-time communication
     return new Client({
       webSocketFactory: () => {
-        return new SockJS(wsUrl, null, {
-          transports: ['websocket'], // ✅ PERFORMANCE: Prefer WebSocket only for better performance
-          timeout: 10000, // ✅ PERFORMANCE: Reduced timeout for faster connection
-          heartbeat: 15000, // ✅ PERFORMANCE: Optimized heartbeat interval
-        });
+        return new SockJS(wsUrl);
       },
       connectHeaders: {
         userId,
-        token: token,
+        token: `Bearer ${token}`,
         ...(csrfToken && { 'X-CSRF-TOKEN': csrfToken }),
       },
       // ✅ PERFORMANCE: Optimized heartbeat settings

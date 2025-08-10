@@ -110,17 +110,13 @@ export const useChat = (user, chatPartner) => {
     }
 
     const socket = new SockJS(
-      `${process.env.NEXT_PUBLIC_API_URL}/ws?token=${getCookie(COOKIE_KEYS.AUTH_TOKEN)}`,
-      null,
-      {
-        transports: ['websocket'], // ✅ PERFORMANCE: WebSocket only for better performance
-        timeout: 5000, // ✅ PERFORMANCE: Ultra-fast timeout
-        heartbeat: 8000, // ✅ PERFORMANCE: Faster heartbeat for real-time chat
-      }
+      `${process.env.NEXT_PUBLIC_API_URL}/ws`
     );
+    const authToken = getCookie(COOKIE_KEYS.AUTH_TOKEN);
     const client = new Client({
       webSocketFactory: () => socket,
       connectHeaders: {
+        token: authToken ? `Bearer ${authToken}` : undefined,
         ...(csrfToken && { 'X-CSRF-TOKEN': csrfToken }),
       },
       // ✅ PERFORMANCE: Ultra-fast heartbeat for real-time chat
