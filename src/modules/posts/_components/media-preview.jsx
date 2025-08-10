@@ -2,6 +2,7 @@ const { default: Image } = require('next/image');
 
 const MediaPreview = ({ file, onRemove }) => {
   const isVideo = file.type?.startsWith('video/') || file.mediaType === 'VIDEO';
+  const isBlobOrData = typeof file.url === 'string' && (file.url.startsWith('blob:') || file.url.startsWith('data:'));
 
   return (
     <div className="group relative">
@@ -23,6 +24,7 @@ const MediaPreview = ({ file, onRemove }) => {
           alt="Preview"
           width={200}
           height={200}
+          unoptimized={isBlobOrData}
           className="aspect-square w-full rounded-lg border border-gray-200 object-cover dark:border-neutral-700"
         />
       )}

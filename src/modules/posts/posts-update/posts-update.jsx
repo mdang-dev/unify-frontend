@@ -8,7 +8,7 @@ import { Select as HerouiSelect, SelectItem as HerouiSelectItem, Textarea as Her
 import PostSwitch from '../_components/post-switch';
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/src/lib/utils';
-import { addToast, ToastProvider } from '@heroui/toast';
+import { toast } from 'sonner';
 import { redirect, useParams } from 'next/navigation';
 import { Spinner } from '@heroui/react';
 import {
@@ -49,11 +49,9 @@ const PostsUpdate = () => {
   const updatePostMutation = useMutation({
     mutationFn: postsCommandApi.updatePost,
     onError: (error) => {
-      addToast({
-        title: 'Post failed',
-        description: error.message || 'An error occurred while update your post.',
-        timeout: 3000,
-        color: 'danger',
+      toast.error('Post failed', {
+        description: error.message || 'An error occurred while updating your post.',
+        duration: 3000,
       });
     },
   });
@@ -61,11 +59,9 @@ const PostsUpdate = () => {
   const insertHashtagsMutation = useMutation({
     mutationFn: hashtagCommandApi.insertHashtags,
     onError: (error) => {
-      addToast({
-        title: 'Hashtag failed',
+      toast.error('Hashtag failed', {
         description: error.message || 'Could not save hashtags.',
-        timeout: 3000,
-        color: 'danger',
+        duration: 3000,
       });
     },
   });
@@ -73,11 +69,9 @@ const PostsUpdate = () => {
   const insertHashtagDetailsMutation = useMutation({
     mutationFn: hashtagCommandApi.insertHashtagDetails,
     onError: (error) => {
-      addToast({
-        title: 'Hashtag details failed',
+      toast.error('Hashtag details failed', {
         description: error.message || 'Could not link hashtags to post.',
-        timeout: 3000,
-        color: 'danger',
+        duration: 3000,
       });
     },
   });
@@ -85,11 +79,9 @@ const PostsUpdate = () => {
   const saveMediaMutation = useMutation({
     mutationFn: (media) => mediaCommandApi.savedMedia(media),
     onError: (error) => {
-      addToast({
-        title: 'Media save failed',
+      toast.error('Media save failed', {
         description: error.message || 'Upload succeeded but media saving failed.',
-        timeout: 3000,
-        color: 'danger',
+        duration: 3000,
       });
     },
   });
@@ -110,10 +102,11 @@ const PostsUpdate = () => {
       setIsLikeVisible(exitingPosts?.isLikeVisible);
 
       const eFiles = exitingPosts?.media.map((m) => ({
+        id: m.id,
         url: m.url,
-        file_type: m.fileType,
+        fileType: m.fileType,
         size: m.size,
-        media_type: m.mediaType,
+        mediaType: m.mediaType,
       }));
       setExistingFiles([...eFiles]);
       setLoading(false);
@@ -182,11 +175,9 @@ const PostsUpdate = () => {
 
   const handleUpload = async () => {
     if (files.length === 0 && existingFiles.length === 0) {
-      addToast({
-        title: 'No files uploaded',
+      toast.warning('No files uploaded', {
         description: 'Please upload at least one media file (image/video).',
-        timeout: 3000,
-        color: 'warning',
+        duration: 3000,
       });
       return;
     }
@@ -221,11 +212,9 @@ const PostsUpdate = () => {
     try {
       // Validate at least one media remains/added
       if (files.length === 0 && existingFiles.length === 0) {
-        addToast({
-          title: 'No files uploaded',
+        toast.warning('No files uploaded', {
           description: 'Please upload at least one media file (image/video).',
-          timeout: 3000,
-          color: 'warning',
+          duration: 3000,
         });
         setLoading(false);
         return;
@@ -243,21 +232,19 @@ const PostsUpdate = () => {
       }
 
       // Upload only when there are new files selected
-      let savedMedia = [];
+      let newMedia = [];
       if (files.length > 0) {
         const fetchedFiles = await handleUpload();
         if (!fetchedFiles?.files?.length) throw new Error('Failed to upload media');
-        const newMedia = fetchedFiles.files.map((file) => ({
-          post,
+        newMedia = fetchedFiles.files.map((file) => ({
           url: file.url,
           fileType: file.file_type,
           size: file.size,
           mediaType: file.media_type.toUpperCase(),
         }));
-        savedMedia = await saveMediaMutation.mutateAsync(newMedia);
       }
 
-      const finalMedia = [...savedMedia, ...existingFiles];
+      const finalMedia = [...existingFiles, ...newMedia];
 
       const newPost = {
         ...post,
@@ -271,18 +258,14 @@ const PostsUpdate = () => {
       const updatedPost = await updatePostMutation.mutateAsync(newPost);
       if (!updatedPost) return;
 
-      addToast({
-        title: 'Success',
+      toast.success('Post updated', {
         description: 'Your post was updated successfully.',
-        timeout: 3000,
-        color: 'success',
+        duration: 3000,
       });
     } catch (error) {
-      addToast({
-        title: 'Encountered an error',
+      toast.error('Encountered an error', {
         description: 'Error: ' + (error?.message || error),
-        timeout: 3000,
-        color: 'danger',
+        duration: 3000,
       });
     } finally {
       setLoading(false);
@@ -290,9 +273,22 @@ const PostsUpdate = () => {
   };
 
   const removeFile = (value) => {
-    setPreviews((prevPreviews) => prevPreviews.filter((item) => item.url !== value.url));
-    setFiles((prevFiles) => prevFiles.filter((item) => item.url !== value.url));
-    setExistingFiles((prevFiles) => prevFiles.filter((item) => item.url !== value.url));
+    setPreviews((prevPreviews) => {
+      const index = prevPreviews.findIndex((item) => item.url === value.url);
+      if (index === -1) return prevPreviews;
+
+      // Determine if this preview belongs to existing media or newly added files
+      if (index < existingFiles.length) {
+        // Remove from existing files by url
+        setExistingFiles((prev) => prev.filter((item) => item.url !== value.url));
+      } else {
+        // Map preview index to files index
+        const fileIndex = index - existingFiles.length;
+        setFiles((prev) => prev.filter((_, i) => i !== fileIndex));
+      }
+
+      return prevPreviews.filter((_, i) => i !== index);
+    });
   };
 
   // AI Assistant helpers (mirroring Create Post)
@@ -305,7 +301,7 @@ const PostsUpdate = () => {
       const byteArray = new Uint8Array(byteNumbers);
       return new File([byteArray], filename, { type: mimeType });
     } catch (error) {
-      addToast({ title: 'Conversion failed', description: 'Failed to convert base64 image to file.', timeout: 3000, color: 'danger' });
+      toast.error('Conversion failed', { description: 'Failed to convert base64 image to file.', duration: 3000 });
       return null;
     }
   };
@@ -314,13 +310,13 @@ const PostsUpdate = () => {
     const maxFiles = 12;
     const maxFileSize = 10 * 1024 * 1024;
     if (files.length >= maxFiles) {
-      addToast({ title: 'Too many files', description: `You can only upload up to ${maxFiles} files.`, timeout: 3000, color: 'warning' });
+      toast.warning('Too many files', { description: `You can only upload up to ${maxFiles} files.`, duration: 3000 });
       return;
     }
     const file = convertBase64ToFile(base64String, filename, mimeType);
     if (!file) return;
     if (file.size > maxFileSize) {
-      addToast({ title: 'File too large', description: `${filename} exceeds the 10MB size limit.`, timeout: 3000, color: 'warning' });
+      toast.warning('File too large', { description: `${filename} exceeds the 10MB size limit.`, duration: 3000 });
       return;
     }
     setFiles((prev) => [...prev, file]);
@@ -334,7 +330,7 @@ const PostsUpdate = () => {
     if (base64Array.length === 0) return;
     const imagesToAdd = base64Array.slice(0, remainingSlots);
     if (imagesToAdd.length < base64Array.length) {
-      addToast({ title: 'Some images skipped', description: `Only ${remainingSlots} images were added due to file limit.`, timeout: 3000, color: 'warning' });
+      toast.warning('Some images skipped', { description: `Only ${remainingSlots} images were added due to file limit.`, duration: 3000 });
     }
     imagesToAdd.forEach((base64String, index) => {
       const filename = `${filenamePrefix}_${index + 1}.jpg`;
@@ -364,7 +360,7 @@ const PostsUpdate = () => {
         img.src = imageUrl;
       });
     } catch (error) {
-      addToast({ title: 'Conversion failed', description: 'Failed to convert image URL to base64.', timeout: 3000, color: 'danger' });
+      toast.error('Conversion failed', { description: 'Failed to convert image URL to base64.', duration: 3000 });
       return null;
     }
   };
@@ -374,7 +370,7 @@ const PostsUpdate = () => {
       const base64String = await convertUrlToBase64(imageUrl, filename, mimeType);
       if (base64String) addBase64Image(base64String, filename, mimeType);
     } catch (error) {
-      addToast({ title: 'URL conversion failed', description: error.message || 'Failed to process image from URL.', timeout: 3000, color: 'danger' });
+      toast.error('URL conversion failed', { description: error.message || 'Failed to process image from URL.', duration: 3000 });
     }
   };
 
@@ -384,7 +380,7 @@ const PostsUpdate = () => {
     if (urlArray.length === 0) return;
     const imagesToAdd = urlArray.slice(0, remainingSlots);
     if (imagesToAdd.length < urlArray.length) {
-      addToast({ title: 'Some images skipped', description: `Only ${remainingSlots} images were added due to file limit.`, timeout: 3000, color: 'warning' });
+      toast.warning('Some images skipped', { description: `Only ${remainingSlots} images were added due to file limit.`, duration: 3000 });
     }
     for (let i = 0; i < imagesToAdd.length; i++) {
       const url = imagesToAdd[i];

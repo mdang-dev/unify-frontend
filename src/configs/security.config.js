@@ -6,7 +6,7 @@ export const SECURITY_CONFIG = {
       // Allow all HTTP(S) and WS(S) connections in development to avoid CSP blocks
       connectSrc: "'self' http: https: ws: wss:",
       mediaSrc: "'self' https://res.cloudinary.com data: blob:",
-      imgSrc: "'self' https://res.cloudinary.com data: https:",
+      imgSrc: "'self' https://res.cloudinary.com data: https: blob:",
       upgradeInsecureRequests: false,
       strictTransportSecurity: false
     },
@@ -20,7 +20,7 @@ export const SECURITY_CONFIG = {
     csp: {
       connectSrc: "'self' https://*.unify.qzz.io https://unify.qzz.io ws: wss: https:",
       mediaSrc: "'self' https://res.cloudinary.com data: blob:",
-      imgSrc: "'self' https://res.cloudinary.com data: https:",
+      imgSrc: "'self' https://res.cloudinary.com data: https: blob:",
       upgradeInsecureRequests: true,
       strictTransportSecurity: true
     },
