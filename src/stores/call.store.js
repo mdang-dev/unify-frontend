@@ -68,14 +68,11 @@ export const useCallStore = create((set, get) => ({
       // Continue without CSRF token if fetch fails
     }
 
-    const client = Stomp.over(
-      () => new SockJS('http://localhost:8080/ws?token=' + getCookie(COOKIE_KEYS.AUTH_TOKEN), null, {
-        transports: ['websocket'], // ✅ PERFORMANCE: WebSocket only
-        timeout: 8000, // ✅ PERFORMANCE: Faster timeout
-        heartbeat: 10000, // ✅ PERFORMANCE: Optimized heartbeat
-      })
-    );
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+    const client = Stomp.over(() => new SockJS(`${apiUrl}/ws`));
+    const authToken = getCookie(COOKIE_KEYS.AUTH_TOKEN);
     client.connect({
+      ...(authToken ? { token: `Bearer ${authToken}` } : {}),
       ...(csrfToken && { 'X-CSRF-TOKEN': csrfToken }),
     }, () => {
       client.subscribe(`/queue/call/${userId}`, (msg) => {

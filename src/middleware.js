@@ -57,11 +57,8 @@ export default async function middleware(req) {
       return NextResponse.redirect(redirectUrl);
     }
   }
-
-  // Add security headers to all responses
-  const response = i18nResponse;
-
-  return response;
+  
+  return i18nResponse;
 }
 
 export const config = {

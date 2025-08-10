@@ -174,7 +174,7 @@ const Message = ({ messages, messagesEndRef, avatar, onRetryMessage }) => {
 
         return (
           <div
-            key={message.id || message.timestamp}
+            key={`${message.id || message.timestamp || 'no-id'}-${index}`}
             className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} ${
               message.isOptimistic ? 'opacity-70' : ''
             } ${message.isFailed ? 'opacity-50' : ''}`}

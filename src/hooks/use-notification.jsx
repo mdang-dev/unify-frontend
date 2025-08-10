@@ -182,16 +182,12 @@ export const useNotification = (userId) => {
           // Continue without CSRF token if fetch fails
         }
 
-        const socket = new SockJS(`${process.env.NEXT_PUBLIC_API_URL}/ws?token=${token}`, null, {
-          transports: ['websocket'], // ✅ PERFORMANCE: WebSocket only
-          timeout: 8000, // ✅ PERFORMANCE: Faster timeout
-          heartbeat: 15000, // ✅ PERFORMANCE: Optimized heartbeat
-        });
+        const socket = new SockJS(`${process.env.NEXT_PUBLIC_API_URL}/ws`);
         const client = new Client({
           webSocketFactory: () => socket,
           connectHeaders: {
             userId,
-            token: token,
+            token: `Bearer ${token}`,
             ...(csrfToken && { 'X-CSRF-TOKEN': csrfToken }),
           },
           reconnectDelay: 3000, // ✅ PERFORMANCE: Faster reconnection
