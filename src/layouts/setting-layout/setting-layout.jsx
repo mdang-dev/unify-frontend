@@ -35,7 +35,7 @@ const SettingsLayout = ({ children }) => {
   };
   return (
     <div className="flex min-h-[calc(100vh-64px)] w-full bg-white dark:bg-neutral-900">
-      <div className="fixed left-20 top-0 h-[calc(100vh-64px)] w-[280px] flex flex-col border-r border-neutral-200 bg-white px-6 py-8 dark:border-neutral-800 dark:bg-neutral-900">
+      <div className="fixed left-20 top-0 flex h-[calc(100vh-64px)] w-[280px] flex-col border-r border-neutral-200 bg-white px-6 py-8 dark:border-neutral-800 dark:bg-neutral-900">
         <div className="space-y-8">
           <div>
             <h3 className="mb-6 bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-2xl font-bold text-transparent">
@@ -121,8 +121,12 @@ const SettingsLayout = ({ children }) => {
                   <i className="fa-solid fa-sign-out-alt text-red-600 dark:text-red-400"></i>
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Confirm Logout</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Are you sure you want to logout?</p>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Confirm Logout
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Are you sure you want to logout?
+                  </p>
                 </div>
               </div>
               <div className="flex gap-3">

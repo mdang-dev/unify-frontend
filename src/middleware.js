@@ -4,7 +4,6 @@ import { cookies } from 'next/headers';
 import { getUser } from './utils/auth.util';
 import createMiddleware from 'next-intl/middleware';
 import { routing } from './i18n/routing';
-import { addSecurityHeaders } from './middleware/security-headers';
 
 const protectedRoutes = new Set(['/statistics', '/manage']);
 const publicRoutes = new Set([
@@ -61,8 +60,7 @@ export default async function middleware(req) {
 
   // Add security headers to all responses
   const response = i18nResponse;
-  addSecurityHeaders(response.headers);
-  
+
   return response;
 }
 
