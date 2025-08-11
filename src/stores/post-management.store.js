@@ -6,10 +6,9 @@ export const usePostManagementStore = create((set, get) => ({
         captions: '',
         status: '',
         audience: '',
-        postedAt: '',
         isCommentVisible: '',
         isLikeVisible: '',
-        hashtags: '',
+        hashtag: '', // Changed from hashtags to hashtag
         commentCount: '',
         commentCountOperator: '=',
     },
@@ -25,6 +24,9 @@ export const usePostManagementStore = create((set, get) => ({
     cachedPosts: [],
     cachedHasNextPage: false,
     cachedCurrentPage: 0,
+    cachedTotal: 0,
+    cachedTotalPages: 0,
+    cachedPageSize: 20,
 
     // Actions
     setFilters: (filters) => set({ filters }),
@@ -58,6 +60,9 @@ export const usePostManagementStore = create((set, get) => ({
         cachedPosts: data.posts || [],
         cachedHasNextPage: data.hasNextPage || false,
         cachedCurrentPage: data.currentPage || 0,
+        cachedTotal: data.total || 0,
+        cachedTotalPages: data.totalPages || 0,
+        cachedPageSize: data.pageSize || 20,
     }),
 
     clearCache: () => set({
@@ -65,10 +70,9 @@ export const usePostManagementStore = create((set, get) => ({
             captions: '',
             status: '',
             audience: '',
-            postedAt: '',
             isCommentVisible: '',
             isLikeVisible: '',
-            hashtags: '',
+            hashtag: '', // Changed from hashtags to hashtag
             commentCount: '',
             commentCountOperator: '=',
         },
@@ -78,6 +82,9 @@ export const usePostManagementStore = create((set, get) => ({
         cachedPosts: [],
         cachedHasNextPage: false,
         cachedCurrentPage: 0,
+        cachedTotal: 0,
+        cachedTotalPages: 0,
+        cachedPageSize: 20,
     }),
 
     // Check if we have cached data
@@ -97,6 +104,9 @@ export const usePostManagementStore = create((set, get) => ({
             cachedPosts: state.cachedPosts,
             cachedHasNextPage: state.cachedHasNextPage,
             cachedCurrentPage: state.cachedCurrentPage,
+            cachedTotal: state.cachedTotal,
+            cachedTotalPages: state.cachedTotalPages,
+            cachedPageSize: state.cachedPageSize,
         };
     },
 })); 

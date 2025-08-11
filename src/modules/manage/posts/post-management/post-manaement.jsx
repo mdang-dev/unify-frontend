@@ -68,6 +68,9 @@ const PostManagement = () => {
     cachedPosts,
     cachedHasNextPage,
     cachedCurrentPage,
+    cachedTotal,
+    cachedTotalPages,
+    cachedPageSize,
     setFilters,
     setAppliedFilters,
     setPagination,
@@ -95,8 +98,8 @@ const PostManagement = () => {
     queryKey: [QUERY_KEYS.POSTS, appliedFilters, currentPage, itemsPerPage],
     queryFn: () => postsQueryApi.getPostsWithFilters({
       ...appliedFilters,
-      page: currentPage - 1, // API expects 0-based indexing
-      size: itemsPerPage,
+      page: currentPage - 1, // Convert 1-based frontend to 0-based backend
+      pageSize: itemsPerPage, // Changed from size to pageSize
     }),
     enabled: appliedFilters !== null, // Only fetch when filters are applied
     placeholderData: keepPreviousData, // Keep previous data while fetching new data
@@ -116,6 +119,8 @@ const PostManagement = () => {
   const posts = postResponse?.posts || cachedPosts || [];
   const hasNextPage = postResponse?.hasNextPage || cachedHasNextPage || false;
   const responseCurrentPage = postResponse?.currentPage || cachedCurrentPage || 0;
+  const total = postResponse?.total || cachedTotal || 0;
+  const totalPages = postResponse?.totalPages || cachedTotalPages || 0;
 
   const handleApplyFilters = () => {
     setFilters(localFilters);
@@ -131,7 +136,7 @@ const PostManagement = () => {
       audience: '',
       isCommentVisible: '',
       isLikeVisible: '',
-      hashtags: '',
+      hashtag: '', // Changed from hashtags to hashtag
       commentCount: '',
       commentCountOperator: '=',
     };
@@ -181,10 +186,11 @@ const PostManagement = () => {
   const handleAction = (action, post) => {
     console.log(`${action} action for post:`, post);
     // Implement your action logic here
+    const postId = post.id || post.actions?.postId;
     if (action === 'view') {
-      router.push(`/manage/posts/${post.id}`);
+      router.push(`/manage/posts/${postId}`);
     } else {
-      alert(`${action} action for post: ${post.id}`);
+      alert(`${action} action for post: ${postId}`);
     }
   };
 
@@ -273,12 +279,15 @@ const PostManagement = () => {
                 <label className="text-sm font-medium">Status</label>
                 <Select
                   placeholder="Select status"
-                  value={localFilters.status}
-                  onChange={(e) => handleFilterChange('status', e.target.value)}
+                  selectedKeys={localFilters.status !== '' && localFilters.status !== undefined && localFilters.status !== null ? [String(localFilters.status)] : []}
+                  onSelectionChange={(keys) => {
+                    const value = Array.from(keys)[0] ?? '';
+                    handleFilterChange('status', value);
+                  }}
                   className="w-full"
                 >
                   {POST_STATUSES.map((status) => (
-                    <SelectItem key={status.key} value={status.key}>
+                    <SelectItem key={status.key}>
                       {status.value}
                     </SelectItem>
                   ))}
@@ -290,12 +299,15 @@ const PostManagement = () => {
                 <label className="text-sm font-medium">Audience</label>
                 <Select
                   placeholder="Select audience"
-                  value={localFilters.audience}
-                  onChange={(e) => handleFilterChange('audience', e.target.value)}
+                  selectedKeys={localFilters.audience !== '' && localFilters.audience !== undefined && localFilters.audience !== null ? [String(localFilters.audience)] : []}
+                  onSelectionChange={(keys) => {
+                    const value = Array.from(keys)[0] ?? '';
+                    handleFilterChange('audience', value);
+                  }}
                   className="w-full"
                 >
                   {AUDIENCE_OPTIONS.map((audience) => (
-                    <SelectItem key={audience.key} value={audience.key}>
+                    <SelectItem key={audience.key}>
                       {audience.value}
                     </SelectItem>
                   ))}
@@ -307,12 +319,15 @@ const PostManagement = () => {
                 <label className="text-sm font-medium">Comment Visibility</label>
                 <Select
                   placeholder="Select comment visibility"
-                  value={localFilters.isCommentVisible}
-                  onChange={(e) => handleFilterChange('isCommentVisible', e.target.value)}
+                  selectedKeys={localFilters.isCommentVisible !== '' && localFilters.isCommentVisible !== undefined && localFilters.isCommentVisible !== null ? [String(localFilters.isCommentVisible)] : []}
+                  onSelectionChange={(keys) => {
+                    const value = Array.from(keys)[0] ?? '';
+                    handleFilterChange('isCommentVisible', value);
+                  }}
                   className="w-full"
                 >
-                  <SelectItem key="true" value="true">Visible</SelectItem>
-                  <SelectItem key="false" value="false">Hidden</SelectItem>
+                  <SelectItem key="true">Visible</SelectItem>
+                  <SelectItem key="false">Hidden</SelectItem>
                 </Select>
               </div>
 
@@ -321,23 +336,26 @@ const PostManagement = () => {
                 <label className="text-sm font-medium">Like Visibility</label>
                 <Select
                   placeholder="Select like visibility"
-                  value={localFilters.isLikeVisible}
-                  onChange={(e) => handleFilterChange('isLikeVisible', e.target.value)}
+                  selectedKeys={localFilters.isLikeVisible !== '' && localFilters.isLikeVisible !== undefined && localFilters.isLikeVisible !== null ? [String(localFilters.isLikeVisible)] : []}
+                  onSelectionChange={(keys) => {
+                    const value = Array.from(keys)[0] ?? '';
+                    handleFilterChange('isLikeVisible', value);
+                  }}
                   className="w-full"
                 >
-                  <SelectItem key="true" value="true">Visible</SelectItem>
-                  <SelectItem key="false" value="false">Hidden</SelectItem>
+                  <SelectItem key="true">Visible</SelectItem>
+                  <SelectItem key="false">Hidden</SelectItem>
                 </Select>
               </div>
 
-              {/* Hashtags Filter */}
+              {/* Hashtag Filter */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">Hashtags</label>
+                <label className="text-sm font-medium">Hashtag</label>
                 <Input
                   type="text"
-                  placeholder="Enter hashtags (comma separated)"
-                  value={localFilters.hashtags}
-                  onChange={(e) => handleFilterChange('hashtags', e.target.value)}
+                  placeholder="Enter hashtag"
+                  value={localFilters.hashtag}
+                  onChange={(e) => handleFilterChange('hashtag', e.target.value)}
                   className="w-full"
                 />
               </div>
@@ -348,12 +366,15 @@ const PostManagement = () => {
                 <div className="flex gap-2">
                   <Select
                     placeholder="Operator"
-                    value={localFilters.commentCountOperator}
-                    onChange={(e) => handleFilterChange('commentCountOperator', e.target.value)}
+                    selectedKeys={localFilters.commentCountOperator !== '' && localFilters.commentCountOperator !== undefined && localFilters.commentCountOperator !== null ? [String(localFilters.commentCountOperator)] : ['=']}
+                    onSelectionChange={(keys) => {
+                      const value = Array.from(keys)[0] ?? '=';
+                      handleFilterChange('commentCountOperator', value);
+                    }}
                     className="w-1/3"
                   >
                     {COMMENT_COUNT_OPERATORS.map((operator) => (
-                      <SelectItem key={operator.key} value={operator.key}>
+                      <SelectItem key={operator.key}>
                         {operator.value}
                       </SelectItem>
                     ))}
@@ -395,7 +416,7 @@ const PostManagement = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <p className="text-sm text-muted-foreground">
-                Showing {posts.length} posts
+                Showing {posts.length} of {total} posts
               </p>
               {/* Cache Status Indicator */}
               <div className="flex items-center gap-1">
@@ -408,14 +429,17 @@ const PostManagement = () => {
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Items per page:</span>
               <Select
-                value={localItemsPerPage.toString()}
-                onChange={(e) => handleItemsPerPageChange(e.target.value)}
+                selectedKeys={[String(localItemsPerPage)]}
+                onSelectionChange={(keys) => {
+                  const value = Array.from(keys)[0] ?? String(localItemsPerPage);
+                  handleItemsPerPageChange(value);
+                }}
                 className="w-20"
               >
-                <SelectItem key="5" value="5">5</SelectItem>
-                <SelectItem key="10" value="10">10</SelectItem>
-                <SelectItem key="20" value="20">20</SelectItem>
-                <SelectItem key="50" value="50">50</SelectItem>
+                <SelectItem key="5">5</SelectItem>
+                <SelectItem key="10">10</SelectItem>
+                <SelectItem key="20">20</SelectItem>
+                <SelectItem key="50">50</SelectItem>
               </Select>
             </div>
           </div>
@@ -486,19 +510,19 @@ const PostManagement = () => {
                     const audienceInfo = getAudienceInfo(post.audience);
                     
                     return (
-                      <ShadcnTableRow key={post.id + index}>
+                      <ShadcnTableRow key={post.actions?.postId + index}>
                         <ShadcnTableCell className="font-medium">
-                          {(localCurrentPage - 1) * localItemsPerPage + index + 1}
+                          {post.no}
                         </ShadcnTableCell>
                         <ShadcnTableCell>
                           <div className="flex items-center gap-2">
                             <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
                               <span className="text-xs font-medium">
-                                {post.user?.username?.charAt(0)?.toUpperCase() || 'U'}
+                                {post.user?.charAt(0)?.toUpperCase() || 'U'}
                               </span>
                             </div>
                             <span className="text-sm font-medium">
-                              {post.user?.username || 'Unknown User'}
+                              {post.user || 'Unknown User'}
                             </span>
                           </div>
                         </ShadcnTableCell>
@@ -532,10 +556,7 @@ const PostManagement = () => {
                         </ShadcnTableCell>
                         <ShadcnTableCell>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm">{post.commentCount || 0}</span>
-                            {!post.isCommentVisible && (
-                              <i className="fa-solid fa-eye-slash text-xs text-muted-foreground"></i>
-                            )}
+                            <span className="text-sm">{post.comments || 0}</span>
                           </div>
                         </ShadcnTableCell>
                         <ShadcnTableCell>
@@ -546,7 +567,7 @@ const PostManagement = () => {
                                 variant="light"
                                 size="sm"
                                 color="primary"
-                                onClick={() => handleAction('view', post)}
+                                onClick={() => handleAction('view', { id: post.actions?.postId, ...post })}
                               >
                                 <i className="fa-solid fa-eye"></i>
                               </Button>
@@ -558,7 +579,7 @@ const PostManagement = () => {
                                 variant="light"
                                 size="sm"
                                 color="warning"
-                                onClick={() => handleAction('hide', post)}
+                                onClick={() => handleAction('hide', { id: post.actions?.postId, ...post })}
                               >
                                 <i className="fa-solid fa-eye-slash"></i>
                               </Button>
@@ -570,7 +591,7 @@ const PostManagement = () => {
                                 variant="light"
                                 size="sm"
                                 color="danger"
-                                onClick={() => handleAction('delete', post)}
+                                onClick={() => handleAction('delete', { id: post.actions?.postId, ...post })}
                               >
                                 <i className="fa-solid fa-trash"></i>
                               </Button>
@@ -584,14 +605,14 @@ const PostManagement = () => {
               </ShadcnTable>
 
               {/* Pagination */}
-              {hasNextPage && (
+              {totalPages > 1 && (
                 <div className="flex items-center justify-between border-t px-4 py-3">
                   <div className="text-sm text-muted-foreground">
-                    Page {localCurrentPage} of {responseCurrentPage + 1}
+                    Page {responseCurrentPage} of {totalPages} (Total: {total} posts)
                   </div>
                   <Pagination
-                    total={responseCurrentPage + 1}
-                    page={localCurrentPage}
+                    total={totalPages}
+                    page={responseCurrentPage}
                     onChange={handlePageChange}
                     showControls
                     color="primary"

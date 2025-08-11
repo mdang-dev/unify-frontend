@@ -70,26 +70,34 @@ export const postsQueryApi = {
           captions: filters.captions || undefined,
           status: filters.status || undefined,
           audience: filters.audience || undefined,
-          postedAt: filters.postedAt || undefined,
           isCommentVisible: filters.isCommentVisible || undefined,
           isLikeVisible: filters.isLikeVisible || undefined,
+          hashtag: filters.hashtag || undefined, // Changed from hashtags to hashtag
           commentCount: filters.commentCount || undefined,
           commentCountOperator: filters.commentCountOperator || '=',
           page: filters.page || 0,
-          size: filters.size || 10,
+          pageSize: filters.pageSize || 20, // Changed from size to pageSize
         },
       });
 
       const data = res?.data || {};
-      const content = Array.isArray(data.content) ? data.content : [];
-      const currentPage = typeof data.number === 'number' ? data.number : (filters.page || 0);
-      const totalPages = typeof data.totalPages === 'number' ? data.totalPages : 0;
-      const last = typeof data.last === 'boolean' ? data.last : (currentPage >= (totalPages - 1));
+
+      // Handle new PostTableResponse structure
+      const rows = Array.isArray(data.rows) ? data.rows : [];
+      const currentPage = typeof data.page === 'number' ? data.page : (filters.page || 0);
+      const pageSize = typeof data.pageSize === 'number' ? data.pageSize : (filters.pageSize || 20);
+      const total = typeof data.total === 'number' ? data.total : 0;
+
+      // Calculate if there's a next page
+      const totalPages = Math.ceil(total / pageSize);
+      const hasNextPage = currentPage < totalPages;
 
       return {
-        posts: content,
-        hasNextPage: !last,
+        posts: rows,
+        hasNextPage,
         currentPage,
+        pageSize,
+        total,
         totalPages,
       };
     } catch (error) {
@@ -102,6 +110,8 @@ export const postsQueryApi = {
         posts: [],
         hasNextPage: false,
         currentPage: filters.page || 0,
+        pageSize: filters.pageSize || 20,
+        total: 0,
         totalPages: 0,
       };
     }
