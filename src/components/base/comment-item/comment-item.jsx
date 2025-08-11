@@ -1,7 +1,7 @@
 import { Card, CardFooter, Button } from '@heroui/react';
 import Image from 'next/image';
 import { formatDistanceToNow } from 'date-fns';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import Reply from './_components/reply';
 import Content from './_components/content';
 import { addToast } from '@heroui/react';
@@ -27,7 +27,13 @@ const flattenReplies = (replies) => {
   return flatList;
 };
 
-const CommentItem = ({ comment, currentUserId, onReplySubmit, onReplyClick, onCommentDeleted }) => {
+const CommentItemComponent = ({
+  comment,
+  currentUserId,
+  onReplySubmit,
+  onReplyClick,
+  onCommentDeleted,
+}) => {
   const [isShown, setIsShown] = useState(false);
   const [showMoreOptions, setShowMoreOptions] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -284,5 +290,24 @@ const CommentItem = ({ comment, currentUserId, onReplySubmit, onReplyClick, onCo
     </>
   );
 };
+
+const areEqual = (prevProps, nextProps) => {
+  // Shallow compare fields that affect render
+  const prev = prevProps.comment;
+  const next = nextProps.comment;
+  if (prev.id !== next.id) return false;
+  if (prev.content !== next.content) return false;
+  if (prev.username !== next.username) return false;
+  if (prev.commentedAt !== next.commentedAt) return false;
+  // Compare replies length to avoid deep traversal; detailed updates will come via new refs
+  const prevReplies = Array.isArray(prev.replies) ? prev.replies.length : 0;
+  const nextReplies = Array.isArray(next.replies) ? next.replies.length : 0;
+  if (prevReplies !== nextReplies) return false;
+
+  if (prevProps.currentUserId !== nextProps.currentUserId) return false;
+  return true;
+};
+
+const CommentItem = memo(CommentItemComponent, areEqual);
 
 export default CommentItem;

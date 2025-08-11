@@ -21,6 +21,7 @@ import { useAuthStore } from '@/src/stores/auth.store';
 import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
 import { postsQueryApi } from '@/src/apis/posts/query/posts.query.api';
 import { commentsQueryApi } from '@/src/apis/comments/query/comments.query.api';
+import { toast } from 'sonner';
 
 export default function ReelsPost() {
   const [postStates, setPostStates] = useState({});
@@ -60,6 +61,31 @@ export default function ReelsPost() {
     queryFn: () => commentsQueryApi.getCommentsByPostId(currentPostId),
     enabled: !!currentPostId && isCommentOpen,
   });
+
+  const sortCommentsRecursively = useCallback((items) => {
+    if (!Array.isArray(items)) return [];
+    const safeTime = (d) => {
+      const t = new Date(d).getTime();
+      return Number.isNaN(t) ? 0 : t;
+    };
+    const sorted = [...items].sort(
+      (a, b) =>
+        safeTime(b?.commentedAt) - safeTime(a?.commentedAt) ||
+        String(b?.id).localeCompare(String(a?.id))
+    );
+    return sorted.map((c) => ({
+      ...c,
+      replies:
+        Array.isArray(c?.replies) && c.replies.length > 0
+          ? sortCommentsRecursively(c.replies)
+          : c?.replies || [],
+    }));
+  }, []);
+
+  const sortedComments = useMemo(
+    () => sortCommentsRecursively(comments || []),
+    [comments, sortCommentsRecursively]
+  );
 
   const initializePostState = useCallback(
     (posts) =>
@@ -307,6 +333,36 @@ export default function ReelsPost() {
     setReplyingTo(null);
   }, []);
 
+  const goToProfile = useCallback(
+    (username) => {
+      if (!username) return;
+      router.push(`/others-profile/${username}`);
+    },
+    [router]
+  );
+
+  const handleCopyLink = useCallback(async () => {
+    try {
+      const url = typeof window !== 'undefined' ? window.location.href : '';
+      if (!url) return;
+
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const input = document.createElement('input');
+        input.value = url;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+      }
+
+      toast.success('Link copied', { position: 'bottom-center', duration: 2000 });
+    } catch (_) {
+      // no-op
+    }
+  }, []);
+
   const updateComments = useCallback(
     (postId, newComment) => {
       setPostStates((prev) => {
@@ -411,7 +467,10 @@ export default function ReelsPost() {
               )}
               <div className="absolute bottom-6 left-4 flex flex-col text-white">
                 <div className="flex items-center">
-                  <div className="h-10 min-h-10 w-10 min-w-10 overflow-hidden rounded-full">
+                  <div
+                    className="h-10 min-h-10 w-10 min-w-10 cursor-pointer overflow-hidden rounded-full"
+                    onClick={() => goToProfile(post?.user?.username)}
+                  >
                     <Image
                       src={
                         post?.user?.avatar?.url
@@ -434,7 +493,12 @@ export default function ReelsPost() {
                     />
                   </div>
                   <div className="flex items-center space-x-2 pl-2">
-                    <span className="font-medium">{post.user?.username}</span>
+                    <span
+                      className="cursor-pointer font-medium"
+                      onClick={() => goToProfile(post?.user?.username)}
+                    >
+                      {post.user?.username}
+                    </span>
                     <span className="text-lg text-white">•</span>
                     {user?.id !== post.user.id && (
                       <FollowButton
@@ -493,10 +557,16 @@ export default function ReelsPost() {
                         >
                           Report
                         </li>
-                        <li className="cursor-pointer rounded-sm p-2 text-left font-bold hover:bg-black/30 hover:backdrop-blur-sm">
+                        <li
+                          className="cursor-pointer rounded-sm p-2 text-left font-bold hover:bg-black/30 hover:backdrop-blur-sm"
+                          onClick={handleCopyLink}
+                        >
                           Copy link
                         </li>
-                        <li className="cursor-pointer rounded-sm p-2 text-left font-bold hover:bg-black/30 hover:backdrop-blur-sm">
+                        <li
+                          className="cursor-pointer rounded-sm p-2 text-left font-bold hover:bg-black/30 hover:backdrop-blur-sm"
+                          onClick={() => goToProfile(post?.user?.username)}
+                        >
                           About this account
                         </li>
                       </ul>
@@ -548,8 +618,8 @@ export default function ReelsPost() {
                 <div className="no-scrollbar flex-grow overflow-auto">
                   {isLoadingComments ? (
                     [...Array(6)].map((_, index) => <CommentSkeleton key={index} />)
-                  ) : comments.length > 0 ? (
-                    comments.map((comment) => (
+                  ) : sortedComments.length > 0 ? (
+                    sortedComments.map((comment) => (
                       <CommentItem
                         key={comment.id}
                         comment={comment}
