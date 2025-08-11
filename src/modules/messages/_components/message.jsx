@@ -208,7 +208,7 @@ const Message = ({ messages, messagesEndRef, avatar, onRetryMessage }) => {
                             <img
                               src={fileUrl}
                               alt={`attachment-${fileIndex}`}
-                              className="max-w-40 rounded-lg shadow-md"
+                              className="max-w-100 w-[500px] rounded-lg shadow-md"
                               onLoad={() => handleMediaLoad(messagesEndRef)}
                             />
                           </a>
