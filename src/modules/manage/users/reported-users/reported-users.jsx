@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useMemo } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import {
   Button,
   Select,
@@ -18,7 +18,6 @@ import TableLoading from '../../_components/table-loading';
 
 const ReportedUsers = () => {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
 
   // Get state from store
@@ -49,70 +48,16 @@ const ReportedUsers = () => {
   const [localSortDirection, setLocalSortDirection] = useState(sortDirection);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Initialize state from URL on mount
+  // Initialize local state from store on mount
   useEffect(() => {
-    const urlStatus = searchParams.get('status');
-    const urlReportedAtFrom = searchParams.get('reportedAtFrom');
-    const urlReportedAtTo = searchParams.get('reportedAtTo');
-    const urlPage = searchParams.get('page');
-    const urlSize = searchParams.get('size');
-    const urlSort = searchParams.get('sort');
+    setLocalFilters(filters);
+    setLocalCurrentPage(currentPage);
+    setLocalItemsPerPage(itemsPerPage);
+    setLocalSortField(sortField);
+    setLocalSortDirection(sortDirection);
+  }, [filters, currentPage, itemsPerPage, sortField, sortDirection]);
 
-    const urlFilters = {
-      status: urlStatus || '',
-      reportedAtFrom: urlReportedAtFrom || null,
-      reportedAtTo: urlReportedAtTo || null,
-    };
 
-    const urlPage1Based = urlPage ? parseInt(urlPage) + 1 : 1; // Convert 0-based to 1-based
-    const urlItemsPerPage = urlSize ? parseInt(urlSize) : 20;
-    
-    let urlSortField = 'latestReportedAt';
-    let urlSortDirection = 'desc';
-    if (urlSort) {
-      const [field, direction] = urlSort.split(',');
-      urlSortField = field || 'latestReportedAt';
-      urlSortDirection = direction || 'desc';
-    }
-
-    // Update local state
-    setLocalFilters(urlFilters);
-    setLocalCurrentPage(urlPage1Based);
-    setLocalItemsPerPage(urlItemsPerPage);
-    setLocalSortField(urlSortField);
-    setLocalSortDirection(urlSortDirection);
-
-    // Update store
-    setFilters(urlFilters);
-    setPagination(urlPage1Based, urlItemsPerPage);
-    setSorting(urlSortField, urlSortDirection);
-
-    // Apply filters if any exist
-    const hasFilters = Object.values(urlFilters).some(value => value !== '' && value !== null);
-    if (hasFilters || urlPage || urlSize || urlSort) {
-      setAppliedFilters(urlFilters);
-    }
-  }, [searchParams, setFilters, setPagination, setSorting, setAppliedFilters]); // Only run on mount or when dependencies change
-
-  // Update URL when filters/pagination change
-  const updateURL = (newFilters, newPage, newItemsPerPage, newSortField, newSortDirection) => {
-    const params = new URLSearchParams();
-    
-    if (newFilters.status) params.set('status', newFilters.status);
-    if (newFilters.reportedAtFrom) params.set('reportedAtFrom', newFilters.reportedAtFrom);
-    if (newFilters.reportedAtTo) params.set('reportedAtTo', newFilters.reportedAtTo);
-    
-    // Convert 1-based page to 0-based for URL
-    if (newPage > 1) params.set('page', (newPage - 1).toString());
-    if (newItemsPerPage !== 20) params.set('size', newItemsPerPage.toString());
-    
-    const sortParam = `${newSortField},${newSortDirection}`;
-    if (sortParam !== 'latestReportedAt,desc') params.set('sort', sortParam);
-
-    const queryString = params.toString();
-    const newUrl = queryString ? `?${queryString}` : window.location.pathname;
-    window.history.replaceState({}, '', newUrl);
-  };
 
   // API call with pagination, filters, and sorting
   const { data: reportResponse, isLoading: loading, error, refetch, isFetching } = useQuery({
@@ -148,7 +93,6 @@ const ReportedUsers = () => {
     setPagination(1, localItemsPerPage);
     setSorting(localSortField, localSortDirection);
     setLocalCurrentPage(1);
-    updateURL(localFilters, 1, localItemsPerPage, localSortField, localSortDirection);
   };
 
   const handleClearFilters = () => {
@@ -166,7 +110,6 @@ const ReportedUsers = () => {
     setLocalSortField('latestReportedAt');
     setLocalSortDirection('desc');
     clearCache();
-    updateURL(emptyFilters, 1, localItemsPerPage, 'latestReportedAt', 'desc');
   };
 
   const handleFilterChange = (field, value) => {
@@ -179,7 +122,6 @@ const ReportedUsers = () => {
   const handlePageChange = (page) => {
     setLocalCurrentPage(page);
     setPagination(page, localItemsPerPage);
-    updateURL(localFilters, page, localItemsPerPage, localSortField, localSortDirection);
   };
 
   const handleItemsPerPageChange = (value) => {
@@ -187,14 +129,12 @@ const ReportedUsers = () => {
     setLocalItemsPerPage(newItemsPerPage);
     setPagination(1, newItemsPerPage);
     setLocalCurrentPage(1);
-    updateURL(localFilters, 1, newItemsPerPage, localSortField, localSortDirection);
   };
 
   const handleSort = (field, direction) => {
     setLocalSortField(field);
     setLocalSortDirection(direction);
     setSorting(field, direction);
-    updateURL(localFilters, localCurrentPage, localItemsPerPage, field, direction);
   };
 
   // Handle manual refresh
@@ -204,6 +144,13 @@ const ReportedUsers = () => {
     } catch (error) {
       console.error('Error refreshing data:', error);
     }
+  };
+
+  // Invalidate cache for current query
+  const handleInvalidateCache = () => {
+    queryClient.invalidateQueries({
+      queryKey: [QUERY_KEYS.REPORTED_USERS, appliedFilters, currentPage, itemsPerPage, sortField, sortDirection]
+    });
   };
 
   // Check if at least one filter is applied
