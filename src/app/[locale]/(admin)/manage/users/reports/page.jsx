@@ -1,5 +1,5 @@
-import ReportUsers from '@/src/modules/manage/users/reports';
+import ReportedUsers from '@/src/modules/manage/users/reported-users';
 
 export default function Page() {
-  return <ReportUsers />;
+  return <ReportedUsers />;
 }
