@@ -141,7 +141,8 @@ const CommentItem = ({ comment, currentUserId, onReplySubmit, onReplyClick, onCo
     <>
       <Card
         key={comment.id}
-        className="mb-2 overflow-visible border-none bg-transparent p-0 shadow-none"
+        className="mb-2 overflow-visible border-none bg-transparent p-0 shadow-none rounded-none"
+        data-comment-id={comment.id}
       >
         <div className="flex items-start gap-3">
           <div className="relative h-10 w-10 overflow-hidden rounded-full border border-zinc-300 dark:border-zinc-700">
@@ -252,7 +253,7 @@ const CommentItem = ({ comment, currentUserId, onReplySubmit, onReplyClick, onCo
           </div>
         </div>
         {isShown && allReplies.length > 0 && (
-          <div className="mt-2 flex w-full flex-col items-end rounded-lg border-l-2 border-gray-200 bg-gray-50/60 pl-8 dark:border-neutral-700 dark:bg-neutral-800/40">
+          <div className="mt-2 flex w-full flex-col items-end border-l-2 border-gray-200 bg-gray-50/60 pl-8 dark:border-neutral-700 dark:bg-neutral-800/40">
             {allReplies.map((reply) => (
               <Reply
                 key={reply.id}

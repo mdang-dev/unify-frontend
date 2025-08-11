@@ -23,6 +23,7 @@ const UnifyLogoIcon = () => {
       width={100}
       height={100}
       className="mx-auto h-16 w-16 flex-none"
+      priority
     />
   );
 };
