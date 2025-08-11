@@ -2,7 +2,7 @@ import { Button } from '@heroui/react';
 import Image from 'next/image';
 import Content from './content';
 import { formatDistanceToNow } from 'date-fns';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import { addToast } from '@heroui/react';
 import defaultAvatar from '@/public/images/unify_icon_2.png';
 import CommentReportModal from './comment-report-modal';
@@ -10,7 +10,13 @@ import DeleteCommentModal from './delete-comment-modal';
 import { reportsCommandApi } from '@/src/apis/reports/command/report.command.api';
 import { commentsCommandApi } from '@/src/apis/comments/command/comments.command.api';
 import { useMutation } from '@tanstack/react-query';
-const Reply = ({ reply, currentUserId, onReplySubmit, onReplyClick, onCommentDeleted }) => {
+const ReplyComponent = ({
+  reply,
+  currentUserId,
+  onReplySubmit,
+  onReplyClick,
+  onCommentDeleted,
+}) => {
   const [showMoreOptions, setShowMoreOptions] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -230,5 +236,19 @@ const Reply = ({ reply, currentUserId, onReplySubmit, onReplyClick, onCommentDel
     </>
   );
 };
+
+const areEqual = (prevProps, nextProps) => {
+  const prev = prevProps.reply;
+  const next = nextProps.reply;
+  if (prev.id !== next.id) return false;
+  if (prev.content !== next.content) return false;
+  if (prev.username !== next.username) return false;
+  if (prev.commentedAt !== next.commentedAt) return false;
+  // replies of replies not rendered here, so shallow checks are enough
+  if (prevProps.currentUserId !== nextProps.currentUserId) return false;
+  return true;
+};
+
+const Reply = memo(ReplyComponent, areEqual);
 
 export default Reply;

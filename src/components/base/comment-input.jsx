@@ -20,7 +20,7 @@ const CommentInput = ({ postId, setComments, parentComment, onCancelReply }) => 
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: (content) => {
+    mutationFn: async (content) => {
       if (!user?.id || !postId || !content) {
         setError('Missing required data to submit comment.');
       }
@@ -32,13 +32,74 @@ const CommentInput = ({ postId, setComments, parentComment, onCancelReply }) => 
         parentId: parentComment?.id || null,
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.COMMENTS_BY_POST, postId] });
+    onMutate: async (content) => {
+      setError(null);
+      await queryClient.cancelQueries({ queryKey: [QUERY_KEYS.COMMENTS_BY_POST, postId] });
+
+      const previousComments = queryClient.getQueryData([QUERY_KEYS.COMMENTS_BY_POST, postId]);
+
+      const tempId = `temp-${Date.now()}`;
+      const optimisticComment = {
+        id: tempId,
+        content,
+        username: user?.username || 'You',
+        userId: user?.id,
+        avatarUrl: user?.avatar?.url || null,
+        commentedAt: new Date().toISOString(),
+        replies: [],
+        parentId: parentComment?.id || null,
+      };
+
+      const addReplyRecursively = (comments, parentId, reply) => {
+        return comments.map((c) => {
+          if (c.id === parentId) {
+            const nextReplies = Array.isArray(c.replies) ? [reply, ...c.replies] : [reply];
+            return { ...c, replies: nextReplies };
+          }
+          if (Array.isArray(c.replies) && c.replies.length > 0) {
+            return { ...c, replies: addReplyRecursively(c.replies, parentId, reply) };
+          }
+          return c;
+        });
+      };
+
+      queryClient.setQueryData([QUERY_KEYS.COMMENTS_BY_POST, postId], (old = []) => {
+        if (parentComment?.id) {
+          return addReplyRecursively(old, parentComment.id, optimisticComment);
+        }
+        return [optimisticComment, ...old];
+      });
+
       setComment(parentComment ? `@${parentComment.username} ` : '');
       setIsCommentEmpty(!parentComment);
+
+      return { previousComments, tempId };
     },
-    onError: (err) => {
-      setError(err.message || 'Failed to post comment');
+    onError: (err, _content, context) => {
+      if (context?.previousComments) {
+        queryClient.setQueryData([QUERY_KEYS.COMMENTS_BY_POST, postId], context.previousComments);
+      }
+      setError(err?.message || 'Failed to post comment');
+    },
+    onSuccess: (created, _content, context) => {
+      // Replace optimistic temp comment with server comment
+      if (!created) return;
+      const replaceTempRecursively = (comments) => {
+        return comments.map((c) => {
+          if (c.id === context?.tempId) return created;
+          if (Array.isArray(c.replies) && c.replies.length > 0) {
+            return { ...c, replies: replaceTempRecursively(c.replies) };
+          }
+          return c;
+        });
+      };
+      queryClient.setQueryData([QUERY_KEYS.COMMENTS_BY_POST, postId], (old = []) =>
+        replaceTempRecursively(old)
+      );
+    },
+    onSettled: () => {
+      // Keep data fresh, but UI already updated optimistically
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.COMMENTS_BY_POST, postId] });
     },
   });
 
@@ -85,7 +146,6 @@ const CommentInput = ({ postId, setComments, parentComment, onCancelReply }) => 
 
   return (
     <div className="relative flex w-full items-center justify-center rounded-2xl text-white">
-      {/* Hiển thị avatar của người dùng hiện tại */}
       <div className="relative mr-2 h-10 w-10 overflow-hidden rounded-full border-2 border-gray-300">
         {user?.avatar?.url ? (
           <Image
