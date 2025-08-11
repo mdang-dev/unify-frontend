@@ -21,7 +21,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import ReportModal from '../report-modal';
 import { useCreateReport } from '@/src/hooks/use-report';
 import { toast } from 'sonner';
-const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete }) => {
+const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete, scrollToCommentId }) => {
   const [openList, setOpenList] = useState(false); // no longer used for dropdown; retained to avoid breaking
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
@@ -63,6 +63,8 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete }) => {
     enabled: !!postData?.id,
   });
 
+  // (moved below comments query to avoid TDZ)
+
   const transformHashtags = (text) => {
     return text.split(/(\#[a-zA-Z0-9_]+)/g).map((part, index) => {
       if (part.startsWith('#')) {
@@ -90,6 +92,106 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete }) => {
     queryFn: () => commentsQueryApi.getCommentsByPostId(postData.id),
     enabled: !!postData?.id,
   });
+
+  // ✅ Scroll to specific comment once comments are available
+  useEffect(() => {
+    if (!scrollToCommentId) return;
+    if (!commentsContainerRef.current) return;
+    if (!Array.isArray(comments) || comments.length === 0) return;
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[PostDetailModal] Scrolling to comment:', scrollToCommentId, 'Total comments:', comments.length);
+      console.log('[PostDetailModal] Comments data:', comments.map(c => ({ id: c.id, content: c.content?.substring(0, 50) })));
+    }
+
+    const timer = window.setTimeout(() => {
+      const selector = `[data-comment-id="${scrollToCommentId}"]`;
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[PostDetailModal] Looking for selector:', selector);
+        console.log('[PostDetailModal] All comment elements:', document.querySelectorAll('[data-comment-id]'));
+      }
+      
+      const commentElement = document.querySelector(selector);
+      if (commentElement) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[PostDetailModal] Found comment element, scrolling...', commentElement);
+        }
+        commentElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Force highlight with multiple approaches
+        commentElement.style.backgroundColor = 'rgba(107, 114, 128, 0.6)';
+        commentElement.style.padding = '12px';
+        commentElement.style.margin = '-12px';
+        commentElement.style.transform = 'scale(1.02)';
+        commentElement.style.boxShadow = '0 0 20px rgba(107, 114, 128, 0.3)';
+        
+        // Also add CSS class
+        commentElement.classList.add('flash-highlight');
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[PostDetailModal] Highlight classes added:', commentElement.className);
+          console.log('[PostDetailModal] Inline styles applied:', commentElement.style.cssText);
+        }
+        
+        window.setTimeout(() => {
+          commentElement.style.backgroundColor = '';
+          commentElement.style.padding = '';
+          commentElement.style.margin = '';
+          commentElement.style.transform = '';
+          commentElement.style.boxShadow = '';
+          commentElement.classList.remove('flash-highlight');
+        }, 2000);
+      } else {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[PostDetailModal] Comment element not found for ID:', scrollToCommentId);
+          console.warn('[PostDetailModal] Available comment IDs:', Array.from(document.querySelectorAll('[data-comment-id]')).map(el => el.getAttribute('data-comment-id')));
+        }
+      }
+    }, 500); // Increased delay
+
+    return () => window.clearTimeout(timer);
+  }, [scrollToCommentId, comments]);
+
+  // ✅ Fallback: Scroll when post data finally loads
+  useEffect(() => {
+    if (!scrollToCommentId || !postData) return;
+    if (!Array.isArray(comments) || comments.length === 0) return;
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[PostDetailModal] Post data loaded, attempting fallback scroll to comment:', scrollToCommentId);
+    }
+
+    // Wait a bit more for DOM to fully render
+    const fallbackTimer = window.setTimeout(() => {
+      const selector = `[data-comment-id="${scrollToCommentId}"]`;
+      const commentElement = document.querySelector(selector);
+      if (commentElement) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[PostDetailModal] Fallback scroll successful');
+        }
+        commentElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Force highlight with inline styles
+        commentElement.style.backgroundColor = 'rgba(107, 114, 128, 0.6)';
+        commentElement.style.padding = '12px';
+        commentElement.style.margin = '-12px';
+        commentElement.style.transform = 'scale(1.02)';
+        commentElement.style.boxShadow = '0 0 20px rgba(107, 114, 128, 0.3)';
+        
+        commentElement.classList.add('flash-highlight');
+        window.setTimeout(() => {
+          commentElement.style.backgroundColor = '';
+          commentElement.style.padding = '';
+          commentElement.style.margin = '';
+          commentElement.style.transform = '';
+          commentElement.style.boxShadow = '';
+          commentElement.classList.remove('flash-highlight');
+        }, 2000);
+      }
+    }, 1000); // Increased delay
+
+    return () => window.clearTimeout(fallbackTimer);
+  }, [scrollToCommentId, postData, comments]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -238,10 +340,41 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete }) => {
     </div>
   );
 
-  if (!postData) return null;
+  if (!postData) {
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={handleClose}>
+        <div
+          className="flex h-[600px] w-[900px] flex-row overflow-hidden rounded-xl bg-white dark:bg-neutral-900"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Left placeholder */}
+          <div className="relative w-1/2 bg-black/70" />
+
+          {/* Right skeleton content */}
+          <div className="flex w-1/2 flex-col p-4">
+            <PostSkeleton />
+            <div className="mt-6 space-y-3">
+              {[...Array(4)].map((_, idx) => (
+                <div key={idx} className="h-3 w-full rounded bg-gray-200 dark:bg-neutral-800" />)
+              )}
+            </div>
+          </div>
+
+          {/* Close Button */}
+          <button
+            className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-2xl font-bold text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+            onClick={handleClose}
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={handleClose}>
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={handleClose}>
       <div className="flex h-[600px] w-[900px] flex-row overflow-hidden rounded-xl bg-white dark:bg-neutral-900" onClick={(e) => e.stopPropagation()}>
         {/* Media Section */}
         <div className="relative w-1/2 bg-black">

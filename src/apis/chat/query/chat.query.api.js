@@ -12,27 +12,27 @@ export const chatQueryApi = {
 
       try {
         const res = await httpClient.get(`${url}/chat-list/${userId}`);
-
+        
         if (!res?.data || !Array.isArray(res.data)) {
           return [];
         }
-
+        
         return res.data
           .map((chat) => {
-            if (!chat || typeof chat !== 'object') {
-              return null;
-            }
-
-            return {
-              userId: chat.userId,
-              fullname: chat.fullName || 'Unknown User',
-              username: chat.username || 'unknown',
-              avatar: chat.avatar,
-              lastMessage: chat.lastMessage || '',
+          if (!chat || typeof chat !== 'object') {
+            return null;
+          }
+          
+          return {
+            userId: chat.userId,
+            fullname: chat.fullName || 'Unknown User',
+            username: chat.username || 'unknown',
+            avatar: chat.avatar,
+            lastMessage: chat.lastMessage || '',
               lastUpdated: chat.lastMessageTime
                 ? new Date(chat.lastMessageTime).toISOString()
                 : getVietnamTimeISO(),
-            };
+          };
           })
           .filter(Boolean);
       } catch (e) {

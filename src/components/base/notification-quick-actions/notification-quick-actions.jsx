@@ -92,11 +92,41 @@ const NotificationQuickActions = ({ notification, currentUserId, onActionComplet
       )}
 
       {/* View Post button for like/comment notifications */}
-      {['like', 'comment'].includes(notification.type?.toLowerCase()) && notification.link && (
+      {['like', 'comment'].includes(notification.type?.toLowerCase()) && (
         <button
           onClick={() => {
-            if (typeof window !== 'undefined' && notification.link) {
-              window.location.href = notification.link;
+            if (typeof window !== 'undefined') {
+              // Extract post ID from multiple sources
+              let postId = null;
+              let commentId = null;
+              
+              // Try to get post ID from notification data first
+              if (notification.data?.postId) {
+                postId = notification.data.postId;
+              } else if (notification.link) {
+                postId = getPostIdFromLink(notification.link);
+              } else if (notification.postId) {
+                postId = notification.postId;
+              }
+              
+              // For comment notifications, try to extract comment ID if available
+              if (notification.type?.toLowerCase() === 'comment') {
+                if (notification.data?.commentId) {
+                  commentId = notification.data.commentId;
+                } else if (notification.commentId) {
+                  commentId = notification.commentId;
+                }
+              }
+              
+              if (postId) {
+                // Dispatch custom event to open post detail modal
+                window.dispatchEvent(new CustomEvent('openPostModal', {
+                  detail: { postId, commentId }
+                }));
+              } else if (notification.link) {
+                // Fallback to navigation if post ID can't be extracted
+                window.location.href = notification.link;
+              }
             }
           }}
           className="px-3 py-1 text-xs font-medium text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"

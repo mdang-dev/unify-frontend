@@ -256,26 +256,35 @@ export const useNotification = (userId) => {
         break;
       case 'like':
       case 'comment':
-        // Extract post ID from link or notification data
+        // Extract post ID from multiple sources
         let postId = null;
         let commentId = null;
         
-        if (notification.link) {
+        // Try to get post ID from notification data first
+        if (notification.data?.postId) {
+          postId = notification.data.postId;
+        } else if (notification.link) {
           // Extract post ID from link like "/posts/123"
           const match = notification.link.match(/\/posts\/([^\/]+)/);
           if (match) {
             postId = match[1];
           }
+        } else if (notification.postId) {
+          // Direct postId field
+          postId = notification.postId;
         }
         
         // For comment notifications, extract comment ID if available
-        if (notification.type?.toLowerCase() === 'comment' && notification.data?.commentId) {
-          commentId = notification.data.commentId;
+        if (notification.type?.toLowerCase() === 'comment') {
+          if (notification.data?.commentId) {
+            commentId = notification.data.commentId;
+          } else if (notification.commentId) {
+            commentId = notification.commentId;
+          }
         }
         
         if (postId) {
           // Open post detail modal instead of navigating
-          // We'll need to pass this to the parent component
           if (typeof window !== 'undefined') {
             // Dispatch custom event to open modal
             window.dispatchEvent(new CustomEvent('openPostModal', {
