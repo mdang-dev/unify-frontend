@@ -2,19 +2,22 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Info } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import CommentDetailModal from './_components/comment-detail-modal';
+import ConfirmationModal from './_components/confirmation-modal';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
 import { reportsCommandApi } from '@/src/apis/reports/command/report.command.api';
 import { reportsQueryApi } from '@/src/apis/reports/query/report.query.api';
 import { postsQueryApi } from '@/src/apis/posts/query/posts.query.api';
+import { addToast } from '@heroui/toast';
 
 export const STATUS_CLASSES = {
-  0: 'text-blue-500 ',
-  1: 'text-green-600 ',
-  2: 'text-red-500 ',
+  0: 'text-zinc-600 dark:text-zinc-300',
+  1: 'text-neutral-700 dark:text-neutral-200',
+  2: 'text-neutral-600 dark:text-neutral-400',
 };
-
 export const STATUS_LABELS = {
   0: 'Pending',
   1: 'Approved',
@@ -22,10 +25,19 @@ export const STATUS_LABELS = {
 };
 
 const CommentsManagement = () => {
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedReport, setSelectedReport] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [confirmationModal, setConfirmationModal] = useState({
+    isOpen: false,
+    action: null,
+    title: '',
+    message: '',
+    confirmText: '',
+    confirmColor: '',
+  });
   const itemsPerPage = 20;
 
   const queryClient = useQueryClient();
@@ -44,17 +56,14 @@ const CommentsManagement = () => {
 
   // Update report status
   const updateReportMutation = useMutation({
-    mutationFn: ({ reportId, status }) => reportsCommandApi.updateReport(reportId, status),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.REPORTS_COMMENTS] });
-      closeModal();
-    },
-    onError: () => {
-      alert('Failed to update report');
-    },
+    mutationFn: ({ reportId, status, adminReason }) =>
+      reportsCommandApi.updateReportWithAdminReason(reportId, status, adminReason),
   });
 
-  const filteredReports = reports.filter((report) =>
+  // Filter reports to show only pending ones (status 0)
+  const pendingReports = reports.filter((report) => report.status === 0);
+
+  const filteredReports = pendingReports.filter((report) =>
     [report.reportedEntity?.content, report.user?.username, report.reportedEntity?.username]
       .join(' ')
       .toLowerCase()
@@ -75,15 +84,138 @@ const CommentsManagement = () => {
     setSelectedReport(null);
   };
 
-  const handleApprove = () => {
-    if (selectedReport) {
-      updateReportMutation.mutate({ reportId: selectedReport.id, status: 1 });
+  const showConfirmationModal = (action, title, message, confirmText, confirmColor) => {
+    setConfirmationModal({
+      isOpen: true,
+      action,
+      title,
+      message,
+      confirmText,
+      confirmColor,
+    });
+  };
+
+  const closeConfirmationModal = () => {
+    setConfirmationModal({
+      isOpen: false,
+      action: null,
+      title: '',
+      message: '',
+      confirmText: '',
+      confirmColor: '',
+    });
+  };
+
+  const handleConfirmAction = () => {
+    if (confirmationModal.action === 'approve') {
+      handleApproveAction();
+    } else if (confirmationModal.action === 'reject') {
+      handleRejectAction();
     }
+    closeConfirmationModal();
+  };
+
+  const handleApprove = () => {
+    showConfirmationModal(
+      'approve',
+      'Approve Comment Report',
+      'Are you sure you want to approve this comment report? This action will mark the report as approved.',
+      'Approve',
+      'bg-neutral-700 hover:bg-neutral-800'
+    );
   };
 
   const handleReject = () => {
+    showConfirmationModal(
+      'reject',
+      'Reject Comment Report',
+      'Are you sure you want to reject this comment report? This action will mark the report as rejected.',
+      'Reject',
+      'bg-zinc-600 hover:bg-zinc-700'
+    );
+  };
+
+  const handleApproveAction = () => {
     if (selectedReport) {
-      updateReportMutation.mutate({ reportId: selectedReport.id, status: 2 });
+      // Optimistically update the UI
+      queryClient.setQueryData([QUERY_KEYS.REPORTS_COMMENTS], (oldData) => {
+        if (!oldData) return oldData;
+        return oldData.map((report) =>
+          report.id === selectedReport.id ? { ...report, status: 1 } : report
+        );
+      });
+
+      updateReportMutation.mutate(
+        {
+          reportId: selectedReport.id,
+          status: 1,
+          adminReason: 'Comment approved by admin',
+        },
+        {
+          onSuccess: () => {
+            addToast({
+              title: 'Success',
+              description: 'Comment report approved successfully.',
+              timeout: 3000,
+              color: 'success',
+            });
+            closeModal();
+          },
+          onError: (error) => {
+            console.error('Failed to approve report:', error);
+            // Revert optimistic update on error
+            queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.REPORTS_COMMENTS] });
+            addToast({
+              title: 'Error',
+              description: 'Failed to approve report. Please try again.',
+              timeout: 3000,
+              color: 'danger',
+            });
+          },
+        }
+      );
+    }
+  };
+
+  const handleRejectAction = () => {
+    if (selectedReport) {
+      // Optimistically update the UI
+      queryClient.setQueryData([QUERY_KEYS.REPORTS_COMMENTS], (oldData) => {
+        if (!oldData) return oldData;
+        return oldData.map((report) =>
+          report.id === selectedReport.id ? { ...report, status: 2 } : report
+        );
+      });
+
+      updateReportMutation.mutate(
+        {
+          reportId: selectedReport.id,
+          status: 2,
+          adminReason: 'Comment rejected by admin',
+        },
+        {
+          onSuccess: () => {
+            addToast({
+              title: 'Success',
+              description: 'Comment report rejected successfully.',
+              timeout: 3000,
+              color: 'success',
+            });
+            closeModal();
+          },
+          onError: (error) => {
+            console.error('Failed to reject report:', error);
+            // Revert optimistic update on error
+            queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.REPORTS_COMMENTS] });
+            addToast({
+              title: 'Error',
+              description: 'Failed to reject report. Please try again.',
+              timeout: 3000,
+              color: 'danger',
+            });
+          },
+        }
+      );
     }
   };
 
@@ -91,10 +223,10 @@ const CommentsManagement = () => {
     <div className="h-screen w-[78rem] px-6 py-10">
       <div className="flex w-full items-center justify-between">
         <div>
-          <h1 className="text-4xl font-black uppercase">Reported Comments Management</h1>
-          <p className="text-gray-500">Review and manage all reported comments on UNIFY.</p>
+          <h1 className="text-4xl font-black uppercase">Pending Comments </h1>
+          <p className="text-gray-500">Review and manage pending comment reports on UNIFY.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <input
             type="text"
             value={search}
@@ -102,66 +234,126 @@ const CommentsManagement = () => {
             placeholder="Search by content, reporter, or comment author..."
             className="rounded-md border px-5 py-2 dark:bg-neutral-800 dark:text-white"
           />
+          <Link
+            href="/manage/comments/processed"
+            className="rounded-md bg-neutral-800 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-100 hover:text-neutral-700 dark:bg-zinc-100 dark:hover:bg-neutral-700 dark:hover:text-neutral-200"
+          >
+            View Processed Comments
+          </Link>
         </div>
       </div>
-      <div className="mt-5">
-        <div className="no-scrollbar h-[calc(73vh-0.7px)] overflow-auto rounded-2xl p-4 shadow-md dark:shadow-[0_4px_6px_rgba(229,229,229,0.4)]">
-          <div className="mb-4 flex items-center gap-2 text-blue-500 dark:text-blue-400">
-            <Info size={20} />
-            <p>Click on any row to view more details and take action</p>
-          </div>
-          <table className="min-w-full table-auto bg-white dark:bg-neutral-900">
-            <thead className="sticky top-0 bg-gray-100 text-gray-500 shadow-inner dark:bg-neutral-800 dark:text-gray-300">
-              <tr>
-                <th className="w-[5%] px-2 py-3 pl-5 text-left">No.</th>
-                <th className="w-[12%] px-2 py-3 text-left">Reporter</th>
-                <th className="w-[18%] px-2 py-3 text-left">Comment Author</th>
-                <th className="w-[25%] px-2 py-3 text-left">Reported Comment</th>
 
-                <th className="w-[15%] px-2 py-3 text-left">Reported At</th>
-                <th className="w-[8%] px-2 py-3 text-left">Status</th>
-                <th className="w-[8%] px-2 py-3 text-left">Action</th>
+      {/* Statistics */}
+      <div className="mt-6 grid grid-cols-2 gap-4">
+        <div className="rounded-lg bg-white p-4 shadow-md dark:bg-neutral-900 dark:shadow-neutral-800/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500 dark:text-neutral-400">Pending Comments</p>
+              <p className="text-2xl font-bold text-zinc-600 dark:text-zinc-400">
+                {pendingReports.length}
+              </p>
+            </div>
+            <div className="rounded-full bg-neutral-800 p-3 dark:bg-zinc-200">
+              <Info className="h-6 w-6 text-zinc-200 dark:text-neutral-800" />
+            </div>
+          </div>
+        </div>
+        <div className="rounded-lg bg-white p-4 shadow-md dark:bg-neutral-900 dark:shadow-neutral-800/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500 dark:text-neutral-400">Total Reports</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-neutral-100">
+                {reports.length}
+              </p>
+            </div>
+            <div className="rounded-full bg-gray-100 p-3 dark:bg-gray-900/30">
+              <Info className="h-6 w-6 text-gray-600 dark:text-gray-400" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5">
+        <div className="no-scrollbar h-[calc(60vh-0.7px)] overflow-auto rounded-2xl bg-white p-4 shadow-md dark:bg-neutral-900 dark:shadow-md dark:shadow-neutral-800/50">
+          <div className="text-neutral-500-500 mb-4 flex items-center gap-2 dark:text-zinc-300">
+            <Info size={20} />
+            <p>Click on any row to view more details and take action on pending reports</p>
+          </div>
+          <table className="min-w-full table-auto divide-y divide-gray-200 dark:divide-neutral-700">
+            <thead className="sticky top-0 z-10 w-full bg-neutral-800 text-zinc-200 dark:bg-neutral-200 dark:text-zinc-800">
+              <tr>
+                <th className="w-[5%] px-4 py-3 text-left text-sm font-semibold">No.</th>
+                <th className="w-[12%] px-4 py-3 text-left text-sm font-semibold">Reporter</th>
+                <th className="w-[18%] px-4 py-3 text-left text-sm font-semibold">
+                  Comment Author
+                </th>
+                <th className="w-[25%] px-4 py-3 text-left text-sm font-semibold">
+                  Reported Comment
+                </th>
+                <th className="w-[15%] px-4 py-3 text-left text-sm font-semibold">Reported At</th>
+                <th className="w-[8%] px-4 py-3 text-left text-sm font-semibold">Status</th>
+                <th className="w-[8%] px-4 py-3 text-left text-sm font-semibold">Action</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-gray-200 dark:divide-neutral-700">
               {currentItems.map((report, index) => (
                 <motion.tr
                   whileHover={{ scale: 1.01 }}
                   onClick={() => openModal(report)}
                   key={report.id}
-                  className={`cursor-pointer transition-colors ${
-                    index % 2 === 0 ? 'bg-white dark:bg-black' : 'bg-gray-100 dark:bg-neutral-800'
+                  className={`cursor-pointer transition-all duration-300 hover:bg-gray-100 dark:hover:bg-neutral-800 ${
+                    index % 2 === 0
+                      ? 'bg-white dark:bg-neutral-900'
+                      : 'bg-gray-50 dark:bg-neutral-800'
+                  } ${
+                    report.status === 1
+                      ? 'ring-2 ring-emerald-200 dark:ring-emerald-800'
+                      : report.status === 2
+                        ? 'ring-2 ring-rose-200 dark:ring-rose-800'
+                        : ''
                   }`}
                 >
-                  <td className="rounded-l-xl py-3 pl-5">{indexOfFirstItem + index + 1}</td>
-                  <td className="px-2 py-3">{report.user?.username}</td>
-                  <td className="px-2 py-3">{report.reportedEntity?.username}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900 dark:text-neutral-100">
+                    {indexOfFirstItem + index + 1}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900 dark:text-neutral-100">
+                    {report.user?.username}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900 dark:text-neutral-100">
+                    {report.reportedEntity?.username}
+                  </td>
                   <td
-                    className="max-w-[300px] truncate px-2 py-3"
+                    className="max-w-[300px] truncate px-4 py-3 text-sm text-gray-900 dark:text-neutral-100"
                     title={report.reportedEntity?.content}
                   >
                     {report.reportedEntity?.content}
                   </td>
-
-                  <td className="px-2 py-3">{new Date(report.reportedAt).toLocaleString()}</td>
-                  <td className={`px-2 py-3 text-center ${STATUS_CLASSES[report.status]}`}>
-                    {STATUS_LABELS[report.status] || report.status}
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900 dark:text-neutral-100">
+                    {new Date(report.reportedAt).toLocaleString()}
                   </td>
-
-                  <td className="px-2 py-3">
-                    {report.status === 0 && (
-                      <>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedReport(report);
-                            setIsModalOpen(true);
-                          }}
-                          className="mr-1 rounded bg-green-500 px-2 py-1 text-white hover:bg-green-600"
-                        >
-                          Approve/Reject
-                        </button>
-                      </>
+                  <td className={`px-4 py-3 text-center text-sm ${STATUS_CLASSES[report.status]}`}>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium dark:bg-neutral-800">
+                      {STATUS_LABELS[report.status] || report.status}
+                      {report.status === 1 && <span className="text-xs">✓</span>}
+                      {report.status === 2 && <span className="text-xs">✗</span>}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    {report.status === 0 ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedReport(report);
+                          setIsModalOpen(true);
+                        }}
+                        className="mr-1 rounded-md border border-neutral-300 bg-neutral-50 px-3 py-1.5 text-sm font-medium text-neutral-700 transition-colors duration-200 hover:border-neutral-400 hover:bg-neutral-100 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:border-neutral-500 dark:hover:bg-neutral-700"
+                      >
+                        Approve/Reject
+                      </button>
+                    ) : (
+                      <span className="text-xs text-gray-500 dark:text-neutral-400">
+                        {report.status === 1 ? '✓ Processed' : '✗ Processed'}
+                      </span>
                     )}
                   </td>
                 </motion.tr>
@@ -176,8 +368,18 @@ const CommentsManagement = () => {
         comment={selectedReport}
         onApprove={handleApprove}
         onReject={handleReject}
-        loading={loading}
+        loading={updateReportMutation.isPending}
         postDetails={postDetails}
+      />
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        onClose={closeConfirmationModal}
+        onConfirm={handleConfirmAction}
+        title={confirmationModal.title}
+        message={confirmationModal.message}
+        confirmText={confirmationModal.confirmText}
+        confirmColor={confirmationModal.confirmColor}
+        loading={updateReportMutation.isPending}
       />
     </div>
   );
