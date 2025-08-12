@@ -11,6 +11,7 @@ import {
 } from 'react-icons/fa';
 import Message from './_components/message';
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { useDebounce } from '@/src/hooks/use-debounce';
 import Picker from 'emoji-picker-react';
 import { Smile, Send, Plus } from 'lucide-react';
 import { useChat } from '@/src/hooks/use-chat';
@@ -21,14 +22,16 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
 import { callCommandApi } from '@/src/apis/call/command/call.command.api';
 import { addToast } from '@heroui/react';
+import FileUploadProgress from './_components/file-upload-progress';
+import { optimizeImage } from '@/src/utils/image-optimization.util';
 
-const Messages = () => {
+ const Messages = () => {
   const user = useAuthStore((s) => s.user);
   const [chatPartner, setChatPartner] = useState(null);
-  
+
   // ✅ PRODUCTION FIX: Add loading state to handle user hydration
   const [isUserHydrated, setIsUserHydrated] = useState(false);
-  
+
   // ✅ PRODUCTION FIX: Ensure user is hydrated before proceeding
   useEffect(() => {
     if (user?.id) {
@@ -45,24 +48,30 @@ const Messages = () => {
   });
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const { chatMessages, sendMessage, chatList, isLoadingChatList, chatListError } = useChat(user, chatPartner);
-  
+  const { chatMessages, sendMessage, chatList, isLoadingChatList, chatListError } = useChat(
+    user,
+    chatPartner
+  );
+
   // Silent chat list updates - only log errors
-  
+
   // ✅ REAL-TIME: Handle chat list updates
   const handleChatListUpdate = (updatedChatList) => {
     // React Query cache is automatically updated by useChat hook
   };
-  
+
   // ✅ OPTIMISTIC: Handle message retry
-  const handleRetryMessage = useCallback((messageId) => {
-    // Find the failed message and retry sending
-    const failedMessage = chatMessages.find(msg => msg.id === messageId && msg.isFailed);
-    if (failedMessage) {
-      // Retry sending the message
-      sendMessage(failedMessage.content, [], failedMessage.receiver);
-    }
-  }, [chatMessages, sendMessage]);
+  const handleRetryMessage = useCallback(
+    (messageId) => {
+      // Find the failed message and retry sending
+      const failedMessage = chatMessages.find((msg) => msg.id === messageId && msg.isFailed);
+      if (failedMessage) {
+        // Retry sending the message
+        sendMessage(failedMessage.content, [], failedMessage.receiver);
+      }
+    },
+    [chatMessages, sendMessage]
+  );
   const [newMessage, setNewMessage] = useState('');
   const [showPicker, setShowPicker] = useState(false);
   const pickerRef = useRef(null);
@@ -94,6 +103,10 @@ const Messages = () => {
 
   const [files, setFiles] = useState([]);
   const [searchQuery, setSearchQuery] = useState(''); // State for search input
+  const [isUploading, setIsUploading] = useState(false); // Loading state for file upload
+  
+  // ✅ PERFORMANCE: Debounced search to prevent excessive filtering
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
   // ✅ PERFORMANCE: Memoized filtered chat list to prevent unnecessary re-renders
   const filteredChatList = useMemo(() => {
@@ -103,11 +116,11 @@ const Messages = () => {
         if (!chat || typeof chat !== 'object') {
           return false;
         }
-        
+
         const fullname = chat?.fullname || chat?.fullName || '';
         const username = chat?.username || '';
-        const searchLower = searchQuery.toLowerCase();
-        
+        const searchLower = debouncedSearchQuery.toLowerCase();
+
         return (
           fullname?.toLowerCase().includes(searchLower) ||
           username?.toLowerCase().includes(searchLower)
@@ -118,7 +131,7 @@ const Messages = () => {
       console.error('Critical error filtering chat list:', error);
       return [];
     }
-  }, [chatList, searchQuery]);
+  }, [chatList, debouncedSearchQuery]);
 
   useEffect(() => {
     const userId = searchParams.get('userId');
@@ -161,12 +174,51 @@ const Messages = () => {
       });
       return;
     }
+    if (!sendMessage) {
+      addToast({
+        title: 'Error',
+        description: 'Chat system not ready. Please try again.',
+        timeout: 3000,
+        color: 'danger',
+      });
+      return;
+    }
     if (newMessage || files.length > 0) {
       sendMessage(newMessage, files, chatPartner);
       setNewMessage('');
       setFiles([]);
     }
   }, [chatPartner, newMessage, files, sendMessage]);
+
+  // Keyboard shortcuts for better UX
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      // Ctrl/Cmd + Enter: Send message
+      if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+        event.preventDefault();
+        handleSendMessage();
+      }
+      
+      // Escape: Clear files or close picker
+      if (event.key === 'Escape') {
+        if (files.length > 0) {
+          setFiles([]);
+          addToast({
+            title: 'Files cleared',
+            description: 'All files have been cleared.',
+            timeout: 2000,
+            color: 'info',
+          });
+        }
+        if (showPicker) {
+          setShowPicker(false);
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [files, showPicker, handleSendMessage]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -184,29 +236,139 @@ const Messages = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showPicker]);
 
-  const handleFileChange = (event) => {
+  const handleFileChange = async (event) => {
     const newFiles = Array.from(event.target.files);
+    const maxFiles = 20;
+
+    // Validate file count limit
+    if (files.length + newFiles.length > maxFiles) {
+      addToast({
+        title: 'Too many files',
+        description: `Maximum ${maxFiles} files allowed.`,
+        timeout: 3000,
+        color: 'warning',
+      });
+      return;
+    }
+
+    setIsUploading(true);
     const validFiles = [];
+    
+    try {
+      for (const file of newFiles) {
+        // Validate file size
+        if (file.size > MAX_FILE_SIZE_BYTES) {
+          addToast({
+            title: 'File too large',
+            description: `${file.name} exceeds ${MAX_FILE_SIZE_MB}MB.`,
+            timeout: 3000,
+            color: 'warning',
+          });
+          continue;
+        }
 
-    newFiles.forEach((file) => {
-      if (file.size <= MAX_FILE_SIZE_BYTES) {
-        validFiles.push({
-          file,
-          preview:
-            file.type.startsWith('image/') || file.type.startsWith('video/')
-              ? URL.createObjectURL(file)
-              : null,
-        });
-      } else {
-        alert(`${file.name} exceeds 50MB and was not added.`);
+        let preview = null;
+        
+        // Generate preview based on file type
+        if (file.type.startsWith('image/')) {
+          preview = await generateImagePreview(file);
+        } else if (file.type.startsWith('video/')) {
+          preview = URL.createObjectURL(file);
+        }
+
+        validFiles.push({ file, preview });
       }
-    });
 
-    setFiles((prevFiles) => [...prevFiles, ...validFiles]);
+      // Add valid files to state
+      if (validFiles.length > 0) {
+        setFiles((prevFiles) => [...prevFiles, ...validFiles]);
+        addToast({
+          title: 'Files added',
+          description: `Added ${validFiles.length} file(s).`,
+          timeout: 2000,
+          color: 'success',
+        });
+      }
+    } catch (error) {
+      console.error('Error processing files:', error);
+      addToast({
+        title: 'Error',
+        description: 'Failed to process some files. Please try again.',
+        timeout: 3000,
+        color: 'danger',
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Generate optimized image preview with error boundary
+  const generateImagePreview = async (file) => {
+    try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      return new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+          console.warn('Image preview generation timeout for:', file.name);
+          resolve(URL.createObjectURL(file));
+        }, 5000); // 5 second timeout
+        
+        img.onload = () => {
+          clearTimeout(timeout);
+          try {
+            // Calculate optimal thumbnail dimensions
+            const maxSize = 150;
+            const aspectRatio = img.width / img.height;
+            let width = maxSize;
+            let height = maxSize;
+            
+            if (aspectRatio > 1) {
+              height = maxSize / aspectRatio;
+            } else {
+              width = maxSize * aspectRatio;
+            }
+            
+            // Create optimized thumbnail
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            const preview = canvas.toDataURL(file.type, 0.8);
+            resolve(preview);
+          } catch (error) {
+            console.warn('Canvas error for preview:', file.name, error);
+            resolve(URL.createObjectURL(file));
+          }
+        };
+        
+        img.onerror = () => {
+          clearTimeout(timeout);
+          console.warn('Failed to load image for preview:', file.name);
+          resolve(URL.createObjectURL(file));
+        };
+        
+        img.src = URL.createObjectURL(file);
+      });
+    } catch (error) {
+      console.warn('Failed to create preview for:', file.name, error);
+      return URL.createObjectURL(file);
+    }
   };
 
   const handleRemoveFile = (index) => {
     setFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
+  };
+
+  const handleClearAllFiles = () => {
+    setFiles([]);
+    addToast({
+      title: 'Files cleared',
+      description: 'All files have been removed from your message.',
+      timeout: 2000,
+      color: 'info',
+    });
   };
 
   const handlePreview = (fileObj) => {
@@ -222,14 +384,14 @@ const Messages = () => {
     if (process.env.NODE_ENV === 'development') {
       console.log('Chat selected:', chat);
     }
-    
+
     if (!chat?.userId || typeof chat.userId !== 'string') {
       if (process.env.NODE_ENV === 'development') {
         console.error('Invalid chat selected:', chat);
       }
       return;
     }
-    
+
     setOpChat({
       userId: chat.userId,
       avatar: chat?.avatar?.url,
@@ -237,7 +399,7 @@ const Messages = () => {
       username: chat?.username || 'unknown',
     });
     setChatPartner(chat.userId);
-    
+
     if (process.env.NODE_ENV === 'development') {
       console.log('Chat partner set to:', chat.userId);
     }
@@ -305,9 +467,7 @@ const Messages = () => {
           <div className="flex-1 overflow-y-scroll border-r-1 px-4 py-1 scrollbar-hide dark:border-r-neutral-700 dark:bg-black">
             {!isUserHydrated ? (
               <div className="flex h-full items-center justify-center">
-                <p className="text-lg text-gray-500 dark:text-neutral-400">
-                  Loading user...
-                </p>
+                <p className="text-lg text-gray-500 dark:text-neutral-400">Loading user...</p>
               </div>
             ) : !chatList ? (
               <div className="flex h-full items-center justify-center">
@@ -342,10 +502,12 @@ const Messages = () => {
                     </div>
                   </div>
                   <span className="text-sm text-gray-400">
-                    {chat?.lastUpdated ? new Date(chat.lastUpdated).toLocaleTimeString('vi-VN', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    }) : ''}
+                    {chat?.lastUpdated
+                      ? new Date(chat.lastUpdated).toLocaleTimeString('vi-VN', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
+                      : ''}
                   </span>
                 </div>
               ))
@@ -383,12 +545,17 @@ const Messages = () => {
                       {opChat?.fullname || 'Fullname'}
                     </h4>
                     <p className="w-40 truncate text-sm text-gray-500 dark:text-neutral-400">
-                      {' '}
                       {opChat?.username || 'Username'}
                     </p>
                   </div>
                 </div>
                 <div className="flex w-1/3 items-center justify-end text-2xl">
+                  {isUploading && (
+                    <div className="mr-2 flex items-center text-sm text-blue-500">
+                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"></div>
+                      Processing...
+                    </div>
+                  )}
                   <button
                     title="Call"
                     onClick={handleCall}
@@ -427,47 +594,14 @@ const Messages = () => {
 
               <div className={`relative w-full`}>
                 {files.length > 0 && (
-                  <div className="scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 absolute mb-3 mt-3 w-[99.8%] translate-y-[-120px] overflow-x-auto rounded-lg bg-neutral-800 p-2">
-                    <div className="flex gap-1">
-                      {files.map((fileObj, index) => (
-                        <div
-                          key={index}
-                          className="relative w-20 flex-shrink-0 cursor-pointer text-center"
-                          onClick={() => handlePreview(fileObj)}
-                        >
-                          {/* File Preview / Icon */}
-                          {fileObj.preview && fileObj.file.type.startsWith('image/') ? (
-                            <img
-                              src={fileObj.preview}
-                              alt="Preview"
-                              className="h-16 w-16 rounded-lg object-cover"
-                            />
-                          ) : fileObj.preview && fileObj.file.type.startsWith('video/') ? (
-                            <video src={fileObj.preview} className="h-16 w-16 rounded-lg" />
-                          ) : fileIcons[fileObj.file.type] ? (
-                            <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-neutral-700">
-                              {fileIcons[fileObj.file.type]}
-                            </div>
-                          ) : (
-                            <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-gray-700 text-sm">
-                              📄
-                            </div>
-                          )}
-
-                          <p className="mt-1 w-16 truncate text-xs">{fileObj.file.name}</p>
-
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRemoveFile(index);
-                            }}
-                            className="absolute right-[14px] top-0 rounded-full bg-transparent p-1 text-xs text-white"
-                          >
-                            ❌
-                          </button>
-                        </div>
-                      ))}
-                    </div>
+                  <div className="absolute bottom-24 left-0 right-0 mx-3 rounded-lg bg-neutral-800 p-3 shadow-lg dark:bg-neutral-800">
+                    <FileUploadProgress
+                      files={files}
+                      onRemove={handleRemoveFile}
+                      onClearAll={handleClearAllFiles}
+                      showFileInfo={true}
+                      className="max-h-54 overflow-y-auto"
+                    />
                   </div>
                 )}
 
