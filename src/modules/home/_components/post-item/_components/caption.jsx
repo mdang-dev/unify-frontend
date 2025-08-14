@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { useTranslations } from 'next-intl';
 
 const Caption = ({ text }) => {
+  const t = useTranslations('Home.PostItem');
   const [isExpanded, setIsExpanded] = useState(false);
   const shouldShowMore = text.length > 100;
 
@@ -19,7 +21,7 @@ const Caption = ({ text }) => {
         onClick={() => setIsExpanded(!isExpanded)}
         className="ml-1.5 font-medium text-blue-500 hover:underline focus:outline-none dark:text-blue-400"
       >
-        {isExpanded ? 'less' : 'more'}
+        {isExpanded ? t('Caption.Less') : t('Caption.More')}
       </button>
     </div>
   );

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import avatar from '@/public/images/unify_icon_2.png';
 import SearchHorizontalToggle from './_components/search-horizontal-toggle';
 import NotificationModal from './_components/notification-modal';
@@ -14,6 +15,7 @@ import { useNotification } from '@/src/hooks/use-notification';
 
 const Sidebar = () => {
   const { user } = useAuthStore();
+  const t = useTranslations('Navigation');
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const modalRef = useRef(null);
   const buttonRef = useRef(null);
@@ -100,7 +102,7 @@ const Sidebar = () => {
           <ul className="flex w-full grow flex-col justify-center text-2xl">
             <li className="h-16">
               <Link
-                title={'Home'}
+                title={t('Home')}
                 href={'/'}
                 onClick={handleReload}
                 className={`flex h-full w-full items-center text-center transition delay-100 duration-100 ease-in-out hover:bg-[#D9D9D9] dark:hover:bg-neutral-700 dark:hover:text-white`}
@@ -110,18 +112,18 @@ const Sidebar = () => {
             </li>
             <li className="h-16">
               <span onClick={toggleSearch} ref={toggleRef}>
-                <NavButton title="Search" href="" iconClass={'fa-solid fa-magnifying-glass'} />
+                <NavButton title={t('Search')} href="" iconClass={'fa-solid fa-magnifying-glass'} />
               </span>
             </li>
             <li className="h-16">
-              <NavButton title="Explore" href="/explore" iconClass={'fa-solid fa-compass'} />
+              <NavButton title={t('Explore')} href="/explore" iconClass={'fa-solid fa-compass'} />
             </li>
             <li className="h-16">
-              <NavButton title="Reels" href="/reels" iconClass={'fa-solid fa-film'} />
+              <NavButton title={t('Reels')} href="/reels" iconClass={'fa-solid fa-film'} />
             </li>
             <li className="h-16">
               <NavButton
-                title="Messages"
+                title={t('Messages')}
                 href="/messages"
                 iconClass={'fa-brands fa-facebook-messenger'}
               />
@@ -132,7 +134,7 @@ const Sidebar = () => {
                 ref={buttonRef}
                 onClick={toggleNotification}
                 className="flex h-full w-full items-center text-center transition delay-100 duration-100 ease-in-out hover:bg-[#D9D9D9] dark:hover:bg-neutral-700 dark:hover:text-white"
-                title="Notifications"
+                title={t('Notifications')}
               >
                 <i className="fa-solid fa-bell w-full"></i>
                 {/* ✅ NEW: Notification badge */}
@@ -141,14 +143,14 @@ const Sidebar = () => {
             </li>
             <li className="h-16">
               <NavButton
-                title="Create post"
+                title={t('CreatePost')}
                 href="/posts"
                 iconClass={'fa-regular fa-square-plus'}
               />
             </li>
             <li className="flex h-16 items-center justify-center">
               {user && (
-                <Link title="Your profile" href={`/profile/${user.username}`} className="">
+                <Link title={t('YourProfile')} href={`/profile/${user.username}`} className="">
                   <div className="h-8 w-8 overflow-hidden rounded-full border-2 border-black dark:border-gray-300">
                     <Image
                       src={user.avatar?.url || avatar}
@@ -163,7 +165,7 @@ const Sidebar = () => {
             </li>
           </ul>
           <Link
-            title="Settings"
+            title={t('Settings')}
             className="flex h-20 w-20 items-center text-center text-3xl transition delay-100 duration-100 ease-in-out hover:bg-[#D9D9D9] dark:hover:bg-neutral-700 dark:hover:text-white"
             href="/settings/edit-profile"
           >

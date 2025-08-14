@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import LikeButton from '@/src/components/button/like-button';
 import CommentButton from '@/src/components/base/comment-button';
 import ShareButton from '@/src/components/button/share-button';
@@ -19,6 +20,7 @@ import Hashtag from './_components/hashtag';
 import User from './_components/user';
 
 const PostItem = ({ post }) => {
+  const t = useTranslations('Home.PostItem');
   const { user } = useAuthStore();
   const { likeCount, setLikeCount } = usePostLikeStatus(user?.id, post?.id);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -29,8 +31,8 @@ const PostItem = ({ post }) => {
     reportsCommandApi.createReport(endpoint, reportId, reason),
   onSuccess: (data) => {
     let toastConfig = {
-      title: 'Success',
-      description: 'Report post successful.',
+      title: t('Report.Success'),
+      description: t('Report.ReportPostSuccessful'),
       timeout: 3000,
       color: 'success',
     };
@@ -50,7 +52,7 @@ const PostItem = ({ post }) => {
       }
 
       toastConfig = {
-        title: 'Fail to report post',
+        title: t('Report.FailToReportPost'),
         description: errorMessage,
         timeout: 3000,
         color,
@@ -61,12 +63,12 @@ const PostItem = ({ post }) => {
     setIsModalOpen(false);
   },
   onError: (error) => {
-    let errorMessage = 'Failed to connect to the server.';
+    let errorMessage = t('Report.FailedToConnectServer');
     let color = 'danger';
 
     if (error.response) {
       const { status, data } = error.response;
-      errorMessage = data?.detail || error.message || 'Unknown error';
+      errorMessage = data?.detail || error.message || t('Report.UnknownError');
 
       if (
         (status === 400 || status === 409) &&
@@ -84,7 +86,7 @@ const PostItem = ({ post }) => {
     }
 
     addToast({
-      title: 'Fail to report post',
+      title: t('Report.FailToReportPost'),
       description: errorMessage,
       timeout: 3000,
       color,
@@ -136,7 +138,7 @@ const PostItem = ({ post }) => {
             <button
               onClick={() => setIsModalOpen(true)}
               className="rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-red-500 dark:text-gray-400 dark:hover:bg-neutral-700 dark:hover:text-red-400"
-              title="Report"
+              title={t('Actions.Report')}
             >
               <i className="fa-solid fa-flag text-sm"></i>
             </button>
@@ -190,7 +192,7 @@ const PostItem = ({ post }) => {
           </div>
 
           <div className="mb-2 text-sm font-medium text-gray-900 dark:text-gray-100">
-            {likeCount} likes
+            {likeCount} {t('Actions.Likes')}
           </div>
 
           <Caption text={transformHashtags(post.captions)} />
@@ -206,7 +208,7 @@ const PostItem = ({ post }) => {
               postId={post.id}
               className="text-sm text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
             >
-              View all {post.commentCount || 0} comments
+              {t('Actions.ViewAll')} {post.commentCount || 0} {t('Actions.Comments')}
             </CommentButton>
           </div>
         </div>

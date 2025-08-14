@@ -231,6 +231,7 @@ const streamers = [
 ];
 
 export default function StreamList() {
+  const t = useTranslations('Streams');
   const queryClient = useQueryClient();
   const [isKeysModalOpen, setIsKeysModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -274,7 +275,7 @@ export default function StreamList() {
     <div className="min-h-screen bg-background text-foreground transition-colors">
       <main className="container mx-auto px-10 py-4">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h1 className="text-3xl font-bold">Live Streams</h1>
+          <h1 className="text-3xl font-bold">{t('Title')}</h1>
 
           <SearchBar />
           <div className="flex gap-2">

@@ -2,5 +2,297 @@
     "Common": {
         "Hello": "Xin chào",
         "Support": "Hỗ trợ"
+    },
+    "Navigation": {
+        "Home": "Trang chủ",
+        "Search": "Tìm kiếm",
+        "Explore": "Khám phá",
+        "Reels": "Reels",
+        "Messages": "Tin nhắn",
+        "Notifications": "Thông báo",
+        "CreatePost": "Tạo bài viết",
+        "YourProfile": "Hồ sơ của bạn",
+        "Settings": "Cài đặt"
+    },
+    "Home": {
+        "PeopleYouMayKnow": "Những người bạn có thể biết",
+        "Copyright": "© UNIFY TỪ WORKAHOLICS",
+        "Posts": {
+            "LoadMore": "Tải thêm",
+            "NoMorePosts": "Không còn bài viết nào",
+            "UnableToLoadPosts": "Không thể tải bài viết",
+            "PleaseLoginToViewPosts": "Vui lòng đăng nhập để xem bài viết",
+            "SomethingWentWrong": "Đã xảy ra lỗi. Vui lòng thử lại sau.",
+            "GoToLogin": "Đi đến đăng nhập"
+        },
+        "SuggestedUsers": {
+            "FailedToLoadSuggestions": "Không thể tải gợi ý",
+            "NoSuggestionsAvailable": "Không có gợi ý nào"
+        },
+        "PostItem": {
+            "Report": {
+                "Success": "Thành công",
+                "ReportPostSuccessful": "Báo cáo bài viết thành công.",
+                "FailToReportPost": "Không thể báo cáo bài viết",
+                "CannotReportOwnContent": "Bạn không thể báo cáo nội dung của chính mình.",
+                "AlreadyReportedContent": "Bạn đã báo cáo nội dung này rồi.",
+                "FailedToConnectServer": "Không thể kết nối đến máy chủ.",
+                "UnknownError": "Lỗi không xác định"
+            },
+            "Actions": {
+                "Like": "Thích",
+                "Likes": "lượt thích",
+                "Comment": "Bình luận",
+                "Comments": "bình luận",
+                "ViewAll": "Xem tất cả",
+                "Share": "Chia sẻ",
+                "Bookmark": "Đánh dấu",
+                "Report": "Báo cáo",
+                "Delete": "Xóa",
+                "Edit": "Chỉnh sửa"
+            },
+            "TimeAgo": {
+                "JustNow": "Vừa xong",
+                "MinutesAgo": "phút trước",
+                "HoursAgo": "giờ trước",
+                "DaysAgo": "ngày trước",
+                "WeeksAgo": "tuần trước",
+                "MonthsAgo": "tháng trước",
+                "YearsAgo": "năm trước"
+            },
+            "Caption": {
+                "More": "thêm",
+                "Less": "ít hơn"
+            },
+            "CommentItem": {
+                "Reply": "Trả lời",
+                "ShowReplies": "Hiển thị câu trả lời",
+                "HideReplies": "Ẩn câu trả lời",
+                "More": "Thêm",
+                "Report": "Báo cáo",
+                "Delete": "Xóa",
+                "Success": "Thành công",
+                "CommentReportedSuccessfully": "Báo cáo bình luận thành công.",
+                "CommentDeletedSuccessfully": "Xóa bình luận thành công.",
+                "AlreadyReported": "Đã báo cáo",
+                "FailedToReport": "Không thể báo cáo",
+                "FailedToDelete": "Không thể xóa",
+                "YouHaveReportedBefore": "Bạn đã báo cáo nội dung này trước đó.",
+                "DeleteModal": {
+                    "Title": "Xóa bình luận",
+                    "AreYouSure": "Bạn có chắc chắn?",
+                    "CannotBeUndone": "Hành động này không thể hoàn tác. Bình luận sẽ bị xóa vĩnh viễn.",
+                    "Cancel": "Hủy",
+                    "Delete": "Xóa",
+                    "Deleting": "Đang xóa..."
+                }
+            },
+            "CommentInput": {
+                "AddComment": "Thêm bình luận...",
+                "ReplyTo": "Trả lời",
+                "Cancel": "Hủy",
+                "MissingRequiredData": "Thiếu dữ liệu cần thiết để gửi bình luận."
+            },
+            "PostDetailModal": {
+                "NoCommentsYet": "Chưa có bình luận nào"
+            },
+            "ReportModal": {
+                "Title": "Tại sao bạn báo cáo bài viết này?",
+                "CommentTitle": "Báo cáo bình luận",
+                "SelectReason": "Vui lòng chọn lý do báo cáo.",
+                "Submit": "Gửi",
+                "Cancel": "Hủy",
+                "Report": "Báo cáo",
+                "Reasons": {
+                    "Spam": "Spam",
+                    "InappropriateContent": "Nội dung không phù hợp",
+                    "Harassment": "Quấy rối",
+                    "HarassmentOrBullying": "Quấy rối hoặc bắt nạt",
+                    "Violence": "Bạo lực",
+                    "ViolenceOrThreats": "Bạo lực hoặc đe dọa",
+                    "HateSpeech": "Ngôn từ thù ghét hoặc phân biệt đối xử",
+                    "FalseInformation": "Thông tin sai lệch",
+                    "Other": "Khác"
+                },
+                "OtherReason": {
+                    "Title": "Vui lòng nêu rõ lý do của bạn",
+                    "Label": "Nhập lý do của bạn:",
+                    "Placeholder": "Nhập lý do của bạn tại đây...",
+                    "PleaseEnterReason": "Vui lòng nhập lý do."
+                },
+                "Success": {
+                    "ReportSubmitted": "Đã gửi báo cáo",
+                    "AlreadyReported": "Bạn đã báo cáo nội dung này trước đó."
+                },
+                "Error": {
+                    "FailedToReport": "Không thể báo cáo"
+                }
+            }
+        }
+    },
+    "Auth": {
+        "Login": {
+            "Title": "Chào mừng trở lại",
+            "Subtitle": "Chưa có tài khoản?",
+            "SignUp": "Đăng ký",
+            "Email": "Email",
+            "Password": "Mật khẩu",
+            "SignIn": "Đăng nhập",
+            "AllFieldsRequired": "Tất cả các trường đều bắt buộc",
+            "InvalidEmail": "Vui lòng nhập địa chỉ email hợp lệ",
+            "IncorrectCredentials": "Email hoặc mật khẩu không đúng !",
+            "SigningIn": "Đang đăng nhập..."
+        },
+        "Register": {
+            "Title": "Tạo tài khoản",
+            "FirstName": "Tên",
+            "LastName": "Họ",
+            "Username": "Tên người dùng",
+            "Email": "Email",
+            "Password": "Mật khẩu",
+            "ConfirmPassword": "Xác nhận mật khẩu",
+            "Gender": "Giới tính",
+            "Male": "Nam",
+            "Female": "Nữ",
+            "BirthDay": "Ngày sinh",
+            "Month": "Tháng",
+            "Day": "Ngày",
+            "Year": "Năm",
+            "SignUp": "Đăng ký",
+            "SigningUp": "Đang đăng ký...",
+            "AlreadyHaveAccount": "Đã có tài khoản?",
+            "SignIn": "Đăng nhập",
+            "AgreeToTerms": "Tôi đồng ý với",
+            "TermsOfService": "Điều khoản dịch vụ",
+            "Validation": {
+                "FirstNameRequired": "Tên là bắt buộc",
+                "FirstNameLettersOnly": "Chỉ cho phép chữ cái",
+                "LastNameRequired": "Họ là bắt buộc",
+                "LastNameLettersOnly": "Chỉ cho phép chữ cái",
+                "UsernameRequired": "Tên người dùng là bắt buộc",
+                "UsernameNoSpecialChars": "Không cho phép ký tự đặc biệt",
+                "UsernameMaxLength": "Tối đa 30 ký tự",
+                "EmailRequired": "Email là bắt buộc",
+                "EmailInvalid": "Định dạng email không hợp lệ",
+                "PasswordRequired": "Mật khẩu là bắt buộc",
+                "PasswordMinLength": "Ít nhất 8 ký tự",
+                "ConfirmPasswordRequired": "Xác nhận mật khẩu là bắt buộc",
+                "PasswordsDoNotMatch": "Mật khẩu không khớp",
+                "BirthDayRequired": "Vui lòng chọn ngày sinh của bạn",
+                "AgeRequirement": "Bạn phải ít nhất 13 tuổi",
+                "TermsRequired": "Bạn phải đồng ý với Điều khoản dịch vụ"
+            }
+        }
+    },
+    "Explore": {
+        "Title": "Khám phá",
+        "Error": "Lỗi",
+        "Loading": "Đang tải...",
+        "NoPosts": "Không tìm thấy bài viết nào",
+        "RecommendedPosts": "Bài viết được đề xuất",
+        "Hashtag": {
+            "Title": "Bài viết với #{hashtag}",
+            "NoPosts": "Không tìm thấy bài viết nào với hashtag này",
+            "Loading": "Đang tải...",
+            "Error": "Lỗi"
+        }
+    },
+    "Reels": {
+        "Title": "Reels"
+    },
+    "Messages": {
+        "Title": "Tin nhắn",
+        "NoMessages": "Chưa có tin nhắn nào",
+        "StartConversation": "Bắt đầu cuộc trò chuyện",
+        "Search": "Tìm kiếm...",
+        "LoadingUser": "Đang tải người dùng...",
+        "LoadingChats": "Đang tải cuộc trò chuyện...",
+        "ErrorLoadingChats": "Lỗi tải cuộc trò chuyện. Vui lòng làm mới trang.",
+        "LetsStartChat": "Hãy bắt đầu với một cuộc trò chuyện",
+        "SelectChatToStart": "Chọn một cuộc trò chuyện để bắt đầu nhắn tin",
+        "UnknownUser": "Người dùng không xác định",
+        "Username": "Tên người dùng",
+        "Fullname": "Họ tên",
+        "Processing": "Đang xử lý...",
+        "Call": "Gọi điện",
+        "VideoCall": "Gọi video",
+        "Message": "Tin nhắn...",
+        "FilesCleared": "Đã xóa tệp",
+        "AllFilesCleared": "Tất cả tệp đã được xóa.",
+        "FilesAdded": "Đã thêm tệp",
+        "AddedFiles": "Đã thêm {count} tệp.",
+        "TooManyFiles": "Quá nhiều tệp",
+        "MaxFilesAllowed": "Tối đa {max} tệp được phép.",
+        "FileTooLarge": "Tệp quá lớn",
+        "FileExceedsSize": "{filename} vượt quá {size}MB.",
+        "ErrorProcessingFiles": "Không thể xử lý một số tệp. Vui lòng thử lại.",
+        "ErrorSendingMessage": "Bạn cần chọn người nhận trước khi gửi tin nhắn!",
+        "ChatSystemNotReady": "Hệ thống chat chưa sẵn sàng. Vui lòng thử lại.",
+        "ErrorCalling": "Lỗi khi gọi điện !",
+        "NoPreviewAvailable": "Không có xem trước cho tệp này.",
+        "LastMessage": "Tin nhắn cuối",
+        "LastUpdated": "Cập nhật lần cuối"
+    },
+    "Streams": {
+        "Title": "Phát trực tiếp",
+        "CreateStream": "Tạo luồng",
+        "Settings": "Cài đặt",
+        "Keys": "Khóa"
+    },
+    "Profile": {
+        "Title": "Hồ sơ",
+        "EditProfile": "Chỉnh sửa hồ sơ",
+        "Followers": "Người theo dõi",
+        "Following": "Đang theo dõi",
+        "Posts": "Bài viết"
+    },
+    "Posts": {
+        "Title": "Tạo bài viết",
+        "WhatOnYourMind": "Bạn đang nghĩ gì?",
+        "Post": "Đăng",
+        "Posting": "Đang đăng...",
+        "NoPosts": "Chưa có bài viết nào",
+        "LoadMore": "Tải thêm"
+    },
+    "Settings": {
+        "Title": "Cài đặt",
+        "EditProfile": "Chỉnh sửa hồ sơ",
+        "Preferences": "Tùy chọn",
+        "Security": "Bảo mật",
+        "Privacy": "Quyền riêng tư"
+    },
+    "Admin": {
+        "Title": "Bảng quản trị",
+        "Users": "Người dùng",
+        "Reports": "Báo cáo",
+        "Statistics": "Thống kê",
+        "Manage": "Quản lý"
+    },
+    "Preferences": {
+        "Title": "Tùy chọn",
+        "Subtitle": "Tùy chỉnh trải nghiệm của bạn với các cài đặt này",
+        "AppTheme": {
+            "Title": "Giao diện ứng dụng",
+            "Description": "Thiết lập cách ứng dụng của bạn hiển thị với chủ đề ưa thích.",
+            "DarkMode": "Chế độ tối"
+        },
+        "Language": {
+            "Title": "Ngôn ngữ",
+            "Description": "Xem tất cả văn bản, tin nhắn, tiêu đề bằng ngôn ngữ ưa thích của bạn.",
+            "InterfaceLanguage": "Ngôn ngữ giao diện"
+        },
+        "Notifications": {
+            "Title": "Thông báo",
+            "Description": "Quản lý cách bạn nhận thông báo và cập nhật."
+        },
+        "Privacy": {
+            "Title": "Quyền riêng tư",
+            "Description": "Kiểm soát cài đặt quyền riêng tư và tùy chọn chia sẻ dữ liệu của bạn.",
+            "ProfileVisibility": "Hiển thị hồ sơ",
+            "ActivityStatus": "Trạng thái hoạt động",
+            "Public": "Công khai",
+            "FriendsOnly": "Chỉ bạn bè",
+            "Private": "Riêng tư"
+        }
     }
 }

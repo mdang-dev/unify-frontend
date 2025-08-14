@@ -1,7 +1,9 @@
 'use client';
 import React from 'react';
+import { useTranslations } from 'next-intl';
 
 const DeleteCommentModal = ({ isOpen, onClose, onConfirm, isDeleting }) => {
+  const t = useTranslations('Home.PostItem.CommentItem.DeleteModal');
   if (!isOpen) return null;
 
   return (

@@ -9,6 +9,7 @@ import {
   FaFileAudio,
   FaFileAlt,
 } from 'react-icons/fa';
+import { useTranslations } from 'next-intl';
 import Message from './_components/message';
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useDebounce } from '@/src/hooks/use-debounce';
@@ -26,6 +27,7 @@ import FileUploadProgress from './_components/file-upload-progress';
 import { optimizeImage } from '@/src/utils/image-optimization.util';
 
  const Messages = () => {
+  const t = useTranslations('Messages');
   const user = useAuthStore((s) => s.user);
   const [chatPartner, setChatPartner] = useState(null);
 
@@ -168,7 +170,7 @@ import { optimizeImage } from '@/src/utils/image-optimization.util';
     if (!chatPartner) {
       addToast({
         title: 'Error',
-        description: 'Bạn cần chọn người nhận trước khi gửi tin nhắn!',
+        description: t('ErrorSendingMessage'),
         timeout: 3000,
         color: 'danger',
       });
@@ -177,7 +179,7 @@ import { optimizeImage } from '@/src/utils/image-optimization.util';
     if (!sendMessage) {
       addToast({
         title: 'Error',
-        description: 'Chat system not ready. Please try again.',
+        description: t('ChatSystemNotReady'),
         timeout: 3000,
         color: 'danger',
       });
@@ -204,8 +206,8 @@ import { optimizeImage } from '@/src/utils/image-optimization.util';
         if (files.length > 0) {
           setFiles([]);
           addToast({
-            title: 'Files cleared',
-            description: 'All files have been cleared.',
+            title: t('FilesCleared'),
+            description: t('AllFilesCleared'),
             timeout: 2000,
             color: 'info',
           });
@@ -243,8 +245,8 @@ import { optimizeImage } from '@/src/utils/image-optimization.util';
     // Validate file count limit
     if (files.length + newFiles.length > maxFiles) {
       addToast({
-        title: 'Too many files',
-        description: `Maximum ${maxFiles} files allowed.`,
+        title: t('TooManyFiles'),
+        description: t('MaxFilesAllowed', { max: maxFiles }),
         timeout: 3000,
         color: 'warning',
       });
@@ -259,8 +261,8 @@ import { optimizeImage } from '@/src/utils/image-optimization.util';
         // Validate file size
         if (file.size > MAX_FILE_SIZE_BYTES) {
           addToast({
-            title: 'File too large',
-            description: `${file.name} exceeds ${MAX_FILE_SIZE_MB}MB.`,
+            title: t('FileTooLarge'),
+            description: t('FileExceedsSize', { filename: file.name, size: MAX_FILE_SIZE_MB }),
             timeout: 3000,
             color: 'warning',
           });
@@ -283,8 +285,8 @@ import { optimizeImage } from '@/src/utils/image-optimization.util';
       if (validFiles.length > 0) {
         setFiles((prevFiles) => [...prevFiles, ...validFiles]);
         addToast({
-          title: 'Files added',
-          description: `Added ${validFiles.length} file(s).`,
+          title: t('FilesAdded'),
+          description: t('AddedFiles', { count: validFiles.length }),
           timeout: 2000,
           color: 'success',
         });
@@ -293,7 +295,7 @@ import { optimizeImage } from '@/src/utils/image-optimization.util';
       console.error('Error processing files:', error);
       addToast({
         title: 'Error',
-        description: 'Failed to process some files. Please try again.',
+        description: t('ErrorProcessingFiles'),
         timeout: 3000,
         color: 'danger',
       });
@@ -364,8 +366,8 @@ import { optimizeImage } from '@/src/utils/image-optimization.util';
   const handleClearAllFiles = () => {
     setFiles([]);
     addToast({
-      title: 'Files cleared',
-      description: 'All files have been removed from your message.',
+      title: t('FilesCleared'),
+      description: t('AllFilesCleared'),
       timeout: 2000,
       color: 'info',
     });
@@ -375,7 +377,7 @@ import { optimizeImage } from '@/src/utils/image-optimization.util';
     if (fileObj.preview) {
       window.open(fileObj.preview, '_blank');
     } else {
-      alert('No preview available for this file.');
+      alert(t('NoPreviewAvailable'));
     }
   };
 
@@ -416,7 +418,7 @@ import { optimizeImage } from '@/src/utils/image-optimization.util';
         onError: () => {
           addToast({
             title: 'Error',
-            description: 'Error when calling !',
+            description: t('ErrorCalling'),
             timeout: 3000,
             color: 'danger',
           });
@@ -436,7 +438,7 @@ import { optimizeImage } from '@/src/utils/image-optimization.util';
         onError: () => {
           addToast({
             title: 'Error',
-            description: 'Error when calling !',
+            description: t('ErrorCalling'),
             timeout: 3000,
             color: 'danger',
           });
@@ -451,11 +453,11 @@ import { optimizeImage } from '@/src/utils/image-optimization.util';
         <div className="flex h-screen basis-1/3 flex-col">
           <div className="sticky top-0 z-10 border-r-1 px-4 py-3 shadow-md dark:border-r-neutral-700 dark:bg-neutral-900">
             <div className="mb-4 flex items-center justify-between">
-              <h1 className="text-3xl font-bold dark:text-white">Message</h1>
+              <h1 className="text-3xl font-bold dark:text-white">{t('Title')}</h1>
             </div>
             <div className="mb-2">
               <Input
-                placeholder={'Search...'}
+                placeholder={t('Search')}
                 className={`h-10 w-full border-gray-300 p-3 placeholder-gray-500 dark:border-neutral-600`}
                 value={searchQuery} // Bind input to searchQuery state
                 onChange={(e) => setSearchQuery(e.target.value)} // Update searchQuery on input change
@@ -467,12 +469,12 @@ import { optimizeImage } from '@/src/utils/image-optimization.util';
           <div className="flex-1 overflow-y-scroll border-r-1 px-4 py-1 scrollbar-hide dark:border-r-neutral-700 dark:bg-black">
             {!isUserHydrated ? (
               <div className="flex h-full items-center justify-center">
-                <p className="text-lg text-gray-500 dark:text-neutral-400">Loading user...</p>
+                <p className="text-lg text-gray-500 dark:text-neutral-400">{t('LoadingUser')}</p>
               </div>
             ) : !chatList ? (
               <div className="flex h-full items-center justify-center">
                 <p className="text-lg text-gray-500 dark:text-neutral-400">
-                  {chatListError ? 'Error loading chats. Please refresh.' : 'Loading chats...'}
+                  {chatListError ? t('ErrorLoadingChats') : t('LoadingChats')}
                 </p>
               </div>
             ) : filteredChatList?.length > 0 ? (
@@ -494,7 +496,7 @@ import { optimizeImage } from '@/src/utils/image-optimization.util';
                     />
                     <div className="ml-4">
                       <h4 className="w-23 truncate text-sm font-medium">
-                        {chat?.fullname || chat?.fullName || opChat?.fullname || 'Unknown User'}
+                        {chat?.fullname || chat?.fullName || opChat?.fullname || t('UnknownUser')}
                       </h4>
                       <p className="w-60 truncate text-sm text-neutral-500 dark:text-gray-400">
                         {chat?.lastMessage}
@@ -514,7 +516,7 @@ import { optimizeImage } from '@/src/utils/image-optimization.util';
             ) : (
               <div className="flex h-full items-center justify-center">
                 <p className="text-lg text-gray-500 dark:text-neutral-400">
-                  Let&apos;s start with a chat
+                  {t('LetsStartChat')}
                 </p>
               </div>
             )}
@@ -525,11 +527,11 @@ import { optimizeImage } from '@/src/utils/image-optimization.util';
         <div className="ml-5 mr-5 h-screen basis-2/3">
           {!opChat?.userId ? (
             <div className="h-full w-full">
-              <div className="flex h-full items-center justify-center">
-                <h1 className="text-lg text-gray-500 dark:text-neutral-400">
-                  Select a chat to start messaging
-                </h1>
-              </div>
+                          <div className="flex h-full items-center justify-center">
+              <h1 className="text-lg text-gray-500 dark:text-neutral-400">
+                {t('SelectChatToStart')}
+              </h1>
+            </div>
             </div>
           ) : (
             <>
@@ -542,10 +544,10 @@ import { optimizeImage } from '@/src/utils/image-optimization.util';
                   />
                   <div className="ml-5">
                     <h4 className="w-60 truncate text-sm font-medium">
-                      {opChat?.fullname || 'Fullname'}
+                      {opChat?.fullname || t('Fullname')}
                     </h4>
                     <p className="w-40 truncate text-sm text-gray-500 dark:text-neutral-400">
-                      {opChat?.username || 'Username'}
+                      {opChat?.username || t('Username')}
                     </p>
                   </div>
                 </div>
@@ -553,18 +555,18 @@ import { optimizeImage } from '@/src/utils/image-optimization.util';
                   {isUploading && (
                     <div className="mr-2 flex items-center text-sm text-blue-500">
                       <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"></div>
-                      Processing...
+                      {t('Processing')}
                     </div>
                   )}
                   <button
-                    title="Call"
+                    title={t('Call')}
                     onClick={handleCall}
                     className="mr-2 rounded-md p-2 transition duration-200 ease-in-out hover:bg-gray-300 dark:hover:bg-neutral-700"
                   >
                     <i className="fa-solid fa-phone dark:text-zinc-100"></i>
                   </button>
                   <button
-                    title="Video Call"
+                    title={t('VideoCall')}
                     onClick={handleVideoCall}
                     className="mr-2 rounded-md p-2 transition duration-200 ease-in-out hover:bg-gray-300 dark:hover:bg-neutral-700"
                   >
@@ -631,7 +633,7 @@ import { optimizeImage } from '@/src/utils/image-optimization.util';
 
                   <input
                     type="text"
-                    placeholder="Message..."
+                    placeholder={t('Message')}
                     className="flex-grow rounded-3xl border border-zinc-300 px-4 py-2 text-black placeholder-zinc-400 focus:outline-none dark:border-neutral-700 dark:bg-black dark:text-white"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
