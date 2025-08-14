@@ -156,18 +156,18 @@ const ReportModal = ({ isOpen, onClose, onSubmit, postId }) => {
                 </label>
               </div>
               
-              {/* Show text field only when "Other" is selected */}
-              {reason === 'Other' && selectedReason === 'Other' && (
-                <div className="ml-6 mt-2">
-                  <input
-                    type="text"
-                    value={customReason}
-                    onChange={(e) => setCustomReason(e.target.value)}
-                    placeholder="Please specify your reason..."
-                    className="w-full rounded-md border border-gray-300 p-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
-                  />
-                </div>
-              )}
+                             {/* Show text field only when "Other" is selected */}
+               {reason.key === 'Other' && selectedReason === 'Other' && (
+                 <div className="ml-6 mt-2">
+                   <textarea
+                     value={customReason}
+                     onChange={(e) => setCustomReason(e.target.value)}
+                     placeholder="Please specify your reason..."
+                     className="w-full rounded-md border border-gray-300 p-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+                     rows={3}
+                   />
+                 </div>
+               )}
             </div>
           ))}
         </div>
