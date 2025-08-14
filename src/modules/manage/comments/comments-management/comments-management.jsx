@@ -224,19 +224,19 @@ const CommentsManagement = () => {
       <div className="flex w-full items-center justify-between">
         <div>
           <h1 className="text-4xl font-black uppercase">Pending Comments </h1>
-          <p className="text-gray-500">Review and manage pending comment reports on UNIFY.</p>
+          <p className="text-neutral-400">Review and manage pending comment reports on UNIFY.</p>
         </div>
         <div className="flex items-center gap-1">
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by content, reporter, or comment author..."
-            className="rounded-md border px-5 py-2 dark:bg-neutral-800 dark:text-white"
+            placeholder="Search..."
+            className="rounded-md border px-5 py-2 dark:bg-neutral-800 dark:text-neutral-400"
           />
           <Link
             href="/manage/comments/processed"
-            className="rounded-md bg-neutral-800 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-100 hover:text-neutral-700 dark:bg-zinc-100 dark:hover:bg-neutral-700 dark:hover:text-neutral-200"
+            className="rounded-md bg-neutral-800 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-100 hover:text-neutral-700 dark:bg-zinc-100 dark:text-neutral-800 dark:hover:bg-neutral-700 dark:hover:text-neutral-200"
           >
             View Processed Comments
           </Link>
@@ -254,7 +254,7 @@ const CommentsManagement = () => {
               </p>
             </div>
             <div className="rounded-full bg-neutral-800 p-3 dark:bg-zinc-200">
-              <Info className="h-6 w-6 text-zinc-200 dark:text-neutral-800" />
+              <Info className="h-6 w-6 text-zinc-200 dark:text-neutral-800"  />
             </div>
           </div>
         </div>
@@ -262,12 +262,12 @@ const CommentsManagement = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500 dark:text-neutral-400">Total Reports</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-neutral-100">
+              <p className="text-2xl font-bold text-zinc-700 dark:text-neutral-100 ">
                 {reports.length}
               </p>
             </div>
-            <div className="rounded-full bg-gray-100 p-3 dark:bg-gray-900/30">
-              <Info className="h-6 w-6 text-gray-600 dark:text-gray-400" />
+            <div className="rounded-full bg-gray-100 p-3 dark:bg-neutral-700">
+              <Info className="h-6 w-6 text-zinc-600 dark:text-zinc-200" />
             </div>
           </div>
         </div>
@@ -346,7 +346,7 @@ const CommentsManagement = () => {
                           setSelectedReport(report);
                           setIsModalOpen(true);
                         }}
-                        className="mr-1 rounded-md border border-neutral-300 bg-neutral-50 px-3 py-1.5 text-sm font-medium text-neutral-700 transition-colors duration-200 hover:border-neutral-400 hover:bg-neutral-100 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:border-neutral-500 dark:hover:bg-neutral-700"
+                        className="mr-1 rounded-md border border-neutral-300 bg-neutral-50 px-3 py-1.5 text-sm font-medium text-neutral-700 transition-colors duration-200 hover:border-neutral-400 hover:bg-neutral-100 dark:border-neutral-600 dark:bg-zinc-200 dark:text-neutral-800 dark:hover:text-zinc-200 dark:hover:border-neutral-500 dark:hover:bg-neutral-700"
                       >
                         Approve/Reject
                       </button>

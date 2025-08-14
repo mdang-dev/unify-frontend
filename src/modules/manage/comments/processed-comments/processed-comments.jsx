@@ -98,7 +98,7 @@ const ProcessedComments = () => {
       <div className="flex w-full items-center justify-between">
         <div>
           <h1 className="text-4xl font-black uppercase">Processed Comments</h1>
-          <p className="text-gray-500">View all comment processed on UNIFY.</p>
+          <p className="text-neutral-400">View all comment processed on UNIFY.</p>
         </div>
         <div className="flex items-center gap-2">
           {/* Status Filter */}
@@ -114,7 +114,7 @@ const ProcessedComments = () => {
                 onClick={() => setStatusFilter(slot)}
                 className={`relative rounded-md border px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out ${
                   statusFilter === slot
-                    ? 'bg-neutral-600 text-white dark:bg-neutral-400 dark:text-neutral-900'
+                    ? 'bg-neutral-600 text-white dark:bg-zinc-200 dark:text-neutral-800'
                     : 'border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-600 hover:text-white dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-600 dark:hover:text-white'
                 } animate-pulse-once hover:scale-[1.01] focus:scale-[1.02] focus:border-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-400`}
               >
@@ -126,12 +126,12 @@ const ProcessedComments = () => {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by content, reporter, or comment author..."
-            className="rounded-md border px-5 py-2 dark:bg-neutral-800 dark:text-white"
+            placeholder=" Search..."
+            className="rounded-md border px-5 py-2 dark:bg-neutral-800 dark:text-neutral-400"
           />
           <Link
             href="/manage/comments/list"
-            className="rounded-md bg-neutral-800 px-4 py-2 text-sm text-center font-medium text-white transition-colors hover:bg-zinc-100 hover:text-neutral-700 dark:bg-zinc-100 dark:hover:bg-neutral-700 dark:hover:text-neutral-200"
+            className="rounded-md bg-neutral-800 px-4 py-2 text-center text-sm font-medium text-white transition-colors hover:bg-zinc-100 hover:text-neutral-700 dark:bg-zinc-100 dark:text-neutral-800 dark:hover:bg-neutral-700 dark:hover:text-neutral-200"
           >
             View Pending Comments
           </Link>
