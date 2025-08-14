@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { PhotoUploadField } from './_components';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { toast } from 'sonner';
@@ -29,7 +30,7 @@ const ReportModal = ({ isOpen, onClose, onSubmit, postId }) => {
 
   const handleSubmit = async () => {
     if (!selectedReason) {
-      alert(t('SelectReason'));
+      toast.error(t('SelectReason'));
       return;
     }
     
@@ -139,7 +140,7 @@ const ReportModal = ({ isOpen, onClose, onSubmit, postId }) => {
 
         <div className="mb-4 space-y-3">
           {reportReasons.map((reason) => (
-            <div key={reason}>
+            <div key={reason.key}>
               <div className="flex items-center">
                 <input
                   type="radio"

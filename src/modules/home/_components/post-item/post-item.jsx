@@ -8,7 +8,7 @@ import ShareButton from '@/src/components/button/share-button';
 import Bookmark from '@/src/components/base/bookmark';
 import Slider from '@/src/components/base/slider';
 import { usePostLikeStatus } from '@/src/hooks/use-post-like-status';
-import { addToast, ToastProvider } from '@heroui/react';
+import { toast } from 'sonner';
 import Link from 'next/link';
 import ReportModal from '@/src/components/base/report-modal';
 import { motion } from 'framer-motion';
@@ -30,41 +30,27 @@ const PostItem = ({ post }) => {
   mutationFn: ({ endpoint, reportedId, reason, urls = [] }) =>
     reportsCommandApi.createReport(endpoint, reportedId, reason, urls),
   onSuccess: (data) => {
-    let toastConfig = {
-      title: t('Report.Success'),
-      description: t('Report.ReportPostSuccessful'),
-      timeout: 3000,
-      color: 'success',
-    };
-
     if (data?.error) {
       const errorMessage = data.error;
-      let color = 'danger';
 
       if (
         errorMessage === 'You cannot report your own content.' ||
         errorMessage === 'You have already reported this content.'
       ) {
-        color = 'warning';
+        toast.warning(errorMessage);
         console.warn('Report warning:', errorMessage);
       } else {
+        toast.error(errorMessage);
         console.error('Report error:', errorMessage);
       }
-
-      toastConfig = {
-        title: t('Report.FailToReportPost'),
-        description: errorMessage,
-        timeout: 3000,
-        color,
-      };
+    } else {
+      toast.success(t('Report.ReportPostSuccessful'));
     }
 
-    addToast(toastConfig);
     setIsModalOpen(false);
   },
   onError: (error) => {
     let errorMessage = t('Report.FailedToConnectServer');
-    let color = 'danger';
 
     if (error.response) {
       const { status, data } = error.response;
@@ -75,22 +61,16 @@ const PostItem = ({ post }) => {
         (errorMessage === 'You cannot report your own content.' ||
           errorMessage === 'You have already reported this content.')
       ) {
-        color = 'warning';
+        toast.warning(errorMessage);
         console.warn('Report warning:', errorMessage);
       } else {
-        color = 'danger';
+        toast.error(errorMessage);
         console.error('Report error:', error);
       }
     } else {
+      toast.error(errorMessage);
       console.error('Report error:', error);
     }
-
-    addToast({
-      title: t('Report.FailToReportPost'),
-      description: errorMessage,
-      timeout: 3000,
-      color,
-    });
 
     setIsModalOpen(false);
   },
@@ -131,7 +111,6 @@ const handleReportPost = useCallback(
 
   return (
     <>
-    <ToastProvider placement={'top-right'} />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
