@@ -82,7 +82,7 @@ const CommentReportModal = ({ isOpen, onClose, onSubmit, commentId }) => {
                     htmlFor={reason}
                     className={`block w-full cursor-pointer rounded-lg border px-4 py-3 text-left text-sm transition-all duration-200 ${
                       selectedReason === reason
-                        ? 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
+                        ? 'border-neutral-800 bg-neutral-800 text-zinc-200 hover:bg-zinc-400 dark:border-zinc-200 dark:bg-zinc-200 dark:text-neutral-800 dark:hover:bg-zinc-400'
                         : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-gray-300 dark:hover:border-neutral-600 dark:hover:bg-neutral-700'
                     }`}
                   >
@@ -106,7 +106,7 @@ const CommentReportModal = ({ isOpen, onClose, onSubmit, commentId }) => {
               className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors duration-200 ${
                 !selectedReason || selectedReason === 'Other'
                   ? 'cursor-not-allowed bg-gray-300 text-gray-500 dark:bg-neutral-600 dark:text-gray-400'
-                  : 'bg-red-500 text-white hover:bg-red-600'
+                  : 'bg-neutral-800 text-zinc-200 hover:bg-zinc-400 dark:bg-zinc-200 dark:text-neutral-800 dark:hover:bg-zinc-400'
               }`}
               disabled={!selectedReason || selectedReason === 'Other'}
             >

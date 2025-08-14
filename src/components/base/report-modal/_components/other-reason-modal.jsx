@@ -35,7 +35,7 @@ const OtherReasonModal = ({ isOpen, onClose, onSubmit, postId }) => {
             type="text"
             value={customReason}
             onChange={(e) => setCustomReason(e.target.value)}
-            className="w-full rounded-md border border-neutral-800 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-neutral-800"
+            className="w-full rounded-md border border-neutral-800 p-2 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:bg-neutral-800"
             placeholder="Type your reason here..."
           />
         </div>
@@ -44,7 +44,7 @@ const OtherReasonModal = ({ isOpen, onClose, onSubmit, postId }) => {
         <div className="item-center mx-3 flex gap-2">
           <button
             onClick={handleSubmit}
-            className="w-full rounded-md bg-red-500 py-1 font-semibold text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:bg-gray-300 dark:disabled:bg-neutral-500"
+            className="w-full rounded-md bg-neutral-800 py-1 font-semibold text-zinc-200 hover:bg-zinc-400 disabled:cursor-not-allowed disabled:bg-gray-300 dark:disabled:bg-neutral-500"
             disabled={!customReason.trim()}
           >
             Submit

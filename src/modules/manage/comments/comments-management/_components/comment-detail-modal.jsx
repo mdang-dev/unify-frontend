@@ -82,7 +82,9 @@ const CommentDetailModal = ({
             </div>
             <div>
               <span className="font-semibold text-gray-700 dark:text-neutral-300">Reason:</span>{' '}
-              <span className="text-rose-600 dark:text-rose-400">{comment.reason}</span>
+              <span className="p-2 rounded-lg bg-neutral-800 text-white dark:bg-white dark:text-neutral-800">
+                {comment.reason}
+              </span>
             </div>
             <div>
               <span className="font-semibold text-gray-700 dark:text-neutral-300">Status:</span>{' '}
@@ -111,7 +113,7 @@ const CommentDetailModal = ({
               <span className="font-semibold text-gray-700 dark:text-neutral-300">
                 Comment Author:
               </span>{' '}
-              <span className="text-blue-600 dark:text-blue-400">
+              <span className="rounded-lg bg-zinc-200 p-2 text-neutral-800 dark:bg-neutral-950 dark:text-zinc-200">
                 {comment.reportedEntity?.username}
               </span>
             </div>
@@ -119,7 +121,7 @@ const CommentDetailModal = ({
               <span className="font-semibold text-gray-700 dark:text-neutral-300">
                 Comment Content:
               </span>
-              <div className="mt-1 rounded-lg border-l-4 border-blue-600 bg-white p-3 dark:border-blue-400 dark:bg-neutral-700">
+              <div className="mt-1 rounded-lg border-l-4 border-neutral-800 bg-white p-3 dark:border-zinc-200 dark:bg-neutral-700">
                 <span className="text-gray-900 dark:text-neutral-100">
                   {comment.reportedEntity?.content}
                 </span>
@@ -139,7 +141,7 @@ const CommentDetailModal = ({
                 <span className="font-semibold text-gray-700 dark:text-neutral-300">
                   Post Author:
                 </span>{' '}
-                <span className="text-emerald-600 dark:text-emerald-300">
+                <span className="rounded-lg bg-zinc-200 p-2 text-neutral-800 dark:bg-neutral-950 dark:text-zinc-200">
                   {postDetails.user?.username}
                 </span>
               </div>
@@ -147,7 +149,7 @@ const CommentDetailModal = ({
                 <span className="font-semibold text-gray-700 dark:text-neutral-300">
                   Post Caption:
                 </span>
-                <div className="mt-1 rounded-lg border-l-4 border-emerald-600 bg-white p-3 dark:border-emerald-400 dark:bg-neutral-700">
+                <div className="mt-1 rounded-lg border-l-4 border-zinc-200 bg-white p-3 dark:border-neutral-950 dark:bg-neutral-700">
                   <span className="text-gray-900 dark:text-neutral-100">
                     {postDetails.captions || 'No caption'}
                   </span>
@@ -179,7 +181,7 @@ const CommentDetailModal = ({
               <button
                 onClick={onApprove}
                 disabled={loading}
-                className="rounded-md bg-neutral-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-600 dark:hover:bg-neutral-700"
+                className="rounded-md bg-neutral-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-700 dark:hover:bg-neutral-800"
               >
                 {loading ? (
                   <div className="flex items-center gap-2">
@@ -193,7 +195,7 @@ const CommentDetailModal = ({
               <button
                 onClick={onReject}
                 disabled={loading}
-                className="rounded-md bg-zinc-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-500 dark:hover:bg-zinc-600"
+                className="rounded-md bg-zinc-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-200  dark:text-neutral-800 dark:hover:bg-zinc-400 " 
               >
                 {loading ? (
                   <div className="flex items-center gap-2">
