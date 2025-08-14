@@ -3,10 +3,22 @@ import httpClient from '@/src/utils/http-client.util';
 const url = '/reports';
 
 export const reportsCommandApi = {
-  createReport: async (endpoint, reportedId, reason) => {
+  createReport: async (endpoint, reportedId, reason, urls = []) => {
+    const params = new URLSearchParams();
+    params.append('reportedId', reportedId);
+    params.append('reason', reason);
+  
+    // Ensure urls is an array and filter out null/undefined values
+    const validUrls = Array.isArray(urls) ? urls.filter(url => url && typeof url === 'string' && url.trim() !== '') : [];
+  
+    // Append each URL with the key 'urls'
+    validUrls.forEach(url => {
+      params.append('urls', url);
+    });
+  
     const res = await httpClient.post(
       `${url}/${endpoint}`,
-      new URLSearchParams({ reportedId, reason }).toString(),
+      params.toString(),
       {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -15,6 +27,7 @@ export const reportsCommandApi = {
     );
     return res.data;
   },
+
   updateReport: async (reportId, status) => {
     const res = await httpClient.put(`${url}/${reportId}/status?status=${status}`);
     return res.data;

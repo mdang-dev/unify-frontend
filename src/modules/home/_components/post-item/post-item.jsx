@@ -27,8 +27,8 @@ const PostItem = ({ post }) => {
   const [showFullImage, setShowFullImage] = useState(false);
 
   const { mutate: reportPost } = useMutation({
-  mutationFn: ({ endpoint, reportId, reason }) =>
-    reportsCommandApi.createReport(endpoint, reportId, reason),
+  mutationFn: ({ endpoint, reportedId, reason, urls = [] }) =>
+    reportsCommandApi.createReport(endpoint, reportedId, reason, urls),
   onSuccess: (data) => {
     let toastConfig = {
       title: t('Report.Success'),
@@ -97,12 +97,18 @@ const PostItem = ({ post }) => {
 });
 
 
-  const handleReportPost = useCallback(
-    async (postId, reason) => {
-      reportPost({ endpoint: 'post', reportId: postId, reason });
-    },
-    [reportPost]
-  );
+const handleReportPost = useCallback(
+  async (postId, reason, urls = []) => {
+    reportPost({
+      endpoint: 'post',
+      reportedId: postId, 
+      reason,
+      urls 
+    });
+  },
+  [reportPost]
+);
+
 
   const hashtags = post.captions.split(/(\#[a-zA-Z0-9_]+)/g).filter((part) => part.startsWith('#'));
 

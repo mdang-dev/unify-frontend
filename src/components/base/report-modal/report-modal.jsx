@@ -1,12 +1,15 @@
 'use client';
 import React from 'react';
-import { useTranslations } from 'next-intl';
-import OtherReasonModal from './_components/other-reason-modal';
+import { PhotoUploadField } from './_components';
+import { XMarkIcon } from '@heroicons/react/24/outline';
+import { toast } from 'sonner';
 
 const ReportModal = ({ isOpen, onClose, onSubmit, postId }) => {
   const t = useTranslations('Home.PostItem.ReportModal');
   const [selectedReason, setSelectedReason] = React.useState('');
-  const [isOtherModalOpen, setIsOtherModalOpen] = React.useState(false);
+  const [customReason, setCustomReason] = React.useState('');
+  const [urls, setUrls] = React.useState([]);
+  const [isUploading, setIsUploading] = React.useState(false);
 
   // Danh sách lý do báo cáo
   const reportReasons = [
@@ -19,47 +22,125 @@ const ReportModal = ({ isOpen, onClose, onSubmit, postId }) => {
 
   const handleReasonChange = (reason) => {
     setSelectedReason(reason);
-    if (reason === 'Other') {
-      setIsOtherModalOpen(true);
+    if (reason !== 'Other') {
+      setCustomReason(''); // Clear custom reason when selecting other options
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedReason) {
       alert(t('SelectReason'));
       return;
     }
-    if (selectedReason !== 'Other') {
-      onSubmit(postId, selectedReason);
+    
+    if (selectedReason === 'Other' && !customReason.trim()) {
+      toast.error('Please enter a reason for reporting.');
+      return;
     }
+    
+    // Use custom reason if "Other" is selected, otherwise use the selected reason
+    const finalReason = selectedReason === 'Other' ? customReason.trim() : selectedReason;
+    await processAndSubmit(postId, finalReason);
   };
 
   const handleClose = () => {
     setSelectedReason('');
-    setIsOtherModalOpen(false);
+    setCustomReason('');
+    setUrls([]);
     onClose();
   };
 
-  // Xử lý khi gửi lý do từ OtherReasonModal
-  const handleOtherSubmit = (postId, customReason) => {
-    onSubmit(postId, customReason); // Gửi lý do tùy chỉnh lên parent
-    setIsOtherModalOpen(false); // Đóng modal Other
-    handleClose(); // Đóng luôn ReportModal
+  // Process images and submit report
+  const processAndSubmit = async (postId, reason, passedUrls = []) => {
+    try {
+      setIsUploading(true);
+
+      let finalUrls = [];
+
+      // If there are images to upload, process them
+      if (urls && urls.length > 0) {
+        try {
+          // Create FormData for the upload API
+          const formData = new FormData();
+          urls.forEach(item => {
+            if (item && item.file) {
+              formData.append('files', item.file);
+            }
+          });
+          
+          // Upload files to Cloudinary via our API
+          const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Upload failed with status: ${response.status}`);
+          }
+          
+          const result = await response.json();
+          
+          // Extract the Cloudinary URLs from the response
+          finalUrls = result.files.map(file => file.url).filter(url => url != null);
+          
+         // toast.success('Images uploaded successfully');
+        } catch (uploadError) {
+          console.error('Upload error:', uploadError);
+          // If upload fails, still submit the report without images
+          toast.warning(`Warning: Image upload failed (${uploadError.message}). The report will be submitted without images.`);
+          finalUrls = [];
+        }
+      }
+      
+      // Add any passed URLs
+      if (Array.isArray(passedUrls)) {
+        finalUrls = [...finalUrls, ...passedUrls];
+      }
+      
+      // Ensure finalUrls is always an array and contains no null values
+      if (!Array.isArray(finalUrls)) {
+        finalUrls = [];
+      }
+      finalUrls = finalUrls.filter(url => url && typeof url === 'string' && url.trim() !== '');
+      
+      // Submit the report with the processed URLs
+      onSubmit(postId, reason, finalUrls);
+      
+    } catch (error) {
+      console.error('Error processing report:', error);
+      toast.error('Error processing report. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
   };
+
+  // Cleanup previews on unmount
+  React.useEffect(() => {
+    return () => {
+      if (Array.isArray(urls)) {
+        urls.forEach((image) => {
+          if (image && image.preview) {
+            URL.revokeObjectURL(image.preview);
+          }
+        });
+      }
+    };
+  }, [urls]);
 
   if (!isOpen) return null;
 
   return (
-    <>
-      <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/60">
-        <div className="z-[9999] mx-4 w-[500px] max-w-[90%] rounded-lg bg-white p-4 shadow-xl dark:bg-neutral-900">
-          <h2 className="mb-4 border-b border-neutral-800 pb-2 text-center text-lg font-semibold">
-            {t('Title')}
-          </h2>
+    <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/60">
+      <div className="z-[9999] mx-4 w-[500px] max-w-[90%] rounded-lg bg-white p-4 shadow-xl dark:bg-neutral-900">
+        <h2 className="mb-4 border-b border-neutral-800 pb-2 text-center text-lg font-semibold">
+          Why are you reporting this post?
+        </h2>
 
-          <div className="mb-4 space-y-3">
-            {reportReasons.map((reason) => (
-              <div key={reason.key} className="flex items-center">
+        <div className="mb-4 space-y-3">
+          {reportReasons.map((reason) => (
+            <div key={reason}>
+              <div className="flex items-center">
                 <input
                   type="radio"
                   id={reason.key}
@@ -73,33 +154,52 @@ const ReportModal = ({ isOpen, onClose, onSubmit, postId }) => {
                   {reason.label}
                 </label>
               </div>
-            ))}
-          </div>
+              
+              {/* Show text field only when "Other" is selected */}
+              {reason === 'Other' && selectedReason === 'Other' && (
+                <div className="ml-6 mt-2">
+                  <input
+                    type="text"
+                    value={customReason}
+                    onChange={(e) => setCustomReason(e.target.value)}
+                    placeholder="Please specify your reason..."
+                    className="w-full rounded-md border border-gray-300 p-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
 
-          <div className="item-center mx-3 flex gap-2">
-            <button
-              onClick={handleSubmit}
-              className="w-full rounded-md bg-red-500 py-1 font-semibold text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:bg-gray-300 dark:disabled:bg-neutral-500"
-              disabled={!selectedReason || selectedReason === 'Other'}
-            >
-              {t('Submit')}
-            </button>
-            <button
-              onClick={handleClose}
-              className="w-full rounded-md bg-gray-100 py-1 font-semibold text-gray-700 hover:bg-gray-200"
-            >
-              {t('Cancel')}
-            </button>
-          </div>
+        {/* Photo Upload Section */}
+        <PhotoUploadField
+          urls={urls}
+          setUrls={setUrls}
+          maxImages={5}
+          disabled={isUploading}
+        />
+
+        <div className="item-center mx-3 flex gap-2">
+          <button
+            onClick={handleSubmit}
+            className="w-full rounded-md bg-red-500 py-1 font-semibold text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:bg-gray-300 dark:disabled:bg-neutral-500"
+            disabled={
+              !selectedReason || 
+              (selectedReason === 'Other' && !customReason.trim()) || 
+              isUploading
+            }
+          >
+            {isUploading ? 'Uploading...' : 'Submit'}
+          </button>
+          <button
+            onClick={handleClose}
+            className="w-full rounded-md bg-gray-100 py-1 font-semibold text-gray-700 hover:bg-gray-200"
+          >
+            Cancel
+          </button>
         </div>
       </div>
-      <OtherReasonModal
-        isOpen={isOtherModalOpen}
-        onClose={() => setIsOtherModalOpen(false)}
-        onSubmit={handleOtherSubmit}
-        postId={postId}
-      />
-    </>
+    </div>
   );
 };
 

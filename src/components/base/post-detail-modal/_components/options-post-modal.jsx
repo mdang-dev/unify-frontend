@@ -28,10 +28,10 @@ const OptionsPostModal = ({
     setIsModalOpen(false);
   };
 
-  const handleReportPost = useCallback(
-    (postId, reason) => {
-      createReport(
-        { endpoint: 'post', reportedId: postId, reason },
+          const handleReportPost = useCallback(
+          (postId, reason, urls = []) => {
+            createReport(
+              { endpoint: 'post', reportedId: postId, reason, urls },
         {
           onSuccess: () => {
             addToast({
