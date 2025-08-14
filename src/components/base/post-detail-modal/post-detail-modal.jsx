@@ -287,9 +287,9 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete, scrollToC
     } catch (_) {}
   };
 
-  const handleReportSubmit = (postId, reason) => {
+  const handleReportSubmit = (postId, reason, urls = []) => {
     createReport(
-      { endpoint: 'post', reportedId: postId, reason },
+      { endpoint: 'post', reportedId: postId, reason, urls },
       {
         onSuccess: () => {
           toast.success('Report submitted');
@@ -306,6 +306,10 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete, scrollToC
         },
       }
     );
+  };
+
+  const handleReportClose = () => {
+    setIsReportOpen(false);
   };
 
   const handleClose = () => {
@@ -340,6 +344,57 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete, scrollToC
     </div>
   );
 
+  // Show other modals instead of post detail modal when they're open
+  if (isReportOpen) {
+    return (
+      <ReportModal
+        isOpen={isReportOpen}
+        onClose={handleReportClose}
+        onSubmit={handleReportSubmit}
+        postId={postData?.id}
+      />
+    );
+  }
+
+  if (showDeleteModal) {
+    return (
+      <DeletePostModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={() => {
+          onDelete(postData.id);
+          setShowDeleteModal(false);
+        }}
+      />
+    );
+  }
+
+  if (showArchiveModal) {
+    return (
+      <ArchivePostModal
+        isOpen={showArchiveModal}
+        onClose={() => setShowArchiveModal(false)}
+        onConfirm={() => {
+          onArchive(postData.id);
+          setShowArchiveModal(false);
+        }}
+      />
+    );
+  }
+
+  if (showRestoreModal) {
+    return (
+      <RestorePostModal
+        isOpen={showRestoreModal}
+        onClose={() => setShowRestoreModal(false)}
+        onConfirm={() => {
+          onArchive(postData.id);
+          setShowRestoreModal(false);
+        }}
+      />
+    );
+  }
+
   if (!postData) {
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={handleClose}>
@@ -373,31 +428,13 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete, scrollToC
     );
   }
 
+  // Show main post detail modal
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={handleClose}>
       <div className="flex h-[600px] w-[900px] flex-row overflow-hidden rounded-xl bg-white dark:bg-neutral-900" onClick={(e) => e.stopPropagation()}>
         {/* Media Section */}
         <div className="relative w-1/2 bg-black">
           <Slider srcs={postData.media || []} onImageClick={() => {}} />
-          {/* {selectedMedia ? (
-            selectedMedia.mediaType === "VIDEO" ? (
-              <video
-                src={selectedMedia.url}
-                controls
-                className="w-full h-full object-contain"
-              />
-            ) : (
-              <img
-                src={selectedMedia.url}
-                alt="Post Media"
-                className="w-full h-full object-contain"
-              />
-            )
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-white">
-              <p>No media available</p>
-            </div>
-          )} */}
         </div>
 
         {/* Content Section */}
@@ -465,38 +502,7 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete, scrollToC
               </Tooltip>
             </div>
 
-            <DeletePostModal
-              isOpen={showDeleteModal}
-              onClose={() => setShowDeleteModal(false)}
-              onConfirm={() => {
-                onDelete(postData.id);
-                setShowDeleteModal(false);
-              }}
-            />
-            <ArchivePostModal
-              isOpen={showArchiveModal}
-              onClose={() => setShowArchiveModal(false)}
-              onConfirm={() => {
-                onArchive(postData.id);
-                setShowArchiveModal(false);
-              }}
-            />
-            <RestorePostModal
-              isOpen={showRestoreModal}
-              onClose={() => setShowRestoreModal(false)}
-              onConfirm={() => {
-                onArchive(postData.id);
-                setShowRestoreModal(false);
-              }}
-            />
-            {isReportOpen && (
-              <ReportModal
-                isOpen={isReportOpen}
-                onClose={() => setIsReportOpen(false)}
-                onSubmit={handleReportSubmit}
-                postId={postData.id}
-              />
-            )}
+
           </div>
 
           {/* Comments Section */}

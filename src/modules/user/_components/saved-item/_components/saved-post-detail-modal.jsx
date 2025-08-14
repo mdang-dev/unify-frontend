@@ -34,9 +34,11 @@ const SavedPostDetailModal = ({ post, onClose, onDelete }) => {
 
   // Xử lý report bài post
 const handleReportPost = useCallback(
-  (postId, reason) => {
+  (postId, reason, urls = []) => {
+    // TODO: Handle image uploads if needed for reports
+    // For now, just pass the report without images
     createReport(
-      { endpoint: 'post', reportedId: postId, reason },
+      { endpoint: 'post', reportedId: postId, reason, urls },
       {
         onSuccess: () => {
           addToast({

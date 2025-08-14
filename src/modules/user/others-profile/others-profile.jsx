@@ -45,9 +45,9 @@ const OthersProfile = () => {
   const { followersCount = 0, followingCount = 0 } = useFollow(user?.id, userInfo?.id);
 
   const handleReportUser = useCallback(
-    async (data, reason) => {
+    async (data, reason, urls = []) => {
       createUserReport.mutate(
-        { endpoint: 'user', reportedId: data, reason: reason },
+        { endpoint: 'user', reportedId: data, reason: reason, urls: urls },
         {
           onSuccess: () => {
             addToast({

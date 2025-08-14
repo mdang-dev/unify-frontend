@@ -1,7 +1,8 @@
 'use client';
 import React from 'react';
+import PhotoUploadField from './photo-upload-field';
 
-const OtherReasonModal = ({ isOpen, onClose, onSubmit, postId }) => {
+const OtherReasonModal = ({ isOpen, onClose, onSubmit, postId, urls, setUrls, maxImages = 5, disabled = false }) => {
   const [customReason, setCustomReason] = React.useState('');
 
   const handleSubmit = () => {
@@ -10,7 +11,8 @@ const OtherReasonModal = ({ isOpen, onClose, onSubmit, postId }) => {
       return;
     }
 
-    onSubmit(postId, customReason);
+    // Pass the urls along with the custom reason
+    onSubmit(postId, customReason, urls);
   };
 
   const handleClose = () => {
@@ -22,7 +24,7 @@ const OtherReasonModal = ({ isOpen, onClose, onSubmit, postId }) => {
 
   return (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60">
-      <div className="mx-4 w-[400px] max-w-[90%] rounded-lg bg-white p-4 shadow-xl dark:bg-neutral-900">
+      <div className="mx-4 w-[500px] max-w-[90%] rounded-lg bg-white p-4 shadow-xl dark:bg-neutral-900">
         <h2 className="mb-4 border-b border-neutral-800 pb-2 text-center text-lg font-semibold">
           Please specify your reason
         </h2>
@@ -40,12 +42,22 @@ const OtherReasonModal = ({ isOpen, onClose, onSubmit, postId }) => {
           />
         </div>
 
+        {/* Photo Upload Section */}
+        <div className="mb-4">
+          <PhotoUploadField
+            urls={urls}
+            setUrls={setUrls}
+            maxImages={maxImages}
+            disabled={disabled}
+          />
+        </div>
+
         {/* Nút hành động */}
         <div className="item-center mx-3 flex gap-2">
           <button
             onClick={handleSubmit}
             className="w-full rounded-md bg-red-500 py-1 font-semibold text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:bg-gray-300 dark:disabled:bg-neutral-500"
-            disabled={!customReason.trim()}
+            disabled={!customReason.trim() || disabled}
           >
             Submit
           </button>

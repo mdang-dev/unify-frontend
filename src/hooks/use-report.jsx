@@ -28,8 +28,8 @@ export const useCreateReport = () => {
   const addPendingReport = useReportStore((s) => s.addPendingReport);
 
   return useMutation({
-    mutationFn: ({ endpoint, reportedId, reason }) =>
-      reportsCommandApi.createReport(endpoint, reportedId, reason),
+    mutationFn: ({ endpoint, reportedId, reason, urls = [] }) =>
+      reportsCommandApi.createReport(endpoint, reportedId, reason, urls),
     onSuccess: (data) => {
       addPendingReport(data);
     },
