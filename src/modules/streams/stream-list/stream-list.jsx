@@ -244,18 +244,25 @@ export default function StreamList() {
   const [delayed, setDelayed] = useState(false);
   const [followersOnly, setFollowersOnly] = useState(false);
   const user = useAuthStore((s) => s.user);
+  const [client, setClient] = useState(false);
+  
 
   useEffect(() => {
     setTimeout(() => {
       setStreams(mockStreams);
       setIsLoading(false);
-    }, 5000);
+    }, 1000);
+  }, []);
+
+  useEffect(() => {
+    setClient(true);
   }, []);
 
   const { data: following, isLoading: isLoadingStreamer } = useQuery({
     queryKey: [QUERY_KEYS.FOLLOWING, user?.id],
     queryFn: () => streamsQueryApi.getFollowedStreamsByUserId(user?.id),
     enabled: !!user?.id,
+  
   });
 
   // const {
@@ -271,7 +278,7 @@ export default function StreamList() {
   const handleStreamCreated = () => {
     queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.LIVE_STREAMS] });
   };
-
+if(!client) return null;
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors">
       <main className="container mx-auto px-10 py-4">
