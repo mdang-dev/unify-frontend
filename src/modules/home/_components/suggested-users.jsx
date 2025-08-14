@@ -18,7 +18,7 @@ const User = ({ href = '', username = '', firstname = '', lastname = '', avatar 
       className="block rounded-lg transition-colors hover:bg-gray-50 dark:hover:bg-neutral-800"
     >
       <div className="flex items-center p-2">
-        <div className="relative h-14 w-14">
+        <div className="relative h-11 w-11">
           <img
                           src={avatar || '/images/unify_icon_2.png'}
             alt={username}
@@ -27,7 +27,7 @@ const User = ({ href = '', username = '', firstname = '', lastname = '', avatar 
         </div>
         <div className="ml-4">
           <p className="text-sm font-bold text-gray-900 dark:text-gray-100">@{username}</p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-xs text-zinc-400 dark:text-zinc-300">
             {firstname} {lastname}
           </p>
         </div>

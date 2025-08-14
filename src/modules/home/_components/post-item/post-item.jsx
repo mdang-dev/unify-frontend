@@ -27,68 +27,66 @@ const PostItem = ({ post }) => {
   const [showFullImage, setShowFullImage] = useState(false);
 
   const { mutate: reportPost } = useMutation({
-  mutationFn: ({ endpoint, reportedId, reason, urls = [] }) =>
-    reportsCommandApi.createReport(endpoint, reportedId, reason, urls),
-  onSuccess: (data) => {
-    if (data?.error) {
-      const errorMessage = data.error;
+    mutationFn: ({ endpoint, reportedId, reason, urls = [] }) =>
+      reportsCommandApi.createReport(endpoint, reportedId, reason, urls),
+    onSuccess: (data) => {
+      if (data?.error) {
+        const errorMessage = data.error;
 
-      if (
-        errorMessage === 'You cannot report your own content.' ||
-        errorMessage === 'You have already reported this content.'
-      ) {
-        toast.warning(errorMessage);
-        console.warn('Report warning:', errorMessage);
+        if (
+          errorMessage === 'You cannot report your own content.' ||
+          errorMessage === 'You have already reported this content.'
+        ) {
+          toast.warning(errorMessage);
+          console.warn('Report warning:', errorMessage);
+        } else {
+          toast.error(errorMessage);
+          console.error('Report error:', errorMessage);
+        }
       } else {
-        toast.error(errorMessage);
-        console.error('Report error:', errorMessage);
+        toast.success(t('Report.ReportPostSuccessful'));
       }
-    } else {
-      toast.success(t('Report.ReportPostSuccessful'));
-    }
 
-    setIsModalOpen(false);
-  },
-  onError: (error) => {
-    let errorMessage = t('Report.FailedToConnectServer');
+      setIsModalOpen(false);
+    },
+    onError: (error) => {
+      let errorMessage = t('Report.FailedToConnectServer');
 
-    if (error.response) {
-      const { status, data } = error.response;
-      errorMessage = data?.detail || error.message || t('Report.UnknownError');
+      if (error.response) {
+        const { status, data } = error.response;
+        errorMessage = data?.detail || error.message || t('Report.UnknownError');
 
-      if (
-        (status === 400 || status === 409) &&
-        (errorMessage === 'You cannot report your own content.' ||
-          errorMessage === 'You have already reported this content.')
-      ) {
-        toast.warning(errorMessage);
-        console.warn('Report warning:', errorMessage);
+        if (
+          (status === 400 || status === 409) &&
+          (errorMessage === 'You cannot report your own content.' ||
+            errorMessage === 'You have already reported this content.')
+        ) {
+          toast.warning(errorMessage);
+          console.warn('Report warning:', errorMessage);
+        } else {
+          toast.error(errorMessage);
+          console.error('Report error:', error);
+        }
       } else {
         toast.error(errorMessage);
         console.error('Report error:', error);
       }
-    } else {
-      toast.error(errorMessage);
-      console.error('Report error:', error);
-    }
 
-    setIsModalOpen(false);
-  },
-});
+      setIsModalOpen(false);
+    },
+  });
 
-
-const handleReportPost = useCallback(
-  async (postId, reason, urls = []) => {
-    reportPost({
-      endpoint: 'post',
-      reportedId: postId, 
-      reason,
-      urls 
-    });
-  },
-  [reportPost]
-);
-
+  const handleReportPost = useCallback(
+    async (postId, reason, urls = []) => {
+      reportPost({
+        endpoint: 'post',
+        reportedId: postId,
+        reason,
+        urls,
+      });
+    },
+    [reportPost]
+  );
 
   const hashtags = post.captions.split(/(\#[a-zA-Z0-9_]+)/g).filter((part) => part.startsWith('#'));
 
@@ -122,21 +120,19 @@ const handleReportPost = useCallback(
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsModalOpen(true)}
-              className="rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-red-500 dark:text-gray-400 dark:hover:bg-neutral-700 dark:hover:text-red-400"
+              className="rounded-full p-2 text-zinc-400 transition-colors hover:text-neutral-900 dark:text-zinc-200 dark:hover:text-neutral-500"
               title={t('Actions.Report')}
             >
               <i className="fa-solid fa-flag text-sm"></i>
             </button>
             <button
-              className="rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-neutral-700 dark:hover:text-gray-200"
+              className="rounded-full p-2 text-zinc-400 transition-colors hover:text-neutral-900 dark:text-zinc-200 dark:hover:text-neutral-500"
               title="Not interested"
             >
               <i className="fa-solid fa-eye-slash text-sm"></i>
             </button>
           </div>
         </div>
-
-
 
         <ReportModal
           isOpen={isModalOpen}

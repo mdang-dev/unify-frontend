@@ -59,7 +59,7 @@ const People = () => {
               onClick={() => handleClick(user.username)}
               className="group flex min-w-[80px] cursor-pointer flex-col items-center"
             >
-              <div className="relative h-[70px] w-[70px] overflow-hidden rounded-full border-2 border-gray-200 transition-colors group-hover:border-pink-500 dark:border-gray-700">
+              <div className="relative h-[70px] w-[70px] overflow-hidden rounded-full border-2 border-gray-200 transition-colors group-hover:border-neutral-900 dark:border-zinc-100 group-hover:dark:border-neutral-600 ">
                 <Image
                   src={user?.avatar?.url || '/images/unify_icon_2.png'}
                   alt="Avatar"
