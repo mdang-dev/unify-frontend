@@ -21,9 +21,10 @@ import { useAuthStore } from '@/src/stores/auth.store';
 import { postsCommandApi } from '@/src/apis/posts/command/posts.command.api';
 import { hashtagCommandApi } from '@/src/apis/hashtag/command/hashtag.command.api';
 import { mediaCommandApi } from '@/src/apis/media/command/media.command.api';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import User from './_components/user';
 import MediaPreview from '../_components/media-preview';
+import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
 
 const PostsCreate = () => {
   const { openModal } = useModalStore();
@@ -38,6 +39,8 @@ const PostsCreate = () => {
   const [loading, setLoading] = useState(false);
   const [promptLoading, setPromptLoading] = useState(false);
   const { user } = useAuthStore();
+  const queryClient = useQueryClient();
+  
 
   const savePostMutation = useMutation({
     mutationFn: postsCommandApi.savedPost,
@@ -223,6 +226,7 @@ const PostsCreate = () => {
       }
 
       // Final success toast
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.POSTS_BY_USER, post?.user?.id] });
       toast.success('Post created!', {
         description: 'Your post was published successfully.',
         duration: 3000,
@@ -267,7 +271,7 @@ const PostsCreate = () => {
 
     setPromptLoading(true);
     try {
-      const response = await fetch(`https://unify-mobile.app.n8n.cloud/webhook/generate-post`, {
+      const response = await fetch(`https://n8nunify.id.vn/webhook/generate-post`, {
         // const response = await fetch(`https://unify-mobile.app.n8n.cloud/webhook-test/generate-post`, {
         method: 'POST',
         headers: {

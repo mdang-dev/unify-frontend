@@ -1,7 +1,6 @@
+'use client';
 import { motion } from 'framer-motion';
 import { STATUS_LABELS } from '../comments-management';
-
-
 
 const CommentDetailModal = ({
   isOpen,
@@ -16,19 +15,21 @@ const CommentDetailModal = ({
 
   const renderMedia = (media) => {
     if (!media || media.length === 0) {
-      return <div className="text-sm italic text-gray-500">No media</div>;
+      return <div className="text-sm italic text-gray-500 dark:text-neutral-400">No media</div>;
     }
 
     return (
       <div className="space-y-2">
-        <span className="text-sm font-semibold">Post Media:</span>
-        <div className="grid max-h-40 grid-cols-2 gap-2 overflow-y-auto">
+        <span className="text-sm font-semibold text-gray-700 dark:text-neutral-200">
+          Post Media:
+        </span>
+        <div className="grid max-h-40 grid-cols-2 gap-2 overflow-y-auto rounded-lg bg-gray-50 p-2 dark:bg-neutral-800">
           {media.map((item, index) => (
             <div key={index} className="relative">
               {item.mediaType === 'VIDEO' ? (
                 <video
                   src={item.url}
-                  className="h-24 w-full rounded-md object-cover"
+                  className="h-24 w-full rounded-md object-cover ring-1 ring-neutral-200 dark:ring-neutral-700"
                   controls
                   preload="metadata"
                 />
@@ -36,10 +37,10 @@ const CommentDetailModal = ({
                 <img
                   src={item.url}
                   alt={`Post media ${index + 1}`}
-                  className="h-24 w-full rounded-md object-cover"
+                  className="h-24 w-full rounded-md object-cover ring-1 ring-neutral-200 dark:ring-neutral-700"
                 />
               )}
-              <div className="absolute bottom-1 right-1 rounded bg-black bg-opacity-50 px-1 text-xs text-white">
+              <div className="absolute bottom-1 right-1 rounded bg-neutral-900 bg-opacity-70 px-1.5 py-0.5 text-xs text-white">
                 {item.mediaType}
               </div>
             </div>
@@ -50,41 +51,50 @@ const CommentDetailModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm">
       <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
+        initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="no-scrollbar max-h-[85vh] w-[700px] overflow-y-auto rounded-lg bg-white p-6 dark:bg-neutral-800"
+        transition={{ duration: 0.2 }}
+        className="no-scrollbar max-h-[85vh] w-[700px] overflow-y-auto rounded-xl bg-white p-6 shadow-xl dark:bg-neutral-900 dark:shadow-neutral-800/50"
       >
-        <h2 className="mb-4 text-xl font-bold">Comment Report Detail</h2>
+        <h2 className="mb-4 text-2xl font-bold text-gray-900 dark:text-neutral-100">
+          Comment Report Detail
+        </h2>
 
         {/* Report Information */}
-        <div className="mb-6 rounded-lg bg-gray-50 p-4 dark:bg-neutral-700">
-          <h3 className="mb-3 text-lg font-semibold text-gray-800 dark:text-gray-200">
+        <div className="mb-6 rounded-lg bg-gray-50 p-4 dark:bg-neutral-800">
+          <h3 className="mb-3 text-lg font-semibold text-gray-800 dark:text-neutral-200">
             Report Information
           </h3>
-          <div className="space-y-2 text-sm">
+          <div className="space-y-3 text-sm">
             <div>
-              <span className="font-semibold">Reporter:</span>{' '}
+              <span className="font-semibold text-gray-700 dark:text-neutral-300">Reporter:</span>{' '}
               <span className="text-blue-600 dark:text-blue-400">{comment.user?.username}</span>
             </div>
             <div>
-              <span className="font-semibold">Reported At:</span>{' '}
-              {new Date(comment.reportedAt).toLocaleString()}
+              <span className="font-semibold text-gray-700 dark:text-neutral-300">
+                Reported At:
+              </span>{' '}
+              <span className="text-gray-900 dark:text-neutral-100">
+                {new Date(comment.reportedAt).toLocaleString()}
+              </span>
             </div>
             <div>
-              <span className="font-semibold">Reason:</span>{' '}
-              <span className="text-red-600 dark:text-red-400">{comment.reason}</span>
+              <span className="font-semibold text-gray-700 dark:text-neutral-300">Reason:</span>{' '}
+              <span className="p-2 rounded-lg bg-neutral-800 text-white dark:bg-white dark:text-neutral-800">
+                {comment.reason}
+              </span>
             </div>
             <div>
-              <span className="font-semibold">Status:</span>{' '}
+              <span className="font-semibold text-gray-700 dark:text-neutral-300">Status:</span>{' '}
               <span
-                className={`rounded px-2 py-1 text-xs ${
+                className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
                   comment.status === 0
-                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                    ? 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
                     : comment.status === 1
-                      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                      : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                      ? 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200'
+                      : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400'
                 }`}
               >
                 {STATUS_LABELS[comment.status] || comment.status}
@@ -94,21 +104,27 @@ const CommentDetailModal = ({
         </div>
 
         {/* Comment Information */}
-        <div className="mb-6 rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
-          <h3 className="mb-3 text-lg font-semibold text-gray-800 dark:text-gray-200">
+        <div className="mb-6 rounded-lg bg-gray-50 p-4 dark:bg-neutral-800">
+          <h3 className="mb-3 text-lg font-semibold text-gray-800 dark:text-neutral-200">
             Reported Comment
           </h3>
-          <div className="space-y-2 text-sm">
+          <div className="space-y-3 text-sm">
             <div>
-              <span className="font-semibold">Comment Author:</span>{' '}
-              <span className="text-blue-600 dark:text-blue-400">
+              <span className="font-semibold text-gray-700 dark:text-neutral-300">
+                Comment Author:
+              </span>{' '}
+              <span className="rounded-lg bg-zinc-200 p-2 text-neutral-800 dark:bg-neutral-950 dark:text-zinc-200">
                 {comment.reportedEntity?.username}
               </span>
             </div>
             <div>
-              <span className="font-semibold">Comment Content:</span>
-              <div className="mt-1 rounded border-l-4 border-blue-500 bg-white p-3 dark:bg-neutral-700">
-                {comment.reportedEntity?.content}
+              <span className="font-semibold text-gray-700 dark:text-neutral-300">
+                Comment Content:
+              </span>
+              <div className="mt-1 rounded-lg border-l-4 border-neutral-800 bg-white p-3 dark:border-zinc-200 dark:bg-neutral-700">
+                <span className="text-gray-900 dark:text-neutral-100">
+                  {comment.reportedEntity?.content}
+                </span>
               </div>
             </div>
           </div>
@@ -116,30 +132,40 @@ const CommentDetailModal = ({
 
         {/* Post Information */}
         {postDetails && (
-          <div className="mb-6 rounded-lg bg-green-50 p-4 dark:bg-green-900/20">
-            <h3 className="mb-3 text-lg font-semibold text-gray-800 dark:text-gray-200">
+          <div className="mb-6 rounded-lg bg-gray-50 p-4 dark:bg-neutral-800">
+            <h3 className="mb-3 text-lg font-semibold text-gray-800 dark:text-neutral-200">
               Related Post
             </h3>
             <div className="space-y-3 text-sm">
               <div>
-                <span className="font-semibold">Post Author:</span>{' '}
-                <span className="text-green-600 dark:text-green-400">
+                <span className="font-semibold text-gray-700 dark:text-neutral-300">
+                  Post Author:
+                </span>{' '}
+                <span className="rounded-lg bg-zinc-200 p-2 text-neutral-800 dark:bg-neutral-950 dark:text-zinc-200">
                   {postDetails.user?.username}
                 </span>
               </div>
               <div>
-                <span className="font-semibold">Post Caption:</span>
-                <div className="mt-1 rounded border-l-4 border-green-500 bg-white p-3 dark:bg-neutral-700">
-                  {postDetails.captions || 'No caption'}
+                <span className="font-semibold text-gray-700 dark:text-neutral-300">
+                  Post Caption:
+                </span>
+                <div className="mt-1 rounded-lg border-l-4 border-zinc-200 bg-white p-3 dark:border-neutral-950 dark:bg-neutral-700">
+                  <span className="text-gray-900 dark:text-neutral-100">
+                    {postDetails.captions || 'No caption'}
+                  </span>
                 </div>
               </div>
               <div>
-                <span className="font-semibold">Posted At:</span>{' '}
-                {new Date(postDetails.postedAt).toLocaleString()}
+                <span className="font-semibold text-gray-700 dark:text-neutral-300">
+                  Posted At:
+                </span>{' '}
+                <span className="text-gray-900 dark:text-neutral-100">
+                  {new Date(postDetails.postedAt).toLocaleString()}
+                </span>
               </div>
               <div>
-                <span className="font-semibold">Audience:</span>{' '}
-                <span className="rounded bg-gray-100 px-2 py-1 text-xs dark:bg-gray-700">
+                <span className="font-semibold text-gray-700 dark:text-neutral-300">Audience:</span>{' '}
+                <span className="inline-flex rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 dark:bg-neutral-700 dark:text-neutral-200">
                   {postDetails.audience}
                 </span>
               </div>
@@ -150,27 +176,42 @@ const CommentDetailModal = ({
 
         {/* Action Buttons */}
         <div className="mt-6 flex justify-end gap-2">
-          {comment.status === 0 && (
+          {comment.status === 0 && onApprove && onReject && (
             <>
               <button
                 onClick={onApprove}
                 disabled={loading}
-                className="rounded-md bg-green-500 px-4 py-2 text-white transition-colors hover:bg-green-600 disabled:opacity-50"
+                className="rounded-md bg-neutral-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-700 dark:hover:bg-neutral-800"
               >
-                {loading ? 'Processing...' : 'Approve'}
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                    Processing...
+                  </div>
+                ) : (
+                  'Approve'
+                )}
               </button>
               <button
                 onClick={onReject}
                 disabled={loading}
-                className="rounded-md bg-red-500 px-4 py-2 text-white transition-colors hover:bg-red-600 disabled:opacity-50"
+                className="rounded-md bg-zinc-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-200  dark:text-neutral-800 dark:hover:bg-zinc-400 " 
               >
-                {loading ? 'Processing...' : 'Reject'}
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                    Processing...
+                  </div>
+                ) : (
+                  'Reject'
+                )}
               </button>
             </>
           )}
           <button
             onClick={onClose}
-            className="rounded-md border px-4 py-2 transition-colors hover:bg-gray-100 dark:hover:bg-neutral-700"
+            disabled={loading}
+            className="rounded-md border border-neutral-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-600 dark:text-neutral-200 dark:hover:bg-neutral-700"
           >
             Close
           </button>

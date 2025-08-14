@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import PostCard from '@/src/components/base/post-card';
 import { Skeleton } from '@heroui/react';
 import PostDetailModal from '@/src/components/base/post-detail-modal';
@@ -9,6 +10,7 @@ import { postsQueryApi } from '@/src/apis/posts/query/posts.query.api';
 import { useQuery } from '@tanstack/react-query';
 
 export default function Explore() {
+  const t = useTranslations('Explore');
   const [selectedPost, setSelectedPost] = useState(null);
 
   const {
@@ -33,6 +35,9 @@ export default function Explore() {
   if (isLoading) {
     return (
       <div className="mt-8 flex h-auto w-full flex-wrap justify-center">
+        <div className="mb-4 w-full text-center">
+          <p className="text-lg text-gray-600 dark:text-gray-400">{t('Loading')}</p>
+        </div>
         <div className="grid grid-cols-1 gap-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {Array(8)
             .fill()
@@ -50,11 +55,25 @@ export default function Explore() {
   }
 
   // Show error message if fetching fails
-  if (error) return <div>Error: {error.message}</div>;
+  if (error) return <div className="text-center mt-8 text-red-500">{t('Error')}: {error.message}</div>;
+
+  // Show no posts message if no posts found
+  if (!posts || posts.length === 0) {
+    return (
+      <div className="mt-8 flex h-auto w-full flex-wrap justify-center">
+        <div className="text-center">
+          <p className="text-lg text-gray-600 dark:text-gray-400">{t('NoPosts')}</p>
+        </div>
+      </div>
+    );
+  }
 
   // Render posts and the modal for the selected post
   return (
     <div className="mb-5 mt-8 flex h-auto w-full flex-wrap justify-center">
+      <div className="mb-4 w-full text-center">
+        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">{t('RecommendedPosts')}</h2>
+      </div>
       <div className="grid grid-cols-1 gap-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         {posts.map((post) => (
           <div key={post.id} className="h-[300px] w-[300px] overflow-hidden rounded-lg">

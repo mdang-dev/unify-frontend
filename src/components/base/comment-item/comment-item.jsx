@@ -2,6 +2,7 @@ import { Card, CardFooter, Button } from '@heroui/react';
 import Image from 'next/image';
 import { formatDistanceToNow } from 'date-fns';
 import { useState, useEffect, useRef, memo } from 'react';
+import { useTranslations } from 'next-intl';
 import Reply from './_components/reply';
 import Content from './_components/content';
 import { addToast } from '@heroui/react';
@@ -34,6 +35,7 @@ const CommentItemComponent = ({
   onReplyClick,
   onCommentDeleted,
 }) => {
+  const t = useTranslations('Home.PostItem.CommentItem');
   const [isShown, setIsShown] = useState(false);
   const [showMoreOptions, setShowMoreOptions] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -66,8 +68,8 @@ const CommentItemComponent = ({
     mutationFn: ({ commentId, reason }) => reportsCommandApi.createCommentReport(commentId, reason),
     onSuccess: () => {
       addToast({
-        title: 'Success',
-        description: 'Comment reported successfully.',
+        title: t('Success'),
+        description: t('CommentReportedSuccessfully'),
         timeout: 3000,
         color: 'success',
       });
@@ -82,8 +84,8 @@ const CommentItemComponent = ({
       } catch {}
       const isDuplicate = errorMessage === 'You have reported this content before.';
       addToast({
-        title: isDuplicate ? 'Already Reported' : 'Failed to Report',
-        description: errorMessage,
+        title: isDuplicate ? t('AlreadyReported') : t('FailedToReport'),
+        description: isDuplicate ? t('YouHaveReportedBefore') : errorMessage,
         timeout: 3000,
         color: isDuplicate ? 'warning' : 'danger',
       });
@@ -96,8 +98,8 @@ const CommentItemComponent = ({
     mutationFn: (commentId) => commentsCommandApi.deleteComment(commentId),
     onSuccess: (_, commentId) => {
       addToast({
-        title: 'Success',
-        description: 'Comment deleted successfully.',
+        title: t('Success'),
+        description: t('CommentDeletedSuccessfully'),
         timeout: 3000,
 
         color: 'success',
@@ -108,8 +110,8 @@ const CommentItemComponent = ({
     },
     onError: () => {
       addToast({
-        title: 'Error',
-        description: `Failed to delete comment !`,
+        title: t('FailedToDelete'),
+        description: t('FailedToDelete'),
         timeout: 3000,
 
         color: 'danger',
@@ -193,7 +195,7 @@ const CommentItemComponent = ({
                 onPress={() => onReplyClick(comment)}
                 aria-label="Reply to comment"
               >
-                <i className="fa-solid fa-reply mr-1"></i>Reply
+                <i className="fa-solid fa-reply mr-1"></i>{t('Reply')}
               </Button>
               {comment.replies && comment.replies.length > 0 && (
                 <Button
@@ -203,7 +205,7 @@ const CommentItemComponent = ({
                   aria-label={isShown ? 'Hide replies' : 'Show replies'}
                 >
                   <i className="fa-solid fa-comments mr-1"></i>
-                  {isShown ? 'Hide Replies' : `Show Replies (${allReplies.length})`}
+                  {isShown ? t('HideReplies') : `${t('ShowReplies')} (${allReplies.length})`}
                 </Button>
               )}
               <div className="relative" ref={dropdownRef}>
@@ -215,7 +217,7 @@ const CommentItemComponent = ({
                   onPress={() => setShowMoreOptions(!showMoreOptions)}
                   isDisabled={isDeleting}
                 >
-                  More
+                  {t('More')}
                 </Button>
 
                 {showMoreOptions && (
@@ -227,7 +229,7 @@ const CommentItemComponent = ({
                           disabled={isDeleting}
                           className="w-full px-4 py-3 text-left text-sm text-red-500 transition-colors duration-200 hover:bg-gray-100 disabled:opacity-50 dark:text-red-400 dark:hover:bg-neutral-700"
                         >
-                          {isDeleting ? 'Deleting...' : 'Delete'}
+                          {isDeleting ? 'Deleting...' : t('Delete')}
                         </button>
                         <button
                           onClick={() => setShowMoreOptions(false)}
@@ -242,7 +244,7 @@ const CommentItemComponent = ({
                           onClick={openReportModal}
                           className="w-full px-4 py-3 text-left text-sm text-red-500 transition-colors duration-200 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-neutral-700"
                         >
-                          Report
+                          {t('Report')}
                         </button>
                         <button
                           onClick={() => setShowMoreOptions(false)}

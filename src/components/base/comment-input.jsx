@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { Smile, Send } from 'lucide-react';
 import Picker from 'emoji-picker-react';
+import { useTranslations } from 'next-intl';
 import defaultAvatar from '@/public/images/unify_icon_2.png';
 import { useAuthStore } from '@/src/stores/auth.store';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -11,6 +12,7 @@ import { commentsCommandApi } from '@/src/apis/comments/command/comments.command
 import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
 
 const CommentInput = ({ postId, setComments, parentComment, onCancelReply }) => {
+  const t = useTranslations('Home.PostItem.CommentInput');
   const [comment, setComment] = useState('');
   const [isCommentEmpty, setIsCommentEmpty] = useState(true);
   const [showPicker, setShowPicker] = useState(false);
@@ -22,7 +24,7 @@ const CommentInput = ({ postId, setComments, parentComment, onCancelReply }) => 
   const mutation = useMutation({
     mutationFn: async (content) => {
       if (!user?.id || !postId || !content) {
-        setError('Missing required data to submit comment.');
+        setError(t('MissingRequiredData'));
       }
 
       return commentsCommandApi.createComment({
@@ -167,7 +169,7 @@ const CommentInput = ({ postId, setComments, parentComment, onCancelReply }) => 
       </div>
 
       <textarea
-        placeholder={parentComment ? `Reply to @${parentComment.username}...` : 'Add a comment...'}
+        placeholder={parentComment ? `${t('ReplyTo')} @${parentComment.username}...` : t('AddComment')}
         maxLength={150}
         rows={1}
         value={comment}
@@ -231,7 +233,7 @@ const CommentInput = ({ postId, setComments, parentComment, onCancelReply }) => 
               onClick={handleCancel}
               className="ml-2 text-zinc-500 hover:text-gray-700 dark:text-neutral-400 dark:hover:text-zinc-200"
             >
-              Cancel
+              {t('Cancel')}
             </button>
           )}
         </>

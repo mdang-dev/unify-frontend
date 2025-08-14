@@ -5,13 +5,20 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 import { toast } from 'sonner';
 
 const ReportModal = ({ isOpen, onClose, onSubmit, postId }) => {
+  const t = useTranslations('Home.PostItem.ReportModal');
   const [selectedReason, setSelectedReason] = React.useState('');
   const [customReason, setCustomReason] = React.useState('');
   const [urls, setUrls] = React.useState([]);
   const [isUploading, setIsUploading] = React.useState(false);
 
   // Danh sách lý do báo cáo
-  const reportReasons = ['Spam', 'Inappropriate Content', 'Harassment', 'Violence', 'Other'];
+  const reportReasons = [
+    { key: 'Spam', label: t('Reasons.Spam') },
+    { key: 'Inappropriate Content', label: t('Reasons.InappropriateContent') },
+    { key: 'Harassment', label: t('Reasons.Harassment') },
+    { key: 'Violence', label: t('Reasons.Violence') },
+    { key: 'Other', label: t('Reasons.Other') }
+  ];
 
   const handleReasonChange = (reason) => {
     setSelectedReason(reason);
@@ -22,7 +29,7 @@ const ReportModal = ({ isOpen, onClose, onSubmit, postId }) => {
 
   const handleSubmit = async () => {
     if (!selectedReason) {
-      toast.error('Please select a reason for reporting.');
+      alert(t('SelectReason'));
       return;
     }
     
@@ -136,15 +143,15 @@ const ReportModal = ({ isOpen, onClose, onSubmit, postId }) => {
               <div className="flex items-center">
                 <input
                   type="radio"
-                  id={reason}
+                  id={reason.key}
                   name="reportReason"
-                  value={reason}
-                  checked={selectedReason === reason}
+                  value={reason.key}
+                  checked={selectedReason === reason.key}
                   onChange={(e) => handleReasonChange(e.target.value)}
                   className="h-4 w-4 border-gray-300 text-blue-500 focus:ring-blue-500"
                 />
-                <label htmlFor={reason} className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                  {reason}
+                <label htmlFor={reason.key} className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                  {reason.label}
                 </label>
               </div>
               

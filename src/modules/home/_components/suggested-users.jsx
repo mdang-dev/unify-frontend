@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useTranslations } from 'next-intl';
 import { useSuggestedUsers } from '@/src/hooks/use-suggested';
 
 const User = ({ href = '', username = '', firstname = '', lastname = '', avatar = '' }) => (
@@ -50,6 +51,7 @@ const LoadingSkeleton = () => (
 );
 
 const SuggestedUsers = () => {
+  const t = useTranslations('Home.SuggestedUsers');
   const { suggestedUsers, loading, error } = useSuggestedUsers();
 
   if (loading) {
@@ -59,7 +61,7 @@ const SuggestedUsers = () => {
   if (error) {
     return (
       <div className="py-4 text-center text-gray-500 dark:text-gray-400">
-        Failed to load suggestions
+        {t('FailedToLoadSuggestions')}
       </div>
     );
   }
@@ -67,7 +69,7 @@ const SuggestedUsers = () => {
   if (!suggestedUsers?.length) {
     return (
       <div className="py-4 text-center text-gray-500 dark:text-gray-400">
-        No suggestions available
+        {t('NoSuggestionsAvailable')}
       </div>
     );
   }

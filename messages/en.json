@@ -2,5 +2,297 @@
     "Common": {
         "Hello": "hello",
         "Support": "Support"
+    },
+    "Navigation": {
+        "Home": "Home",
+        "Search": "Search",
+        "Explore": "Explore",
+        "Reels": "Reels",
+        "Messages": "Messages",
+        "Notifications": "Notifications",
+        "CreatePost": "Create post",
+        "YourProfile": "Your profile",
+        "Settings": "Settings"
+    },
+    "Home": {
+        "PeopleYouMayKnow": "People you may know",
+        "Copyright": "© UNIFY FROM WORKAHOLICS",
+        "Posts": {
+            "LoadMore": "Load more",
+            "NoMorePosts": "No more posts",
+            "UnableToLoadPosts": "Unable to load posts",
+            "PleaseLoginToViewPosts": "Please log in to view posts",
+            "SomethingWentWrong": "Something went wrong. Please try again later.",
+            "GoToLogin": "Go to Login"
+        },
+        "SuggestedUsers": {
+            "FailedToLoadSuggestions": "Failed to load suggestions",
+            "NoSuggestionsAvailable": "No suggestions available"
+        },
+        "PostItem": {
+            "Report": {
+                "Success": "Success",
+                "ReportPostSuccessful": "Report post successful.",
+                "FailToReportPost": "Fail to report post",
+                "CannotReportOwnContent": "You cannot report your own content.",
+                "AlreadyReportedContent": "You have already reported this content.",
+                "FailedToConnectServer": "Failed to connect to the server.",
+                "UnknownError": "Unknown error"
+            },
+            "Actions": {
+                "Like": "Like",
+                "Likes": "likes",
+                "Comment": "Comment",
+                "Comments": "comments",
+                "ViewAll": "View all",
+                "Share": "Share",
+                "Bookmark": "Bookmark",
+                "Report": "Report",
+                "Delete": "Delete",
+                "Edit": "Edit"
+            },
+            "TimeAgo": {
+                "JustNow": "Just now",
+                "MinutesAgo": "minutes ago",
+                "HoursAgo": "hours ago",
+                "DaysAgo": "days ago",
+                "WeeksAgo": "weeks ago",
+                "MonthsAgo": "months ago",
+                "YearsAgo": "years ago"
+            },
+            "Caption": {
+                "More": "more",
+                "Less": "less"
+            },
+            "CommentItem": {
+                "Reply": "Reply",
+                "ShowReplies": "Show Replies",
+                "HideReplies": "Hide Replies",
+                "More": "More",
+                "Report": "Report",
+                "Delete": "Delete",
+                "Success": "Success",
+                "CommentReportedSuccessfully": "Comment reported successfully.",
+                "CommentDeletedSuccessfully": "Comment deleted successfully.",
+                "AlreadyReported": "Already Reported",
+                "FailedToReport": "Failed to Report",
+                "FailedToDelete": "Failed to Delete",
+                "YouHaveReportedBefore": "You have reported this content before.",
+                "DeleteModal": {
+                    "Title": "Delete Comment",
+                    "AreYouSure": "Are you sure?",
+                    "CannotBeUndone": "This action cannot be undone. The comment will be permanently deleted.",
+                    "Cancel": "Cancel",
+                    "Delete": "Delete",
+                    "Deleting": "Deleting..."
+                }
+            },
+            "CommentInput": {
+                "AddComment": "Add a comment...",
+                "ReplyTo": "Reply to",
+                "Cancel": "Cancel",
+                "MissingRequiredData": "Missing required data to submit comment."
+            },
+            "PostDetailModal": {
+                "NoCommentsYet": "No comments yet"
+            },
+            "ReportModal": {
+                "Title": "Why are you reporting this post?",
+                "CommentTitle": "Report Comment",
+                "SelectReason": "Please select a reason for reporting.",
+                "Submit": "Submit",
+                "Cancel": "Cancel",
+                "Report": "Report",
+                "Reasons": {
+                    "Spam": "Spam",
+                    "InappropriateContent": "Inappropriate Content",
+                    "Harassment": "Harassment",
+                    "HarassmentOrBullying": "Harassment or bullying",
+                    "Violence": "Violence",
+                    "ViolenceOrThreats": "Violence or threats",
+                    "HateSpeech": "Hate speech or discrimination",
+                    "FalseInformation": "False information",
+                    "Other": "Other"
+                },
+                "OtherReason": {
+                    "Title": "Please specify your reason",
+                    "Label": "Enter your reason:",
+                    "Placeholder": "Type your reason here...",
+                    "PleaseEnterReason": "Please enter a reason."
+                },
+                "Success": {
+                    "ReportSubmitted": "Report submitted",
+                    "AlreadyReported": "You have reported this content before."
+                },
+                "Error": {
+                    "FailedToReport": "Failed to report"
+                }
+            }
+        }
+    },
+    "Auth": {
+        "Login": {
+            "Title": "Welcome back",
+            "Subtitle": "Don't have an account?",
+            "SignUp": "Sign up",
+            "Email": "Email",
+            "Password": "Password",
+            "SignIn": "Sign in",
+            "AllFieldsRequired": "All fields are required",
+            "InvalidEmail": "Please enter a valid email address",
+            "IncorrectCredentials": "Incorrect email or password !",
+            "SigningIn": "Signing In..."
+        },
+        "Register": {
+            "Title": "Create Account",
+            "FirstName": "First Name",
+            "LastName": "Last Name",
+            "Username": "Username",
+            "Email": "Email",
+            "Password": "Password",
+            "ConfirmPassword": "Confirm Password",
+            "Gender": "Gender",
+            "Male": "Male",
+            "Female": "Female",
+            "BirthDay": "Birth Day",
+            "Month": "Month",
+            "Day": "Day",
+            "Year": "Year",
+            "SignUp": "Sign Up",
+            "SigningUp": "Signing Up...",
+            "AlreadyHaveAccount": "Already have an account?",
+            "SignIn": "Sign in",
+            "AgreeToTerms": "I agree to the",
+            "TermsOfService": "Terms of Service",
+            "Validation": {
+                "FirstNameRequired": "First Name is required",
+                "FirstNameLettersOnly": "Only letters are allowed",
+                "LastNameRequired": "Last Name is required",
+                "LastNameLettersOnly": "Only letters are allowed",
+                "UsernameRequired": "Username is required",
+                "UsernameNoSpecialChars": "Special characters are not allowed",
+                "UsernameMaxLength": "Max 30 characters",
+                "EmailRequired": "Email is required",
+                "EmailInvalid": "Invalid email format",
+                "PasswordRequired": "Password is required",
+                "PasswordMinLength": "At least 8 characters",
+                "ConfirmPasswordRequired": "Confirm Password is required",
+                "PasswordsDoNotMatch": "Passwords do not match",
+                "BirthDayRequired": "Please select your birth date",
+                "AgeRequirement": "You must be at least 13 years old",
+                "TermsRequired": "You must agree to the Terms of Service"
+            }
+        }
+    },
+    "Explore": {
+        "Title": "Explore",
+        "Error": "Error",
+        "Loading": "Loading...",
+        "NoPosts": "No posts found",
+        "RecommendedPosts": "Recommended Posts",
+        "Hashtag": {
+            "Title": "Posts with #{hashtag}",
+            "NoPosts": "No posts found with this hashtag",
+            "Loading": "Loading...",
+            "Error": "Error"
+        }
+    },
+    "Reels": {
+        "Title": "Reels"
+    },
+    "Messages": {
+        "Title": "Messages",
+        "NoMessages": "No messages yet",
+        "StartConversation": "Start a conversation",
+        "Search": "Search...",
+        "LoadingUser": "Loading user...",
+        "LoadingChats": "Loading chats...",
+        "ErrorLoadingChats": "Error loading chats. Please refresh.",
+        "LetsStartChat": "Let's start with a chat",
+        "SelectChatToStart": "Select a chat to start messaging",
+        "UnknownUser": "Unknown User",
+        "Username": "Username",
+        "Fullname": "Fullname",
+        "Processing": "Processing...",
+        "Call": "Call",
+        "VideoCall": "Video Call",
+        "Message": "Message...",
+        "FilesCleared": "Files cleared",
+        "AllFilesCleared": "All files have been cleared.",
+        "FilesAdded": "Files added",
+        "AddedFiles": "Added {count} file(s).",
+        "TooManyFiles": "Too many files",
+        "MaxFilesAllowed": "Maximum {max} files allowed.",
+        "FileTooLarge": "File too large",
+        "FileExceedsSize": "{filename} exceeds {size}MB.",
+        "ErrorProcessingFiles": "Failed to process some files. Please try again.",
+        "ErrorSendingMessage": "Bạn cần chọn người nhận trước khi gửi tin nhắn!",
+        "ChatSystemNotReady": "Chat system not ready. Please try again.",
+        "ErrorCalling": "Error when calling !",
+        "NoPreviewAvailable": "No preview available for this file.",
+        "LastMessage": "Last message",
+        "LastUpdated": "Last updated"
+    },
+    "Streams": {
+        "Title": "Live Streams",
+        "CreateStream": "Create Stream",
+        "Settings": "Settings",
+        "Keys": "Keys"
+    },
+    "Profile": {
+        "Title": "Profile",
+        "EditProfile": "Edit Profile",
+        "Followers": "Followers",
+        "Following": "Following",
+        "Posts": "Posts"
+    },
+    "Posts": {
+        "Title": "Create Post",
+        "WhatOnYourMind": "What's on your mind?",
+        "Post": "Post",
+        "Posting": "Posting...",
+        "NoPosts": "No posts yet",
+        "LoadMore": "Load more"
+    },
+    "Settings": {
+        "Title": "Settings",
+        "EditProfile": "Edit Profile",
+        "Preferences": "Preferences",
+        "Security": "Security",
+        "Privacy": "Privacy"
+    },
+    "Admin": {
+        "Title": "Admin Panel",
+        "Users": "Users",
+        "Reports": "Reports",
+        "Statistics": "Statistics",
+        "Manage": "Manage"
+    },
+    "Preferences": {
+        "Title": "Preferences",
+        "Subtitle": "Customize your experience with these settings",
+        "AppTheme": {
+            "Title": "App Theme",
+            "Description": "Set how your app should look like with your preferred theme.",
+            "DarkMode": "Dark Mode"
+        },
+        "Language": {
+            "Title": "Language",
+            "Description": "See all texts, messages, titles in your preferred language.",
+            "InterfaceLanguage": "Interface Language"
+        },
+        "Notifications": {
+            "Title": "Notifications",
+            "Description": "Manage how you receive notifications and updates."
+        },
+        "Privacy": {
+            "Title": "Privacy",
+            "Description": "Control your privacy settings and data sharing preferences.",
+            "ProfileVisibility": "Profile Visibility",
+            "ActivityStatus": "Activity Status",
+            "Public": "Public",
+            "FriendsOnly": "Friends Only",
+            "Private": "Private"
+        }
     }
 }

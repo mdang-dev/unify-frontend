@@ -10,9 +10,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { authCommandApi } from '@/src/apis/auth/command/auth.command.api';
 
 const RegisterPage = () => {
+  const t = useTranslations('Auth.Register');
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState("");
   const router = useRouter();
@@ -58,37 +60,37 @@ const RegisterPage = () => {
     let newErrors = {};
 
     if (!formData.firstName.trim())
-      newErrors.firstName = "First Name is required";
+      newErrors.firstName = t('Validation.FirstNameRequired');
     else if (!/^[A-Za-z]+$/.test(formData.firstName))
-      newErrors.firstName = "Only letters are allowed";
+      newErrors.firstName = t('Validation.FirstNameLettersOnly');
 
-    if (!formData.lastName.trim()) newErrors.lastName = "Last Name is required";
+    if (!formData.lastName.trim()) newErrors.lastName = t('Validation.LastNameRequired');
     else if (!/^[A-Za-z]+$/.test(formData.lastName))
-      newErrors.lastName = "Only letters are allowed";
+      newErrors.lastName = t('Validation.LastNameLettersOnly');
 
-    if (!formData.username.trim()) newErrors.username = "Username is required";
+    if (!formData.username.trim()) newErrors.username = t('Validation.UsernameRequired');
     else if (!/^[A-Za-z0-9]+$/.test(formData.username))
-      newErrors.username = "Special characters are not allowed";
+      newErrors.username = t('Validation.UsernameNoSpecialChars');
     else if (formData.username.length > 30)
-      newErrors.username = "Max 30 characters";
+      newErrors.username = t('Validation.UsernameMaxLength');
 
-    if (!formData.email.trim()) newErrors.email = "Email is required";
+    if (!formData.email.trim()) newErrors.email = t('Validation.EmailRequired');
     else if (
       !/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(formData.email)
     )
-      newErrors.email = "Invalid email format";
+      newErrors.email = t('Validation.EmailInvalid');
 
-    if (!formData.password.trim()) newErrors.password = "Password is required";
+    if (!formData.password.trim()) newErrors.password = t('Validation.PasswordRequired');
     else if (formData.password.length < 8)
-      newErrors.password = "At least 8 characters";
+      newErrors.password = t('Validation.PasswordMinLength');
 
     if (!formData.confirmPassword.trim())
-      newErrors.confirmPassword = "Confirm Password is required";
+      newErrors.confirmPassword = t('Validation.ConfirmPasswordRequired');
     else if (formData.confirmPassword !== formData.password)
-      newErrors.confirmPassword = "Passwords do not match";
+      newErrors.confirmPassword = t('Validation.PasswordsDoNotMatch');
 
     if (!date.day || !date.month || !date.year) {
-      newErrors.birthDay = "Please select your birth date";
+      newErrors.birthDay = t('Validation.BirthDayRequired');
     }
 
     const today = new Date();
@@ -104,11 +106,11 @@ const RegisterPage = () => {
       age--;
     }
     if (age < 13) {
-      newErrors.birthDay = "You must be at least 13 years old";
+      newErrors.birthDay = t('Validation.AgeRequirement');
     }
 
     if (!formData.agreeToTerms) {
-      newErrors.agreeToTerms = "You must agree to the Terms of Service";
+      newErrors.agreeToTerms = t('Validation.TermsRequired');
     }
 
     setErrors(newErrors);
@@ -167,7 +169,7 @@ const RegisterPage = () => {
               <div className="basis-1/2">
                 <Input
                   name="firstName"
-                  placeholder="First Name"
+                  placeholder={t('FirstName')}
                   className="h-12"
                   value={formData.firstName}
                   onChange={handleChange}
@@ -179,7 +181,7 @@ const RegisterPage = () => {
               <div className="basis-1/2">
                 <Input
                   name="lastName"
-                  placeholder="Last Name"
+                  placeholder={t('LastName')}
                   className="h-12"
                   value={formData.lastName}
                   onChange={handleChange}
@@ -192,7 +194,7 @@ const RegisterPage = () => {
             <div className="basis-1/2">
               <Input
                 name="username"
-                placeholder="Username"
+                placeholder={t('Username')}
                 className="h-12"
                 value={formData.username}
                 onChange={handleChange}
@@ -204,7 +206,7 @@ const RegisterPage = () => {
             <div className="basis-1/2">
               <Input
                 name="email"
-                placeholder="Email"
+                placeholder={t('Email')}
                 className="h-12"
                 value={formData.email}
                 onChange={handleChange}
@@ -216,7 +218,7 @@ const RegisterPage = () => {
             <div className="basis-1/2">
               <Input
                 name="password"
-                placeholder="Password"
+                placeholder={t('Password')}
                 className="h-12"
                 type="password"
                 value={formData.password}
@@ -230,7 +232,7 @@ const RegisterPage = () => {
             <div className="basis-1/2">
               <Input
                 name="confirmPassword"
-                placeholder="Confirm Password"
+                placeholder={t('ConfirmPassword')}
                 className="h-12"
                 type="password"
                 value={formData.confirmPassword}
@@ -251,11 +253,11 @@ const RegisterPage = () => {
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="true" id="r1" defaultChecked={true} />
-                  <Label htmlFor="r1">Male</Label>
+                  <Label htmlFor="r1">{t('Male')}</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="false" id="r2" />
-                  <Label htmlFor="r2">Female</Label>
+                  <Label htmlFor="r2">{t('Female')}</Label>
                 </div>
               </RadioGroup>
             </div>
@@ -271,9 +273,9 @@ const RegisterPage = () => {
             )}
 
             <div className="flex items-center gap-1 m-auto">
-              <span>Do you have an account?</span>
+              <span>{t('AlreadyHaveAccount')}</span>
               <Link href="/login" className="text-[#0F00E1]">
-                Sign in
+                {t('SignIn')}
               </Link>
             </div>
 
@@ -290,9 +292,9 @@ const RegisterPage = () => {
                 }
               />
               <Label htmlFor="terms" className="text-sm">
-                I agree to the{" "}
+                {t('AgreeToTerms')}{" "}
                 <Link href="/landing" className="text-blue-600 underline">
-                  Terms of Service
+                  {t('TermsOfService')}
                 </Link>
               </Label>
             </div>
@@ -305,7 +307,7 @@ const RegisterPage = () => {
               className="text-2xl p-6 mt-3"
               disabled={registerMutation.isPending}
             >
-              {registerMutation.isPending ? 'Signing Up...' : 'Sign Up'}
+              {registerMutation.isPending ? t('SigningUp') : t('SignUp')}
             </Button>
           </div>
         </form>

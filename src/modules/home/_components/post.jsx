@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import PostItem from './post-item/post-item';
 import { useInView } from 'react-intersection-observer';
 import PostLoading from './post-loading';
@@ -11,6 +12,7 @@ import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
 import { postsQueryApi } from '@/src/apis/posts/query/posts.query.api';
 
 const Post = () => {
+  const t = useTranslations('Home.Posts');
   const { ref, inView } = useInView({ threshold: 0.3 });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -55,12 +57,12 @@ const Post = () => {
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">
-            Unable to load posts
+            {t('UnableToLoadPosts')}
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mb-4">
             {error?.response?.status === 401 
-              ? 'Please log in to view posts' 
-              : 'Something went wrong. Please try again later.'
+              ? t('PleaseLoginToViewPosts')
+              : t('SomethingWentWrong')
             }
           </p>
           {error?.response?.status === 401 && (
@@ -68,7 +70,7 @@ const Post = () => {
               href="/login" 
               className="inline-block bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors"
             >
-              Go to Login
+              {t('GoToLogin')}
             </a>
           )}
         </div>
@@ -111,10 +113,10 @@ const Post = () => {
             onClick={() => fetchNextPage()}
             className="font-medium text-blue-500 transition-colors hover:text-blue-600"
           >
-            Load more
+            {t('LoadMore')}
           </button>
         ) : (
-          <span className="text-gray-500 dark:text-gray-400">No more posts</span>
+          <span className="text-gray-500 dark:text-gray-400">{t('NoMorePosts')}</span>
         )}
       </div>
     </div>

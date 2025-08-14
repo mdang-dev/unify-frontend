@@ -5,6 +5,7 @@ import { File, FileText, FileImage, FileVideo, FileMusic } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useState, useEffect } from 'react';
 import { postsQueryApi } from '@/src/apis/posts/query/posts.query.api';
+import EnhancedMedia from './enhanced-media';
 
 
 const PostDetailModal = dynamic(() => import('@/src/components/base/post-detail-modal'), { ssr: false });
@@ -164,6 +165,62 @@ const Message = ({ messages, messagesEndRef, avatar, onRetryMessage }) => {
     return parts;
   };
 
+  // ✅ Helper function to check if this is the last message from current user
+  const isLastMessageFromCurrentUser = (messageIndex) => {
+    const message = messages[messageIndex];
+    if (message.sender !== currentUser) return false;
+    
+    // Check if there are any subsequent messages from current user
+    for (let i = messageIndex + 1; i < messages.length; i++) {
+      if (messages[i].sender === currentUser) {
+        return false; // Found a later message from current user
+      }
+    }
+    return true; // This is the last message from current user
+  };
+
+  // ✅ Format timestamp to show day and time like "Da 15:36"
+  const formatMessageTime = (timestamp) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    
+    // Format time as HH:MM
+    const timeString = date.toLocaleTimeString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    
+    // Check if message is from today
+    if (messageDate.getTime() === today.getTime()) {
+      return timeString; // Just show time for today's messages
+    }
+    
+    // Check if message is from yesterday
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (messageDate.getTime() === yesterday.getTime()) {
+      return `Yesterday ${timeString}`;
+    }
+    
+    // Check if message is from this week
+    const dayOfWeek = date.getDay();
+    const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const weekAgo = new Date(today);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    
+    if (messageDate > weekAgo) {
+      return `${weekDays[dayOfWeek]} ${timeString}`;
+    }
+    
+    // For older messages, show date
+    return date.toLocaleDateString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+    }) + ` ${timeString}`;
+  };
+
   return (
     <div className="m-4 mb-0 flex flex-col gap-3">
       {messages.map((message, index) => {
@@ -171,12 +228,13 @@ const Message = ({ messages, messagesEndRef, avatar, onRetryMessage }) => {
         const isFirstOfGroup = index === 0 || messages[index - 1].sender !== message.sender;
         const isLastOfGroup =
           index === messages.length - 1 || messages[index + 1].sender !== message.sender;
+        const shouldShowStatus = isCurrentUser && isLastMessageFromCurrentUser(index);
 
         return (
           <div
             key={`${message.id || message.timestamp || 'no-id'}-${index}`}
             className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} ${
-              message.isOptimistic ? 'opacity-70' : ''
+              message.isOptimistic ? 'opacity-70 transition-opacity duration-300' : 'opacity-100 transition-opacity duration-300'
             } ${message.isFailed ? 'opacity-50' : ''}`}
           >
             {isFirstOfGroup && !isCurrentUser && (
@@ -197,50 +255,59 @@ const Message = ({ messages, messagesEndRef, avatar, onRetryMessage }) => {
               } ${!isCurrentUser && !isFirstOfGroup ? 'pl-[50px]' : ''}`}
             >
               {message.fileUrls?.length > 0 && (
-                <div className="mb-3 mt-2 flex flex-wrap gap-2">
+                <div className="mb-3 mt-2 flex flex-wrap gap-2 flex-col items-end">
                   {message.fileUrls.map((fileUrl, fileIndex) => {
-                    const fileName = fileUrl.split('/').pop().split('?')[0];
-                    const fileExtension = fileName.split('.').pop().toLowerCase();
+                    // Check if this is a new enhanced format with metadata
+                    if (typeof fileUrl === 'object' && fileUrl.url) {
+                      // Enhanced format with metadata
                     return (
                       <div key={fileIndex} className="flex flex-col items-start">
-                        {['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension) ? (
-                          <a href={fileUrl} target={`_blan`}>
-                            <img
-                              src={fileUrl}
-                              alt={`attachment-${fileIndex}`}
-                              className="max-w-100 w-[500px] rounded-lg shadow-md"
+                          <EnhancedMedia
+                            fileUrl={fileUrl.url}
+                            fileName={fileUrl.name || 'File'}
+                            fileType={fileUrl.type || 'application/octet-stream'}
+                            thumbnailUrl={fileUrl.thumbnailUrl}
+                            base64Data={fileUrl.base64Data}
+                            variants={fileUrl.variants || {}}
                               onLoad={() => handleMediaLoad(messagesEndRef)}
-                            />
-                          </a>
-                        ) : ['mp4', 'webm', 'ogg', 'mp3'].includes(fileExtension) ? (
-                          <video
-                            src={fileUrl}
-                            controls
-                            className="max-w-xs rounded-lg shadow-md"
-                            onLoadedData={() => handleMediaLoad(messagesEndRef)}
+                            onError={() => console.warn('Media load failed:', fileUrl.url)}
+                            maxWidth="500px"
+                            maxHeight="400px"
+                            lazyLoad={true}
                           />
-                        ) : ['mp3', 'wav', 'ogg'].includes(fileExtension) ? (
-                          <audio
-                            controls
-                            className="w-full"
-                            onLoadedData={() => handleMediaLoad(messagesEndRef)}
-                          >
-                            <source src={fileUrl} type="audio/mpeg" />
-                            Your browser does not support the audio element.
-                          </audio>
-                        ) : (
-                          <a
-                            href={fileUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-white shadow-md transition hover:bg-blue-600"
-                          >
-                            {getFileIcon(fileExtension)}
-                            <span>{getFileName(fileUrl)}</span>
-                          </a>
+                          {fileUrl.compressionRatio && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              Compressed: {fileUrl.compressionRatio}% smaller
+                            </div>
                         )}
                       </div>
                     );
+                    }
+                    
+                    // Legacy format - direct URL string
+                    if (typeof fileUrl === 'string') {
+                      const fileName = fileUrl.split('/').pop().split('?')[0];
+                      const fileExtension = fileName.split('.').pop().toLowerCase();
+                      
+                      return (
+                        <div key={fileIndex} className="flex flex-col items-start">
+                          <EnhancedMedia
+                            fileUrl={fileUrl}
+                            fileName={fileName}
+                            fileType={fileExtension}
+                            onLoad={() => handleMediaLoad(messagesEndRef)}
+                            onError={() => console.warn('Media load failed:', fileUrl)}
+                            maxWidth="500px"
+                            maxHeight="400px"
+                            lazyLoad={true}
+                          />
+                        </div>
+                      );
+                    }
+                    
+                    // Fallback for unknown format
+                    console.warn('Unknown fileUrl format:', fileUrl);
+                    return null;
                   })}
                 </div>
               )}
@@ -256,31 +323,59 @@ const Message = ({ messages, messagesEndRef, avatar, onRetryMessage }) => {
                   }`}
                 >
                   {renderContent(message.content)}
-                  {message.isOptimistic && (
-                    <div className="text-xs opacity-50 mt-1">Sending...</div>
-                  )}
-                  {message.isFailed && (
-                    <div className="flex items-center gap-2 mt-1">
-                      <div className="text-xs opacity-75">Failed to send</div>
-                      <button
-                        onClick={() => onRetryMessage?.(message.id)}
-                        className="text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded"
-                      >
-                        Retry
-                      </button>
-                    </div>
-                  )}
                 </div>
               )}
 
-              {isLastOfGroup && (
-                <p className="mt-1 text-xs text-gray-400">
-                  {new Date(message.timestamp).toLocaleTimeString('vi-VN', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </p>
-              )}
+              {/* ✅ TIME & STATUS: Show time for last message of group and status for last message of current user */}
+              <div className={`mt-1 flex items-center gap-2 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
+                {isLastOfGroup && (
+                  <div className="flex items-center gap-2">
+                    <div className="px-2 py-1 text-white text-xs rounded-md shadow-sm">
+                      {formatMessageTime(message.timestamp)}
+                    </div>
+                    
+                    {/* ✅ MESSAGE STATUS: Show status alongside time for current user's last message */}
+                    {shouldShowStatus && (
+                      <div className="flex items-center gap-1">
+                        {/* ✅ SIMPLIFIED: Only 2 states - Sending and Sent */}
+                        {(message.messageState === 'sending' || 
+                          message.messageState === 'uploading' || 
+                          message.messageState === 'uploaded' || 
+                          message.isOptimistic || 
+                          (!message.backendConfirmed && !message.isFailed)) && (
+                          <div className="flex items-center gap-1 text-xs text-gray-400">
+                            <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                            <span>Sending</span>
+                          </div>
+                        )}
+                        
+                        {((message.messageState === 'sent' || 
+                          message.messageState === 'delivered' || 
+                          message.messageState === 'read') && 
+                          message.backendConfirmed && !message.isFailed) && (
+                          <div className="flex items-center gap-1 text-xs text-gray-400">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span>Sent</span>
+                          </div>
+                        )}
+                        
+                        {(message.messageState === 'failed' || message.isFailed) && (
+                          <div className="flex items-center gap-2 text-xs text-red-400">
+                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                            <span>Failed</span>
+                            <button
+                              onClick={() => onRetryMessage?.(message.id)}
+                              className="text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded ml-1"
+                            >
+                              Retry
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         );

@@ -1,7 +1,9 @@
 'use client';
 import React from 'react';
+import { useTranslations } from 'next-intl';
 
 const DeleteCommentModal = ({ isOpen, onClose, onConfirm, isDeleting }) => {
+  const t = useTranslations('Home.PostItem.CommentItem.DeleteModal');
   if (!isOpen) return null;
 
   return (
@@ -17,8 +19,8 @@ const DeleteCommentModal = ({ isOpen, onClose, onConfirm, isDeleting }) => {
         {/* Content */}
         <div className="px-6 py-6">
           <div className="text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
-              <i className="fa-solid fa-trash text-2xl text-red-500 dark:text-red-400"></i>
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-zinc-200 dark:bg-neutral-700">
+              <i className="fa-solid fa-trash text-2xl text-neutral-800 dark:text-zinc-200"></i>
             </div>
             <h3 className="mb-2 text-lg font-medium text-gray-900 dark:text-white">
               Are you sure?
@@ -41,7 +43,7 @@ const DeleteCommentModal = ({ isOpen, onClose, onConfirm, isDeleting }) => {
           <button
             onClick={onConfirm}
             disabled={isDeleting}
-            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-red-500 px-4 py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-neutral-800 px-4 py-2.5 text-sm font-medium text-zinc-200 transition-colors duration-200 hover:bg-neutral-400 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-neutral-800 dark:hover:bg-zinc-400"
           >
             {isDeleting ? (
               <>

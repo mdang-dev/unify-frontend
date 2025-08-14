@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import unify_icon_lightmode from '@/public/images/unify_icon_lightmode.svg';
 import { Input } from '@/src/components/ui/input';
 import { useMutation } from '@tanstack/react-query';
@@ -16,6 +17,7 @@ import { useEffect } from 'react';
 import { useUser } from '@heroui/react';
 
 export default function LoginPage() {
+  const t = useTranslations('Auth.Login');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -44,11 +46,11 @@ export default function LoginPage() {
 
   const validateForm = () => {
     if (!formData.email || !formData.password) {
-      setError('All fields are required');
+      setError(t('AllFieldsRequired'));
       return false;
     }
     if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      setError('Please enter a valid email address');
+      setError(t('InvalidEmail'));
       return false;
     }
     return true;
@@ -71,7 +73,7 @@ export default function LoginPage() {
       },
       onError: (err) => {
         console.error('❌ Login error:', err);
-        setError('Incorrect email or password !');
+        setError(t('IncorrectCredentials'));
       },
       onSettled: () => {
         setIsSubmitting(false);
@@ -114,7 +116,7 @@ export default function LoginPage() {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="text-3xl font-bold text-black dark:text-white"
           >
-            Welcome back
+            {t('Title')}
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -122,12 +124,12 @@ export default function LoginPage() {
             transition={{ duration: 0.5, delay: 0.4 }}
             className="mt-2 text-sm text-neutral-600 dark:text-neutral-400"
           >
-            Don&apos;t have an account?{' '}
+            {t('Subtitle')}{' '}
             <Link
               href="/register"
               className="font-medium text-black hover:underline dark:text-white"
             >
-              Sign up
+              {t('SignUp')}
             </Link>
           </motion.p>
         </div>
@@ -155,7 +157,7 @@ export default function LoginPage() {
                 htmlFor="email"
                 className="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300"
               >
-                Email address
+                {t('Email')}
               </label>
               <Input
                 id="email"
@@ -166,7 +168,7 @@ export default function LoginPage() {
                 value={formData.email}
                 onChange={handleChange}
                 className="relative block w-full appearance-none rounded-xl border border-neutral-200 px-4 py-3 text-neutral-900 placeholder-neutral-500 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-black dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:placeholder-neutral-400 dark:focus:ring-white sm:text-sm"
-                placeholder="Enter your email"
+                placeholder={t('Email')}
               />
             </div>
             <div>
@@ -174,7 +176,7 @@ export default function LoginPage() {
                 htmlFor="password"
                 className="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300"
               >
-                Password
+                {t('Password')}
               </label>
               <div className="relative">
                 <input
@@ -186,7 +188,7 @@ export default function LoginPage() {
                   value={formData.password}
                   onChange={handleChange}
                   className="relative block w-full appearance-none rounded-xl border border-neutral-200 px-4 py-3 pr-10 text-neutral-900 placeholder-neutral-500 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-black dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:placeholder-neutral-400 dark:focus:ring-white sm:text-sm"
-                  placeholder="Enter your password"
+                  placeholder={t('Password')}
                 />
                 <button
                   type="button"
@@ -228,7 +230,7 @@ export default function LoginPage() {
               disabled={isSubmitting}
               className="group relative flex w-full justify-center rounded-xl border border-transparent bg-black px-4 py-3 text-sm font-medium text-white transition-all hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-neutral-100 dark:focus:ring-white"
             >
-              {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Sign in'}
+              {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : t('SignIn')}
             </button>
           </div>
         </motion.form>

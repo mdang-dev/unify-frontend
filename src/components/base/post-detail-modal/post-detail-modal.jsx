@@ -5,6 +5,7 @@ import { CommentItem, CommentInput } from '..';
 import Cookies from 'js-cookie';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import Avatar from '@/public/images/unify_icon_2.png';
 import DeletePostModal from './_components/delete-post-modal';
 import ArchivePostModal from './_components/archive-post-modal';
@@ -22,6 +23,7 @@ import ReportModal from '../report-modal';
 import { useCreateReport } from '@/src/hooks/use-report';
 import { toast } from 'sonner';
 const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete, scrollToCommentId }) => {
+  const t = useTranslations('Home.PostItem.PostDetailModal');
   const [openList, setOpenList] = useState(false); // no longer used for dropdown; retained to avoid breaking
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
@@ -292,15 +294,15 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete, scrollToC
       { endpoint: 'post', reportedId: postId, reason, urls },
       {
         onSuccess: () => {
-          toast.success('Report submitted');
+          toast.success(t('ReportModal.Success.ReportSubmitted'));
           setIsReportOpen(false);
         },
         onError: (error) => {
           const errorMessage = error?.message || 'Unknown error';
           if (errorMessage === 'You have reported this content before.') {
-            toast.warning('You have reported this content before.');
+            toast.warning(t('ReportModal.Success.AlreadyReported'));
           } else {
-            toast.error('Failed to report: ' + errorMessage);
+            toast.error(t('ReportModal.Error.FailedToReport') + ': ' + errorMessage);
           }
           setIsReportOpen(false);
         },
@@ -562,7 +564,7 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete, scrollToC
                 </div>
               ) : (
                 <div className="flex h-full items-center justify-center">
-                  <p className="font-medium text-zinc-500 dark:text-zinc-400">No comments yet</p>
+                  <p className="font-medium text-zinc-500 dark:text-zinc-400">{t('NoCommentsYet')}</p>
                 </div>
               )}
             </div>

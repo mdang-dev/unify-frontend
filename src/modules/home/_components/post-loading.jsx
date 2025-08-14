@@ -1,7 +1,9 @@
 import { Skeleton } from '@heroui/react';
 import React from 'react';
+import { useTranslations } from 'next-intl';
 
 const PostLoading = () => {
+  const t = useTranslations('Home.PostItem');
   return (
     <div className="mx-auto mt-8 w-3/4 opacity-10">
       <div className="flex">
@@ -27,7 +29,7 @@ const PostLoading = () => {
           <div className="flex gap-2">Three buttons</div>
 
           <div>
-            <span className="text-base text-zinc-400">0 likes</span>
+            <span className="text-base text-zinc-400">0 {t('Actions.Likes')}</span>
           </div>
         </div>
       </Skeleton>
@@ -37,7 +39,7 @@ const PostLoading = () => {
       </Skeleton>
       <Skeleton className="mx-auto mt-1 w-[450px] rounded-md">
         <div className="text-md animate-none text-black transition-none hover:text-gray-500 dark:text-zinc-400 dark:hover:text-white">
-          View all comments
+          {t('Actions.ViewAll')} {t('Actions.Comments')}
         </div>
       </Skeleton>
     </div>
