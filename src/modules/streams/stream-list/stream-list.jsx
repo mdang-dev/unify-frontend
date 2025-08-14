@@ -23,6 +23,7 @@ import { userSuggestionQueryApi } from '@/src/apis/suggested-users/query/suggest
 import ChatSettingsModal from './_components/chat-settings-modal';
 import { Settings } from 'lucide-react';
 import SearchBar from './_components/search-bar';
+import { useTranslations } from 'next-intl';
 
 export const mockStreams = [
   {
