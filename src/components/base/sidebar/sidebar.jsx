@@ -128,7 +128,9 @@ const Sidebar = () => {
                 iconClass={'fa-brands fa-facebook-messenger'}
               />
             </li>
-
+            <li className="h-16">
+              <NavButton title="Streams" href="/streams" iconClass={'fa-solid fa-podcast'} />
+            </li>
             <li className="h-16 relative">
               <button
                 ref={buttonRef}
