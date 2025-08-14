@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { RadioGroup, RadioGroupItem } from '@/src/components/ui/radio-group';
-import { addToast } from '@heroui/toast';
+import { toast } from 'sonner';
 import { ModalDialog } from '@/src/components/base';
 import { useModalStore } from '@/src/stores/modal.store';
 import { useAuthStore } from '@/src/stores/auth.store';
@@ -143,15 +143,10 @@ const EditProfile = () => {
     } else if (data.username.length > 30) {
       errors.username = 'Username must be at most 30 characters';
     }
-    if (data.biography.length > 100) {
+    if (data.biography && data.biography.length > 100) {
       errors.biography = 'Biography must be at most 100 characters';
     }
-    const emailPattern = /^[^@]+@[a-zA-Z0-9-]+\.(com)$/;
-    if (!data.email) {
-      errors.email = 'Email is required';
-    } else if (!emailPattern.test(data.email)) {
-      errors.email = "Email must be in the format '@yourdomain.com'";
-    }
+    // Remove email validation since backend doesn't update email
     if (data.phone && !/^[0-9]{10}$/.test(data.phone)) {
       errors.phone = 'Phone number should be 10 digits';
     }
@@ -204,21 +199,15 @@ const EditProfile = () => {
 
     // Check file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      addToast({
-        title: 'File too large',
-        description: 'Image size must be less than 5MB.',
-        timeout: 3000,
-        color: 'warning',
+      toast.error('Image size must be less than 5MB.', {
+        description: 'File too large',
       });
       return;
     }
 
     if (!allowedTypes.includes(file.type)) {
-      addToast({
-        title: 'Invalid file type',
-        description: 'Only images (png, jpeg, jpg, gif) are allowed.',
-        timeout: 3000,
-        color: 'warning',
+      toast.error('Only images (png, jpeg, jpg, gif) are allowed.', {
+        description: 'Invalid file type',
       });
       return;
     }
@@ -232,11 +221,8 @@ const EditProfile = () => {
       }));
     };
     reader.onerror = () => {
-      addToast({
-        title: 'Error',
-        description: 'Failed to read image file.',
-        timeout: 3000,
-        color: 'danger',
+      toast.error('Failed to read image file.', {
+        description: 'Error',
       });
     };
     reader.readAsDataURL(file);
@@ -307,35 +293,38 @@ const EditProfile = () => {
       }
     } catch (error) {
       console.error('Avatar upload failed:', error);
-      addToast({
-        title: 'Avatar Upload Failed',
-        description: 'Failed to upload avatar. Please try again.',
-        timeout: 3000,
-        color: 'warning',
+      toast.error('Failed to upload avatar. Please try again.', {
+        description: 'Avatar Upload Failed',
       });
       setLoading(false);
       return;
     }
 
+    // Prepare request data matching backend UserDto structure
     const requestData = {
       id: userData.id || '',
-      firstName: userData.firstName || '',
-      lastName: userData.lastName || '',
-      username: userData.username || '',
-      email: userData.email || '',
-      phone: userData.phone || '',
+      firstName: userData.firstName || null,
+      lastName: userData.lastName || null,
+      username: userData.username || null,
+      phone: userData.phone || null,
+      email: userData.email || null, // Backend doesn't update email but we send it for validation
+      password: null, // Not updating password in this form
       gender: userData.gender === true ? true : false,
-      birthDay:
-        userData.birthDay &&
+      birthDay: userData.birthDay &&
         userData.birthDay.year &&
         userData.birthDay.month &&
         userData.birthDay.day
           ? `${userData.birthDay.year}-${userData.birthDay.month.padStart(2, '0')}-${userData.birthDay.day.padStart(2, '0')}`
           : null,
-      location: userData.location || '',
-      education: userData.education || '',
-      workAt: userData.workAt || '',
-      biography: userData.biography || '',
+      location: userData.location || null,
+      education: userData.education || null,
+      workAt: userData.workAt || null,
+      biography: userData.biography || null,
+      status: userData.status || null,
+      reportApprovalCount: userData.reportApprovalCount || null,
+      currentPassword: null, // Not updating password
+      newPassword: null, // Not updating password
+      roles: null, // Not updating roles
       avatar: avatarData,
     };
 
@@ -349,7 +338,7 @@ const EditProfile = () => {
           setUser({
             ...user,
             ...response,
-            avatar: avatarData, // Update avatar in local state
+            avatar: response.avatar || avatarData, // Use response avatar or fallback to uploaded one
           });
         }
         
@@ -357,23 +346,16 @@ const EditProfile = () => {
           queryKey: [QUERY_KEYS.USER_PROFILE],
         });
         
-        addToast({
-          title: 'Success',
-          description: 'Profile update successful.',
-          timeout: 3000,
-          color: 'success',
+        toast.success('Profile update successful.', {
+          description: 'Success',
         });
         setErrors({});
       },
       onError: (err) => {
         console.error('Update user error:', err);
         console.error('Error response:', err?.response?.data);
-        addToast({
-          title: 'Error',
-          description:
-            'Error: ' + (err?.response?.data?.message || err?.message || 'Unknown error'),
-          timeout: 3000,
-          color: 'danger',
+        toast.error('Error: ' + (err?.response?.data?.message || err?.message || 'Unknown error'), {
+          description: 'Error',
         });
       },
       onSettled: () => setLoading(false),
@@ -529,10 +511,12 @@ const EditProfile = () => {
                     <input
                       type="email"
                       value={userData.email || ''}
-                      onChange={(e) => handleChange('email', e.target.value)}
-                      className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-neutral-600 dark:bg-neutral-700 dark:text-white"
+                      disabled
+                      className="w-full rounded-lg border border-gray-300 px-4 py-2 bg-gray-100 text-gray-500 cursor-not-allowed dark:border-neutral-600 dark:bg-neutral-800 dark:text-gray-400"
                     />
-                    {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email}</p>}
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Email cannot be changed. Contact support if needed.
+                    </p>
                   </div>
                 </div>
               </div>
