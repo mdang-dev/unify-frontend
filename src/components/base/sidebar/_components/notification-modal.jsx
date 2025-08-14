@@ -7,7 +7,6 @@ import LikeNotification from './like-notification';
 import CommentNotification from './comment-notification';
 import { useNotification } from '@/src/hooks/use-notification';
 import { useDesktopNotifications } from '@/src/hooks/use-desktop-notifications';
-import NotificationQuickActions from '../../notification-quick-actions';
 import dynamic from 'next/dynamic';
 
 // ✅ Use dynamic import like share flow
@@ -227,11 +226,7 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
             sortedNotifications.map((notification, index) => (
               <div key={notification.id} className="space-y-2">
                 {renderNotification(notification)}
-                <NotificationQuickActions
-                  notification={notification}
-                  currentUserId={userId}
-                  onActionComplete={() => {}}
-                />
+              
                 {index < sortedNotifications.length - 1 && (
                   <hr className="my-5 border-white dark:border-black" />
                 )}

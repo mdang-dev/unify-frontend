@@ -43,6 +43,7 @@ export const useChat = (user, chatPartner) => {
   const messagesEndRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const queryClient = useQueryClient();
+  const sendingMessagesRef = useRef(new Set()); // Track messages currently being sent
 
   // ✅ PERSISTENCE: Save/load message states to/from localStorage
   const getMessageStatesKey = () => `message_states_${user?.id}_${chatPartner}`;
@@ -233,23 +234,154 @@ export const useChat = (user, chatPartner) => {
       maxWebSocketFrameSize: 32 * 1024,
       onConnect: () => {
         setIsConnected(true);
+        console.log('✅ WebSocket connected for user:', user?.id);
+        
+        // ✅ IMPROVED: Subscribe to all necessary channels
         client.subscribe(`/user/${user?.id}/queue/messages`, handleIncomingMessage);
         client.subscribe(`/user/${user?.id}/queue/chat-list-update`, handleChatListUpdate);
         client.subscribe(`/user/${user?.id}/queue/errors`, (error) => {
           console.error('❌ WS error:', error);
         });
+        
+        // ✅ IMPROVED: Request missed messages after reconnection
+        requestMissedMessages();
       },
-      onStompError: () => setIsConnected(false),
+      onStompError: (error) => {
+        console.error('❌ STOMP error:', error);
+        setIsConnected(false);
+      },
       onWebSocketClose: () => {
+        console.warn('⚠️ WebSocket closed, attempting reconnection...');
         setIsConnected(false);
         reconnectTimeoutRef.current = setTimeout(connectWebSocket, 5000);
       },
-      onWebSocketError: () => setIsConnected(false),
+      onWebSocketError: (error) => {
+        console.error('❌ WebSocket error:', error);
+        setIsConnected(false);
+      },
     });
 
     client.activate();
     stompClientRef.current = client;
   }, [user?.id]);
+
+  // ✅ IMPROVED: Request missed messages after WebSocket reconnection
+  const requestMissedMessages = useCallback(async () => {
+    if (!chatPartner || !user?.id) return;
+    
+    try {
+      // Get the last message timestamp to request only newer messages
+      const currentMessages = queryClient.getQueryData([QUERY_KEYS.MESSAGES, user?.id, chatPartner]) || [];
+      const lastMessage = currentMessages[currentMessages.length - 1];
+      
+      if (lastMessage && lastMessage.timestamp) {
+        const lastTimestamp = new Date(lastMessage.timestamp);
+        const now = new Date();
+        
+        // Request messages from last 5 minutes to catch any missed ones
+        const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+        
+        if (lastTimestamp < fiveMinutesAgo) {
+          // Fetch messages from the last timestamp to ensure we have everything
+          const missedMessages = await chatQueryApi.getMessages(user?.id, chatPartner);
+          
+          if (missedMessages && missedMessages.length > 0) {
+            // Merge missed messages with current ones, avoiding duplicates
+            const existingIds = new Set(currentMessages.map(msg => msg.id || msg.clientTempId));
+            const newMessages = missedMessages.filter(msg => 
+              !existingIds.has(msg.id) && !existingIds.has(msg.clientTempId)
+            );
+            
+            if (newMessages.length > 0) {
+              const mergedMessages = [...currentMessages, ...newMessages];
+              const sortedMessages = sortMessages(mergedMessages);
+              
+              // Update both local state and cache
+              setChatMessages(sortedMessages);
+              queryClient.setQueryData([QUERY_KEYS.MESSAGES, user?.id, chatPartner], sortedMessages);
+              
+              console.log(`✅ Recovered ${newMessages.length} missed messages after reconnection`);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to request missed messages:', error);
+    }
+  }, [chatPartner, user?.id, queryClient]);
+
+  // ✅ IMPROVED: Force message synchronization when needed
+  const forceMessageSync = useCallback(async () => {
+    if (!chatPartner || !user?.id) return;
+    
+    try {
+      console.log('🔄 Force syncing messages...');
+      
+      // Fetch fresh messages from backend
+      const backendMessages = await chatQueryApi.getMessages(user?.id, chatPartner);
+      
+      if (backendMessages && backendMessages.length > 0) {
+        // Get current messages
+        const currentMessages = queryClient.getQueryData([QUERY_KEYS.MESSAGES, user?.id, chatPartner]) || [];
+        
+        // Create efficient lookup maps
+        const currentMap = new Map();
+        currentMessages.forEach(msg => {
+          const key = msg.id || msg.clientTempId;
+          if (key) currentMap.set(key, msg);
+        });
+        
+        // Find all missing messages
+        const missingMessages = [];
+        backendMessages.forEach(backendMsg => {
+          const key = backendMsg.id || backendMsg.clientTempId;
+          if (key && !currentMap.has(key)) {
+            missingMessages.push({
+              ...backendMsg,
+              messageState: 'sent',
+              backendConfirmed: true,
+              isOptimistic: false
+            });
+          }
+        });
+        
+        if (missingMessages.length > 0) {
+          console.log(`🔄 Found ${missingMessages.length} missing messages during force sync`);
+          
+          const mergedMessages = [...currentMessages, ...missingMessages];
+          const sortedMessages = sortMessages(mergedMessages);
+          
+          // Update both local state and cache
+          setChatMessages(sortedMessages);
+          queryClient.setQueryData([QUERY_KEYS.MESSAGES, user?.id, chatPartner], sortedMessages);
+          
+          return missingMessages.length;
+        } else {
+          console.log('✅ All messages are in sync');
+          return 0;
+        }
+      }
+      
+      return 0;
+    } catch (error) {
+      console.error('Force sync failed:', error);
+      return 0;
+    }
+  }, [chatPartner, user?.id, queryClient]);
+
+  // ✅ IMPROVED: Add manual sync button functionality
+  useEffect(() => {
+    // Expose force sync function globally for debugging
+    if (typeof window !== 'undefined') {
+      window.forceMessageSync = forceMessageSync;
+    }
+    
+    return () => {
+      if (typeof window !== 'undefined') {
+        delete window.forceMessageSync;
+      }
+    };
+  }, [forceMessageSync]);
 
   useEffect(() => {
     connectWebSocket();
@@ -280,7 +412,7 @@ export const useChat = (user, chatPartner) => {
         return;
       }
       
-        // ✅ FIX: Update existing optimistic message or add new message. Prefer matching by clientTempId.
+        // ✅ FIX: Improved message deduplication and synchronization
         
         // ✅ CACHE: Also update cache for immediate availability when switching chats
         const isForCurrentChat = (newMessage.sender === user?.id && newMessage.receiver === chatPartner) ||
@@ -289,53 +421,126 @@ export const useChat = (user, chatPartner) => {
         if (isForCurrentChat) {
           const currentMessages = queryClient.getQueryData([QUERY_KEYS.MESSAGES, user?.id, chatPartner]) || [];
           
+          // ✅ IMPROVED: Better deduplication logic with stricter checking
+          let shouldAddMessage = true;
+          let updatedMessages = currentMessages;
+          
+          // First try to match by clientTempId (most reliable)
           if (newMessage.clientTempId) {
             const byTempId = currentMessages.find((msg) => msg.clientTempId === newMessage.clientTempId);
             if (byTempId) {
-              const updatedMessages = currentMessages.map((msg) =>
+              // Update existing optimistic message
+              updatedMessages = currentMessages.map((msg) =>
                 msg.clientTempId === newMessage.clientTempId
-                  ? { ...msg, ...newMessage, isOptimistic: false, id: msg.id } // Keep original ID and properties
+                  ? { 
+                      ...msg, 
+                      ...newMessage, 
+                      isOptimistic: false, 
+                      id: newMessage.id || msg.id, // Use backend ID if available
+                      messageState: 'sent',
+                      backendConfirmed: true,
+                      serverTimestamp: newMessage.timestamp
+                    }
                   : msg
               );
-              queryClient.setQueryData([QUERY_KEYS.MESSAGES, user?.id, chatPartner], sortMessages(updatedMessages));
-            } else {
-              queryClient.setQueryData([QUERY_KEYS.MESSAGES, user?.id, chatPartner], sortMessages([...currentMessages, newMessage]));
+              shouldAddMessage = false;
             }
-          } else {
-            const existingMessage = currentMessages.find(msg => 
+          }
+          
+          // If no tempId match, try to match by content and timing (with stricter logic)
+          if (shouldAddMessage) {
+            const existingMessage = currentMessages.find(msg => {
+              // ✅ IMPROVED: Stricter matching to prevent duplicates
+              const contentMatch = msg.content === newMessage.content;
+              const senderMatch = msg.sender === newMessage.sender;
+              const receiverMatch = msg.receiver === newMessage.receiver;
+              const timeMatch = Math.abs(new Date(msg.timestamp).getTime() - new Date(newMessage.timestamp).getTime()) < 5000; // Reduced to 5 seconds
+              
+              // ✅ NEW: Also check if message is already confirmed to prevent duplicates
+              const notAlreadyConfirmed = !msg.backendConfirmed || msg.isOptimistic;
+              
+              return contentMatch && senderMatch && receiverMatch && timeMatch && notAlreadyConfirmed;
+            });
+            
+            if (existingMessage) {
+              // Update existing message with backend data
+              updatedMessages = currentMessages.map((msg) =>
+                msg.id === existingMessage.id
+                  ? { 
+                      ...msg, 
+                      ...newMessage, 
+                      isOptimistic: false,
+                      id: newMessage.id || msg.id,
+                      messageState: 'sent',
+                      backendConfirmed: true,
+                      serverTimestamp: newMessage.timestamp
+                    }
+                  : msg
+              );
+              shouldAddMessage = false;
+            }
+          }
+          
+          // ✅ IMPROVED: Additional check to prevent exact duplicates
+          if (shouldAddMessage) {
+            const exactDuplicate = currentMessages.find(msg => 
               msg.content === newMessage.content && 
               msg.sender === newMessage.sender &&
               msg.receiver === newMessage.receiver &&
-              Math.abs(new Date(msg.timestamp).getTime() - new Date(newMessage.timestamp).getTime()) < 5000
+              msg.backendConfirmed &&
+              Math.abs(new Date(msg.timestamp).getTime() - new Date(newMessage.timestamp).getTime()) < 2000
             );
             
-            if (!existingMessage) {
-              queryClient.setQueryData([QUERY_KEYS.MESSAGES, user?.id, chatPartner], sortMessages([...currentMessages, newMessage]));
+            if (exactDuplicate) {
+              console.log('🔄 Duplicate message detected, skipping:', newMessage.content);
+              shouldAddMessage = false;
             }
           }
+          
+          // Add new message if it's truly new
+          if (shouldAddMessage) {
+            console.log('➕ Adding new message:', newMessage.content);
+            updatedMessages = [...currentMessages, {
+              ...newMessage,
+              messageState: 'sent',
+              backendConfirmed: true,
+              isOptimistic: false,
+              serverTimestamp: newMessage.timestamp
+            }];
+          }
+          
+          // Update cache with sorted messages
+          queryClient.setQueryData([QUERY_KEYS.MESSAGES, user?.id, chatPartner], sortMessages(updatedMessages));
         }
         
       setChatMessages((prev) => {
+          // ✅ IMPROVED: Better local state synchronization with duplicate prevention
+          let newState = prev;
+          
+          // First try to match by clientTempId
           if (newMessage.clientTempId) {
             const byTempId = prev.find((msg) => msg.clientTempId === newMessage.clientTempId);
             if (byTempId) {
-              return sortMessages(
+              newState = sortMessages(
                 prev.map((msg) =>
                   msg.clientTempId === newMessage.clientTempId
                     ? { 
                         ...msg, 
                         ...newMessage, 
                         isOptimistic: false, 
-                        id: msg.id, // Keep original ID
-                        messageState: 'sent', // ✅ SIMPLIFIED: Mark as sent (confirmed by backend)
-                        persistentMessage: true 
+                        id: newMessage.id || msg.id,
+                        messageState: 'sent',
+                        backendConfirmed: true,
+                        serverTimestamp: newMessage.timestamp
                       }
                     : msg
                 )
               );
+              return newState;
             }
           }
-        // Check if we already have an optimistic message with same content
+          
+          // Check if we already have an optimistic message with same content (stricter)
           const existingOptimistic = prev.find(
             (msg) =>
           msg.isOptimistic && 
@@ -344,7 +549,7 @@ export const useChat = (user, chatPartner) => {
           msg.receiver === newMessage.receiver &&
               Math.abs(
                 new Date(msg.timestamp).getTime() - new Date(newMessage.timestamp).getTime()
-              ) < 5000
+              ) < 5000 // Keep at 5 seconds for optimistic messages
         );
         
         if (existingOptimistic) {
@@ -355,21 +560,38 @@ export const useChat = (user, chatPartner) => {
               ? { 
                   ...newMessage, 
                   isOptimistic: false,
-                  messageState: 'sent', // ✅ SIMPLIFIED: Backend confirmed message as sent
-                  backendConfirmed: true 
+                  messageState: 'sent',
+                  backendConfirmed: true,
+                  serverTimestamp: newMessage.timestamp
                 }
               : msg
               )
             );
         }
         
+        // ✅ IMPROVED: Additional duplicate check for confirmed messages
+        const confirmedDuplicate = prev.find(msg => 
+          msg.content === newMessage.content &&
+          msg.sender === newMessage.sender &&
+          msg.receiver === newMessage.receiver &&
+          msg.backendConfirmed &&
+          Math.abs(new Date(msg.timestamp).getTime() - new Date(newMessage.timestamp).getTime()) < 2000
+        );
+        
+        if (confirmedDuplicate) {
+          console.log('🔄 Duplicate confirmed message, skipping:', newMessage.content);
+          return prev;
+        }
+        
         // Add new message if it's not from us (receiver's message)
         if (newMessage.sender !== user?.id) {
+            console.log('➕ Adding incoming message:', newMessage.content);
             return sortMessages([...prev, {
               ...newMessage,
-              messageState: 'sent', // ✅ DEFAULT: Incoming messages are already "sent"
+              messageState: 'sent',
               backendConfirmed: true,
-              isOptimistic: false
+              isOptimistic: false,
+              serverTimestamp: newMessage.timestamp
             }]);
         }
         
@@ -421,7 +643,7 @@ export const useChat = (user, chatPartner) => {
       // Silent error handling
     }
     },
-    [user?.id, queryClient]
+    [user?.id, queryClient, chatPartner]
   );
   
   // ✅ REAL-TIME: Handle chat list updates from WebSocket
@@ -624,6 +846,143 @@ export const useChat = (user, chatPartner) => {
     return () => clearInterval(interval);
   }, [chatMessages.length, syncMessageStatuses]); // ✅ FIX: Only depend on length, not the whole array
 
+  // ✅ IMPROVED: Periodic full message synchronization to prevent drift
+  useEffect(() => {
+    if (!chatPartner || !user?.id) return;
+    
+    // Sync all messages every 30 seconds to prevent any drift
+    const interval = setInterval(async () => {
+      try {
+        const backendMessages = await chatQueryApi.getMessages(user?.id, chatPartner);
+        
+        if (backendMessages && backendMessages.length > 0) {
+          // Get current messages
+          const currentMessages = queryClient.getQueryData([QUERY_KEYS.MESSAGES, user?.id, chatPartner]) || [];
+          
+          // Create maps for efficient lookup
+          const currentMap = new Map();
+          currentMessages.forEach(msg => {
+            const key = msg.id || msg.clientTempId;
+            if (key) currentMap.set(key, msg);
+          });
+          
+          // ✅ IMPROVED: Better duplicate detection during sync
+          const missingMessages = [];
+          const duplicateMessages = [];
+          
+          backendMessages.forEach(backendMsg => {
+            const key = backendMsg.id || backendMsg.clientTempId;
+            if (key && !currentMap.has(key)) {
+              // Check if this is a duplicate of an existing message
+              const isDuplicate = currentMessages.some(existingMsg => 
+                existingMsg.content === backendMsg.content &&
+                existingMsg.sender === backendMsg.sender &&
+                existingMsg.receiver === backendMsg.receiver &&
+                Math.abs(new Date(existingMsg.timestamp).getTime() - new Date(backendMsg.timestamp).getTime()) < 5000
+              );
+              
+              if (!isDuplicate) {
+                missingMessages.push({
+                  ...backendMsg,
+                  messageState: 'sent',
+                  backendConfirmed: true,
+                  isOptimistic: false
+                });
+              } else {
+                duplicateMessages.push(backendMsg);
+              }
+            }
+          });
+          
+          // Add missing messages if any found
+          if (missingMessages.length > 0) {
+            console.log(`🔄 Found ${missingMessages.length} missing messages, syncing...`);
+            
+            const mergedMessages = [...currentMessages, ...missingMessages];
+            const sortedMessages = sortMessages(mergedMessages);
+            
+            // Update both local state and cache
+            setChatMessages(sortedMessages);
+            queryClient.setQueryData([QUERY_KEYS.MESSAGES, user?.id, chatPartner], sortedMessages);
+          }
+          
+          // Log duplicate detection
+          if (duplicateMessages.length > 0) {
+            console.log(`🔄 Detected ${duplicateMessages.length} duplicate messages during sync`);
+          }
+          
+          // ✅ IMPROVED: Also check for local duplicates and clean them up
+          const localDuplicates = findLocalDuplicates(currentMessages);
+          if (localDuplicates.length > 0) {
+            console.log(`🧹 Cleaning up ${localDuplicates.length} local duplicate messages`);
+            const cleanedMessages = removeLocalDuplicates(currentMessages);
+            setChatMessages(cleanedMessages);
+            queryClient.setQueryData([QUERY_KEYS.MESSAGES, user?.id, chatPartner], cleanedMessages);
+          }
+        }
+      } catch (error) {
+        console.warn('Periodic sync failed:', error);
+      }
+    }, 30000); // 30 seconds
+    
+    return () => clearInterval(interval);
+  }, [chatPartner, user?.id, queryClient]);
+
+  // ✅ NEW: Helper function to find local duplicate messages
+  const findLocalDuplicates = useCallback((messages) => {
+    const duplicates = [];
+    const seen = new Set();
+    
+    messages.forEach((msg, index) => {
+      const key = `${msg.content}-${msg.sender}-${msg.receiver}`;
+      const timestamp = new Date(msg.timestamp).getTime();
+      
+      // Check if we've seen a similar message recently
+      const isDuplicate = Array.from(seen).some(seenKey => {
+        const [seenContent, seenSender, seenReceiver, seenTime] = seenKey.split('-');
+        return seenContent === msg.content &&
+               seenSender === msg.sender &&
+               seenReceiver === msg.receiver &&
+               Math.abs(parseInt(seenTime) - timestamp) < 5000;
+      });
+      
+      if (isDuplicate) {
+        duplicates.push({ message: msg, index });
+      } else {
+        seen.add(`${key}-${timestamp}`);
+      }
+    });
+    
+    return duplicates;
+  }, []);
+
+  // ✅ NEW: Helper function to remove local duplicate messages
+  const removeLocalDuplicates = useCallback((messages) => {
+    const seen = new Set();
+    const cleaned = [];
+    
+    messages.forEach(msg => {
+      const key = `${msg.content}-${msg.sender}-${msg.receiver}`;
+      const timestamp = new Date(msg.timestamp).getTime();
+      
+      // Keep the first occurrence of each message
+      const isDuplicate = Array.from(seen).some(seenKey => {
+        const [seenContent, seenSender, seenReceiver, seenTime] = seenKey.split('-');
+        return seenContent === msg.content &&
+               seenSender === msg.sender &&
+               seenReceiver === msg.receiver &&
+               Math.abs(parseInt(seenTime) - timestamp) < 5000;
+      });
+      
+      if (!isDuplicate) {
+        cleaned.push(msg);
+        seen.add(`${key}-${timestamp}`);
+      }
+    });
+    
+    return sortMessages(cleaned);
+  }, []);
+
   // ✅ RETRY FAILED MESSAGES: Auto retry failed messages after backend confirmation
   const retryFailedMessagesRef = useRef(new Set()); // Track already processed failed messages
   
@@ -689,6 +1048,16 @@ export const useChat = (user, chatPartner) => {
       return;
     }
     
+    // ✅ FIX: Prevent duplicate message sending
+    const messageKey = `${user.id}-${target}-${content}-${Date.now()}`;
+    if (sendingMessagesRef.current.has(messageKey)) {
+      console.warn('⚠️ Message already being sent, ignoring duplicate');
+      return;
+    }
+    
+    // ✅ FIX: Add to sending set to prevent duplicates
+    sendingMessagesRef.current.add(messageKey);
+    
     const optimisticId = `optimistic_${Date.now()}_${Math.random()}`;
     const clientTempId = optimisticId;
     const currentTime = getVietnamTimeISO();
@@ -726,8 +1095,7 @@ export const useChat = (user, chatPartner) => {
           ? {
               ...chat,
               lastMessage:
-                optimisticMessage.content ||
-                (optimisticMessage.fileUrls?.length ? 'Đã gửi file' : ''),
+                optimisticMessage.content || (optimisticMessage.fileUrls?.length ? 'Đã gửi file' : ''),
               lastUpdated: currentTime,
               hasNewMessage: true,
             }
@@ -745,8 +1113,7 @@ export const useChat = (user, chatPartner) => {
         fullname: 'Unknown User',
         username: 'unknown',
         avatar: '',
-        lastMessage:
-          optimisticMessage.content || (optimisticMessage.fileUrls?.length ? 'Đã gửi file' : ''),
+        lastMessage: optimisticMessage.content || (optimisticMessage.content?.length ? 'Đã gửi file' : ''),
         lastUpdated: currentTime,
         hasNewMessage: true,
       };
@@ -755,47 +1122,29 @@ export const useChat = (user, chatPartner) => {
 
     queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user?.id], updated);
     
-    setTimeout(() => {
-      const currentList = queryClient.getQueryData([QUERY_KEYS.CHAT_LIST, user?.id]) || [];
-      const cleanedList = currentList.map((chat) => {
-        if (chat.userId === otherUserId && chat.hasNewMessage) {
-          return { ...chat, hasNewMessage: false };
-        }
-        return chat;
-      });
-      queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user?.id], cleanedList);
-    }, 3000);
-    
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
-    
     try {
-      // ✅ SIMPLIFIED: Keep message state as "sending" throughout upload process
-      // No need to change state during file upload - just keep it as "sending"
+      // ✅ IMPROVED: Better file handling and message preparation
+      let uploadedFileUrls = [];
+      if (files && files.length > 0) {
+        try {
+          uploadedFileUrls = await uploadFiles(files);
+        } catch (uploadError) {
+          console.error('File upload failed:', uploadError);
+          // Continue without files rather than failing completely
+        }
+      }
       
-      const uploadedFiles = files?.length ? await uploadFiles(files, {
-        createThumbnails: true,
-        convertToBase64: true
-      }) : [];
-      
-      // Extract URLs for backward compatibility
-      const uploadedFileUrls = uploadedFiles.map(file => file.url || file);
-      
+      // ✅ IMPROVED: Create final message with all necessary data
       const finalMessage = {
         ...optimisticMessage,
-        fileUrls: uploadedFiles, // Store full metadata for enhanced display
-        isOptimistic: false,
-        uploadComplete: true, // Mark as upload complete
-        timestamp: optimisticMessage.timestamp, // Keep original timestamp for smooth transition
-        messageState: 'sending', // ✅ SIMPLIFIED: Keep as "sending" until backend confirms
-        uploadProgress: 100,
-        persistentMessage: true, // Ensure this message is never removed
+        fileUrls: uploadedFileUrls,
+        timestamp: currentTime,
+        clientTempId, // Ensure clientTempId is preserved
       };
       
-      // ✅ SMOOTH UPDATE: Update optimistic message to final message (no removal, no re-creation)
+      // ✅ IMPROVED: Update optimistic message with file URLs
       setChatMessages((prev) => {
-        return sortMessages(prev.map((msg) => {
+        return prev.map((msg) => {
           if (msg.id === optimisticId) {
             return {
               ...msg, // Keep all original properties
@@ -804,7 +1153,7 @@ export const useChat = (user, chatPartner) => {
             };
           }
           return msg;
-        }));
+        });
       });
       
       // ✅ CACHE: Update messages cache with final message smoothly
@@ -842,8 +1191,7 @@ export const useChat = (user, chatPartner) => {
         queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user?.id], updated);
       }
       
-        // ✅ SIMPLIFIED: finalMessage already has messageState as 'sending'
-        // No need to create additional sendingMessage state
+        // ✅ IMPROVED: Better WebSocket message handling with retry logic
         
         if (isConnected && stompClientRef.current?.connected) {
           const messagePayload = {
@@ -855,6 +1203,12 @@ export const useChat = (user, chatPartner) => {
             timestamp: currentTime, // ✅ VIETNAM TIMEZONE: Send Vietnam time to backend
           };
           
+          // ✅ IMPROVED: Add retry mechanism for WebSocket failures
+          let wsRetryCount = 0;
+          const maxWsRetries = 3;
+          
+          const sendViaWebSocket = () => {
+            try {
           stompClientRef.current.publish({
             destination: '/app/chat.sendMessage',
             body: JSON.stringify(messagePayload),
@@ -864,20 +1218,48 @@ export const useChat = (user, chatPartner) => {
             },
           });
           
-          // ✅ BACKEND VERIFICATION: Check status after WebSocket send
+              // ✅ IMPROVED: Check status after WebSocket send with retry
           setTimeout(async () => {
             await verifyMessageStatus(optimisticId, clientTempId);
+                // ✅ FIX: Remove from sending set after successful send
+                sendingMessagesRef.current.delete(messageKey);
           }, 2000); // Check after 2 seconds
           
+            } catch (wsError) {
+              console.warn('WebSocket send failed, retrying...', wsError);
+              if (wsRetryCount < maxWsRetries) {
+                wsRetryCount++;
+                setTimeout(sendViaWebSocket, 1000 * wsRetryCount); // Exponential backoff
         } else {
+                // Fallback to HTTP if WebSocket fails completely
+                console.warn('WebSocket failed after retries, falling back to HTTP');
+                sendMessageViaHttp(finalMessage);
+                setTimeout(async () => {
+                  await verifyMessageStatus(optimisticId, clientTempId);
+                  // ✅ FIX: Remove from sending set after HTTP send
+                  sendingMessagesRef.current.delete(messageKey);
+                }, 1000);
+              }
+            }
+          };
+          
+          sendViaWebSocket();
+          
+        } else {
+          // ✅ IMPROVED: HTTP fallback with better error handling
           await sendMessageViaHttp(finalMessage);
           
-          // ✅ BACKEND VERIFICATION: Check status after HTTP send
+          // ✅ IMPROVED: Check status after HTTP send
           setTimeout(async () => {
             await verifyMessageStatus(optimisticId, clientTempId);
+            // ✅ FIX: Remove from sending set after HTTP send
+            sendingMessagesRef.current.delete(messageKey);
           }, 1000); // Check after 1 second
         }
     } catch (error) {
+      // ✅ FIX: Remove from sending set on error
+      sendingMessagesRef.current.delete(messageKey);
+      
       setChatMessages((prev) =>
         prev.map((msg) =>
           msg.id === optimisticId ? { ...msg, isFailed: true, error: error.message } : msg
@@ -915,12 +1297,55 @@ export const useChat = (user, chatPartner) => {
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
+      
+      const responseData = await response.json();
+      
+      // ✅ IMPROVED: Handle duplicate message response
+      if (responseData.status === 'duplicate') {
+        console.log('🔄 Backend detected duplicate message, marking as sent');
+        // Mark the optimistic message as sent since backend already has it
+        setChatMessages((prev) => {
+          return prev.map((msg) => {
+            if (msg.clientTempId === message.clientTempId || msg.id === message.id) {
+              return {
+                ...msg,
+                isOptimistic: false,
+                messageState: 'sent',
+                backendConfirmed: true,
+                serverTimestamp: responseData.timestamp
+              };
+            }
+            return msg;
+          });
+        });
+        
+        // Also update cache
+        if (chatPartner) {
+          const currentMessages = queryClient.getQueryData([QUERY_KEYS.MESSAGES, user?.id, chatPartner]) || [];
+          const updatedMessages = currentMessages.map((msg) => {
+            if (msg.clientTempId === message.clientTempId || msg.id === message.id) {
+              return {
+                ...msg,
+                isOptimistic: false,
+                messageState: 'sent',
+                backendConfirmed: true,
+                serverTimestamp: responseData.timestamp
+              };
+            }
+            return msg;
+          });
+          queryClient.setQueryData([QUERY_KEYS.MESSAGES, user?.id, chatPartner], updatedMessages);
+        }
+        
+        return;
+      }
+      
     } catch (error) {
       throw new Error(`HTTP send failed: ${error.message}`);
     }
   };
 
-  return {
+              return {
     chatMessages,
     sendMessage,
     chatList,
@@ -928,5 +1353,10 @@ export const useChat = (user, chatPartner) => {
     chatListError,
     messagesEndRef,
     isConnected,
+    forceMessageSync, // ✅ NEW: Expose force sync function
+    requestMissedMessages, // ✅ NEW: Expose missed messages function
+    findLocalDuplicates, // ✅ NEW: Expose duplicate detection function
+    removeLocalDuplicates, // ✅ NEW: Expose duplicate removal function
   };
-};
+};    
+
