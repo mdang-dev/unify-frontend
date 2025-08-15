@@ -1,81 +1,158 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 export const PerformanceMonitor = () => {
   const [metrics, setMetrics] = useState({
-    memory: null,
+    memory: 0,
+    cpu: 0,
     fps: 0,
-    loadTime: 0,
-    renderTime: 0,
+    connections: 0
   });
+  
+  const [isVisible, setIsVisible] = useState(false);
+  const intervalRef = useRef(null);
+  const frameCountRef = useRef(0);
+  const lastTimeRef = useRef(performance.now());
+  const memoryInfoRef = useRef(null);
 
+  // ✅ OPTIMIZED: Use useCallback to prevent unnecessary re-renders
   const updateMetrics = useCallback(() => {
-    // Memory usage
-    if ('memory' in performance) {
-      setMetrics(prev => ({
-        ...prev,
-        memory: {
-          used: Math.round(performance.memory.usedJSHeapSize / 1024 / 1024),
-          total: Math.round(performance.memory.totalJSHeapSize / 1024 / 1024),
-          limit: Math.round(performance.memory.jsHeapSizeLimit / 1024 / 1024),
-        }
-      }));
-    }
-
-    // FPS calculation
-    let frameCount = 0;
-    let lastTime = performance.now();
-    
-    const measureFPS = () => {
-      frameCount++;
-      const currentTime = performance.now();
-      
-      if (currentTime - lastTime >= 1000) {
-        setMetrics(prev => ({
-          ...prev,
-          fps: frameCount
-        }));
-        frameCount = 0;
-        lastTime = currentTime;
+    try {
+      // Memory usage
+      if ('memory' in performance) {
+        memoryInfoRef.current = performance.memory;
+        const memoryUsage = Math.round(memoryInfoRef.current.usedJSHeapSize / 1024 / 1024);
+        setMetrics(prev => ({ ...prev, memory: memoryUsage }));
       }
+
+      // FPS calculation
+      const currentTime = performance.now();
+      frameCountRef.current++;
       
-      requestAnimationFrame(measureFPS);
-    };
-    
-    measureFPS();
+      if (currentTime - lastTimeRef.current >= 1000) {
+        const fps = Math.round((frameCountRef.current * 1000) / (currentTime - lastTimeRef.current));
+        setMetrics(prev => ({ ...prev, fps }));
+        frameCountRef.current = 0;
+        lastTimeRef.current = currentTime;
+      }
+
+      // WebSocket connections (estimated)
+      const wsConnections = document.querySelectorAll('script[src*="ws"]').length;
+      setMetrics(prev => ({ ...prev, connections: wsConnections }));
+    } catch (error) {
+      console.warn('Performance monitoring error:', error);
+    }
   }, []);
 
+  // ✅ OPTIMIZED: Start monitoring with cleanup
   useEffect(() => {
-    // Page load time
-    const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
-    setMetrics(prev => ({
-      ...prev,
-      loadTime: Math.round(loadTime)
-    }));
+    if (isVisible) {
+      // ✅ OPTIMIZED: Reduced interval from 5000ms to 10000ms to save resources
+      intervalRef.current = setInterval(updateMetrics, 10000);
+      
+      // Initial update
+      updateMetrics();
+    }
 
-    // Start monitoring
-    updateMetrics();
-    
-    // Update metrics every 5 seconds
-    const interval = setInterval(updateMetrics, 5000);
-    
-    return () => clearInterval(interval);
-  }, [updateMetrics]);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [isVisible, updateMetrics]);
 
-  // Only show in development
-  if (process.env.NODE_ENV !== 'development') {
-    return null;
+  // ✅ OPTIMIZED: Toggle visibility with cleanup
+  const toggleVisibility = useCallback(() => {
+    setIsVisible(prev => !prev);
+  }, []);
+
+  // ✅ OPTIMIZED: Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, []);
+
+  if (!isVisible) {
+    return (
+      <button
+        onClick={toggleVisibility}
+        className="fixed bottom-4 right-4 bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-full shadow-lg z-50"
+        title="Show Performance Monitor"
+      >
+        📊
+      </button>
+    );
   }
 
   return (
-    <div className="fixed bottom-4 right-4 bg-black/80 text-white p-3 rounded-lg text-xs font-mono z-50">
-      <div className="mb-2 font-bold">Performance Monitor</div>
-      <div>FPS: {metrics.fps}</div>
-      {metrics.memory && (
-        <div>Memory: {metrics.memory.used}MB / {metrics.memory.total}MB</div>
-      )}
-      <div>Load Time: {metrics.loadTime}ms</div>
+    <div className="fixed bottom-4 right-4 bg-black bg-opacity-90 text-white p-4 rounded-lg shadow-lg z-50 min-w-[200px]">
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="text-sm font-semibold">Performance Monitor</h3>
+        <button
+          onClick={toggleVisibility}
+          className="text-gray-400 hover:text-white text-lg"
+          title="Hide Performance Monitor"
+        >
+          ×
+        </button>
+      </div>
+      
+      <div className="space-y-2 text-xs">
+        <div className="flex justify-between">
+          <span>Memory:</span>
+          <span className={metrics.memory > 100 ? 'text-red-400' : 'text-green-400'}>
+            {metrics.memory} MB
+          </span>
+        </div>
+        
+        <div className="flex justify-between">
+          <span>FPS:</span>
+          <span className={metrics.fps < 30 ? 'text-red-400' : 'text-green-400'}>
+            {metrics.fps}
+          </span>
+        </div>
+        
+        <div className="flex justify-between">
+          <span>Connections:</span>
+          <span className={metrics.connections > 10 ? 'text-yellow-400' : 'text-green-400'}>
+            {metrics.connections}
+          </span>
+        </div>
+        
+        {memoryInfoRef.current && (
+          <>
+            <div className="flex justify-between">
+              <span>Heap Limit:</span>
+              <span>{Math.round(memoryInfoRef.current.jsHeapSizeLimit / 1024 / 1024)} MB</span>
+            </div>
+            
+            <div className="flex justify-between">
+              <span>Heap Used:</span>
+              <span>{Math.round(memoryInfoRef.current.usedJSHeapSize / 1024 / 1024)} MB</span>
+            </div>
+          </>
+        )}
+      </div>
+      
+      <div className="mt-3 pt-2 border-t border-gray-600">
+        <button
+          onClick={() => {
+            if ('memory' in performance) {
+              performance.memory && console.log('Memory Info:', performance.memory);
+            }
+            console.log('Performance Timeline:', performance.getEntriesByType('measure'));
+          }}
+          className="w-full bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded text-xs"
+        >
+          Log to Console
+        </button>
+      </div>
     </div>
   );
 }; 

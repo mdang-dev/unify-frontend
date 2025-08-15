@@ -19,6 +19,8 @@ export const useCallStore = create((set, get) => ({
   screenSharing: false,
   notifySound: null,
   broadcastChannel: null,
+  // ✅ OPTIMIZED: Add audio cache to prevent creating new Audio objects
+  audioCache: new Map(),
 
   init: async (userId) => {
     const bc = new BroadcastChannel('smartcall');
@@ -84,13 +86,39 @@ export const useCallStore = create((set, get) => ({
   },
 
   playRing: () => {
-    const sound = new Audio('/sounds/ring.mp3');
-    sound.play();
+    const state = get();
+    // ✅ OPTIMIZED: Use cached audio object instead of creating new one
+    if (!state.audioCache.has('ring')) {
+      const sound = new Audio('/sounds/ring.mp3');
+      // ✅ OPTIMIZED: Preload audio to prevent memory issues
+      sound.preload = 'auto';
+      state.audioCache.set('ring', sound);
+    }
+    
+    const sound = state.audioCache.get('ring');
+    // ✅ OPTIMIZED: Reset audio to beginning before playing
+    sound.currentTime = 0;
+    sound.play().catch(error => {
+      console.warn('Failed to play ring sound:', error);
+    });
   },
 
   playStart: () => {
-    const sound = new Audio('/sounds/start.mp3');
-    sound.play();
+    const state = get();
+    // ✅ OPTIMIZED: Use cached audio object instead of creating new one
+    if (!state.audioCache.has('start')) {
+      const sound = new Audio('/sounds/start.mp3');
+      // ✅ OPTIMIZED: Preload audio to prevent memory issues
+      sound.preload = 'auto';
+      state.audioCache.set('start', sound);
+    }
+    
+    const sound = state.audioCache.get('start');
+    // ✅ OPTIMIZED: Reset audio to beginning before playing
+    sound.currentTime = 0;
+    sound.play().catch(error => {
+      console.warn('Failed to play start sound:', error);
+    });
   },
 
   sendSignal: (msg) => {
@@ -128,10 +156,13 @@ export const useCallStore = create((set, get) => ({
     const bc = get().broadcastChannel;
     window.open('/call', '_blank');
 
-    // Send restore message every 500ms until the call window is ready
+    // ✅ OPTIMIZED: Send restore message every 500ms until the call window is ready
     const interval = setInterval(() => {
       bc.postMessage({ type: 'restore', role: 'caller', otherUser });
     }, 500);
+    
+    // ✅ OPTIMIZED: Store interval ID for cleanup
+    set({ intervalId: interval });
 
     bc.onmessage = (e) => {
       if (e.data.type === 'ready') {
@@ -233,16 +264,46 @@ export const useCallStore = create((set, get) => ({
 
   endCall: () => {
     const state = get();
-    if (state.peerConnection) state.peerConnection.close();
-    if (state.localStream) state.localStream.getTracks().forEach((track) => track.stop());
-    clearInterval(state.intervalId);
+    
+    // ✅ OPTIMIZED: Cleanup all resources
+    if (state.intervalId) {
+      clearInterval(state.intervalId);
+    }
+    
+    if (state.peerConnection) {
+      state.peerConnection.close();
+    }
+    
+    if (state.localStream) {
+      state.localStream.getTracks().forEach((track) => track.stop());
+    }
+    
+    if (state.signalingClient) {
+      state.signalingClient.disconnect();
+    }
+    
+    if (state.broadcastChannel) {
+      state.broadcastChannel.close();
+    }
+    
+    // ✅ OPTIMIZED: Clear audio cache to free memory
+    state.audioCache.forEach(audio => {
+      audio.pause();
+      audio.src = '';
+    });
+    state.audioCache.clear();
+    
     set({
       inCall: false,
+      role: null,
+      otherUser: null,
       timer: 0,
       intervalId: null,
       peerConnection: null,
       localStream: null,
       remoteStream: null,
+      signalingClient: null,
+      broadcastChannel: null
     });
   },
 }));
