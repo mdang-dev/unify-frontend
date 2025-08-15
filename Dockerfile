@@ -45,9 +45,12 @@ COPY --from=builder /app/node_modules ./node_modules
 ENV NODE_ENV=production
 ENV PORT=3000
 
+# ✅ OPTIMIZED: Add Node.js memory limits to prevent memory overflow
+ENV NODE_OPTIONS="--max-old-space-size=1024 --max-semi-space-size=128 --optimize-for-size"
+
 EXPOSE 3000
 
 ENTRYPOINT ["/sbin/tini", "--"]
 
-# Run the app
-CMD ["pnpm", "start"]
+# Run the app with memory limits
+CMD ["sh", "-c", "node $NODE_OPTIONS ./node_modules/.bin/next start"]
