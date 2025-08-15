@@ -330,7 +330,7 @@ const Message = ({ messages, messagesEndRef, avatar, onRetryMessage }) => {
               <div className={`mt-1 flex items-center gap-2 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
                 {isLastOfGroup && (
                   <div className="flex items-center gap-2">
-                    <div className="px-2 py-1 text-white text-xs rounded-md shadow-sm">
+                    <div className="px-2 py-1 text-black dark:text-white text-xs">
                       {formatMessageTime(message.timestamp)}
                     </div>
                     
