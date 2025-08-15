@@ -5,7 +5,7 @@ import { useState, useEffect, useRef, memo } from 'react';
 import { useTranslations } from 'next-intl';
 import Reply from './_components/reply';
 import Content from './_components/content';
-import { addToast } from '@heroui/react';
+import { toast } from 'sonner';
 import defaultAvatar from '@/public/images/unify_icon_2.png';
 import { reportsCommandApi } from '@/src/apis/reports/command/report.command.api';
 import { commentsCommandApi } from '@/src/apis/comments/command/comments.command.api';
@@ -67,12 +67,7 @@ const CommentItemComponent = ({
   const reportCommentMutation = useMutation({
     mutationFn: ({ commentId, reason }) => reportsCommandApi.createCommentReport(commentId, reason),
     onSuccess: () => {
-      addToast({
-        title: t('Success'),
-        description: t('CommentReportedSuccessfully'),
-        timeout: 3000,
-        color: 'success',
-      });
+      toast.success(t('CommentReportedSuccessfully'));
       setIsReportModalOpen(false);
       setShowMoreOptions(false);
     },
@@ -83,12 +78,12 @@ const CommentItemComponent = ({
         if (parsed?.message) errorMessage = parsed.message;
       } catch {}
       const isDuplicate = errorMessage === 'You have reported this content before.';
-      addToast({
-        title: isDuplicate ? t('AlreadyReported') : t('FailedToReport'),
-        description: isDuplicate ? t('YouHaveReportedBefore') : errorMessage,
-        timeout: 3000,
-        color: isDuplicate ? 'warning' : 'danger',
-      });
+      
+      if (isDuplicate) {
+        toast.warning(t('YouHaveReportedBefore'));
+      } else {
+        toast.error(errorMessage);
+      }
       setIsReportModalOpen(false);
     },
   });
@@ -97,25 +92,13 @@ const CommentItemComponent = ({
   const deleteCommentMutation = useMutation({
     mutationFn: (commentId) => commentsCommandApi.deleteComment(commentId),
     onSuccess: (_, commentId) => {
-      addToast({
-        title: t('Success'),
-        description: t('CommentDeletedSuccessfully'),
-        timeout: 3000,
-
-        color: 'success',
-      });
+      toast.success(t('CommentDeletedSuccessfully'));
       onCommentDeleted?.(commentId);
       setIsDeleteModalOpen(false);
       setShowMoreOptions(false);
     },
     onError: () => {
-      addToast({
-        title: t('FailedToDelete'),
-        description: t('FailedToDelete'),
-        timeout: 3000,
-
-        color: 'danger',
-      });
+      toast.error(t('FailedToDelete'));
     },
     onSettled: () => {
       setIsDeleting(false);
