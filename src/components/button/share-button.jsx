@@ -12,9 +12,36 @@ import {
 import { useSuggestedUsers } from '@/src/hooks/use-suggested';
 import { useAuthStore } from '@/src/stores/auth.store';
 import { useChat } from '@/src/hooks/use-chat';
-import { useFacebookSDK } from '@/src/hooks/use-facebook-sdk';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
+
+// Import react-share components
+import {
+  FacebookShareButton,
+  FacebookMessengerShareButton,
+  TwitterShareButton,
+  TelegramShareButton,
+  WhatsappShareButton,
+  LinkedinShareButton,
+  PinterestShareButton,
+  RedditShareButton,
+  TumblrShareButton,
+  EmailShareButton,
+  ViberShareButton,
+  LineShareButton,
+  FacebookIcon,
+  FacebookMessengerIcon,
+  TwitterIcon,
+  TelegramIcon,
+  WhatsappIcon,
+  LinkedinIcon,
+  PinterestIcon,
+  RedditIcon,
+  TumblrIcon,
+  EmailIcon,
+  ViberIcon,
+  LineIcon,
+} from 'react-share';
 
 // Accept post as prop
 const ShareButton = ({ post, className = '' }) => {
@@ -28,10 +55,11 @@ const ShareButton = ({ post, className = '' }) => {
   const { friendUsers, loading } = useSuggestedUsers();
   const [chatPartner, setChatPartner] = useState(null);
   const { sendMessage, isConnected } = useChat(user, chatPartner);
-  const { isReady: fbReady, shareToFacebook, shareToMessenger } = useFacebookSDK();
 
-  // Generate share link
+  // Generate share link and content
   const shareLink = `${window.location.origin}/shared/${post.id}`;
+  const shareTitle = post?.content || 'Check out this post on Unify!';
+  const shareText = post?.content ? `${post.captions.substring(0, 100)}...` : 'Check out this amazing post on Unify!';
 
   // Filter friends by search
   const filteredFriends = useMemo(() => {
@@ -67,80 +95,13 @@ const ShareButton = ({ post, className = '' }) => {
     }
   };
 
-  const shareToSocialMedia = async (platform) => {
-    const text = `Check out this post on Unify!`;
-    let url = '';
-    
-    switch (platform) {
-      case 'facebook':
-        try {
-          if (fbReady) {
-            await shareToFacebook(shareLink, text);
-            toast.success('Shared to Facebook successfully!');
-          } else {
-            // Fallback to sharer.php method
-            url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareLink)}`;
-            window.open(url, '_blank', 'width=600,height=400');
-          }
-        } catch (error) {
-          if (error.message === 'User cancelled sharing') {
-            // Don't show error for user cancellation
-            return;
-          }
-          toast.error('Failed to share to Facebook');
-          console.error('Facebook sharing error:', error);
-        }
-        return;
-        
-      case 'messenger':
-        try {
-          if (fbReady) {
-            await shareToMessenger(shareLink);
-            toast.success('Shared to Messenger successfully!');
-          } else {
-            // Fallback to dialog method
-            url = `https://www.facebook.com/dialog/send?app_id=737901299112236&link=${encodeURIComponent(shareLink)}&redirect_uri=${encodeURIComponent(window.location.origin)}`;
-            window.open(url, '_blank', 'width=600,height=400');
-          }
-        } catch (error) {
-          if (error.message === 'User cancelled sharing') {
-            // Don't show error for user cancellation
-            return;
-          }
-          
-          // Check if it's a Facebook app configuration error
-          if (error.message.includes('app_id') || error.message.includes('permission') || error.message.includes('review')) {
-            toast.error('Messenger sharing requires app review. Using fallback method...');
-            // Use fallback method
-            url = `https://www.facebook.com/dialog/send?app_id=737901299112236&link=${encodeURIComponent(shareLink)}&redirect_uri=${encodeURIComponent(window.location.origin)}`;
-            window.open(url, '_blank', 'width=600,height=400');
-          } else {
-            toast.error('Failed to share to Messenger');
-            console.error('Messenger sharing error:', error);
-          }
-        }
-        return;
-        
-      case 'twitter':
-        url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareLink)}`;
-        break;
-      case 'instagram':
-        // Instagram doesn't support direct sharing via URL, so we'll copy the link
-        copyToClipboard();
-        toast.info('Instagram sharing: Copy the link and paste it in your Instagram story or post');
-        return;
-      case 'zalo':
-        // Zalo sharing - copy link and show instructions
-        copyToClipboard();
-        toast.info('Zalo sharing: Copy the link and paste it in your Zalo chat or timeline');
-        return;
-      default:
-        return;
-    }
-    
-    if (url) {
-      window.open(url, '_blank', 'width=600,height=400');
-    }
+  const handleShareSuccess = (platform) => {
+    toast.success(`Shared to ${platform} successfully!`);
+  };
+
+  const handleShareError = (platform, error) => {
+    console.error(`${platform} sharing error:`, error);
+    toast.error(`Failed to share to ${platform}`);
   };
 
   return (
@@ -269,67 +230,183 @@ const ShareButton = ({ post, className = '' }) => {
                   </div>
                 )}
 
-                                 {/* Social Media Tab */}
-                 {activeTab === 'social' && (
-                   <div className="space-y-4">
-                     {/* Facebook App Status Notice */}
-                     <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                       <div className="flex items-start">
-                         <i className="fas fa-info-circle text-blue-500 mt-1 mr-2"></i>
-                         <div className="text-sm text-blue-700 dark:text-blue-300">
-                           <p className="font-medium mb-1">Facebook Integration Status:</p>
-                           <p>• Facebook sharing: <span className="text-green-600 dark:text-green-400">✅ Working</span></p>
-                           <p>• Messenger sharing: <span className="text-yellow-600 dark:text-yellow-400">⚠️ Requires app review</span></p>
-                           <p className="text-xs mt-2 opacity-75">
-                             Messenger sharing will work automatically once the Facebook app review is completed.
-                           </p>
-                         </div>
-                       </div>
-                     </div>
-                     
-                     <div className="grid grid-cols-2 gap-4">
-                       <button
-                         onClick={() => shareToSocialMedia('facebook')}
-                         className="flex items-center justify-center gap-3 p-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                       >
-                         <i className="fab fa-facebook text-2xl"></i>
-                         <span className="font-medium">Facebook</span>
-                       </button>
-                       
-                       <button
-                         onClick={() => shareToSocialMedia('messenger')}
-                         className="flex items-center justify-center gap-3 p-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                       >
-                         <i className="fab fa-facebook-messenger text-2xl"></i>
-                         <span className="font-medium">Messenger</span>
-                       </button>
-                       
-                       <button
-                         onClick={() => shareToSocialMedia('twitter')}
-                         className="flex items-center justify-center gap-3 p-4 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors"
-                       >
-                         <i className="fab fa-twitter text-2xl"></i>
-                         <span className="font-medium">Twitter</span>
-                       </button>
-                       
-                       <button
-                         onClick={() => shareToSocialMedia('instagram')}
-                         className="flex items-center justify-center gap-3 p-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors"
-                       >
-                         <i className="fab fa-instagram text-2xl"></i>
-                         <span className="font-medium">Instagram</span>
-                       </button>
-                       
-                       <button
-                         onClick={() => shareToSocialMedia('zalo')}
-                         className="flex items-center justify-center gap-3 p-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                       >
-                         <i className="fas fa-comments text-2xl"></i>
-                         <span className="font-medium">Zalo</span>
-                       </button>
-                     </div>
-                   </div>
-                 )}
+                {/* Social Media Tab */}
+                {activeTab === 'social' && (
+                  <div className="space-y-6">
+                    {/* Share Info */}
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                      <div className="flex items-start">
+                        <i className="fas fa-info-circle text-blue-500 mt-1 mr-2"></i>
+                        <div className="text-sm text-blue-700 dark:text-blue-300">
+                          <p className="font-medium mb-1">Share this post:</p>
+                          <p className="text-xs opacity-75">{shareText}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Social Media Buttons */}
+                    <div className="grid grid-cols-3 gap-4">
+                      {/* Facebook */}
+                      <FacebookShareButton
+                        url={shareLink}
+                        quote={shareText}
+                        hashtag="#Unify"
+                        onShareWindowClose={() => handleShareSuccess('Facebook')}
+                      >
+                        <div className="flex flex-col items-center gap-2 p-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                          <FacebookIcon size={32} round />
+                          <span className="text-xs font-medium">Facebook</span>
+                        </div>
+                      </FacebookShareButton>
+
+                      {/* Facebook Messenger */}
+                      <FacebookMessengerShareButton
+                        url={shareLink}
+                        appId="737901299112236"
+                        onShareWindowClose={() => handleShareSuccess('Messenger')}
+                      >
+                        <div className="flex flex-col items-center gap-2 p-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                          <FacebookMessengerIcon size={32} round />
+                          <span className="text-xs font-medium">Messenger</span>
+                        </div>
+                      </FacebookMessengerShareButton>
+
+                      {/* Twitter/X */}
+                      <TwitterShareButton
+                        url={shareLink}
+                        title={shareText}
+                        hashtags={['Unify', 'SocialMedia']}
+                        onShareWindowClose={() => handleShareSuccess('Twitter')}
+                      >
+                        <div className="flex flex-col items-center gap-2 p-4 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors">
+                          <TwitterIcon size={32} round />
+                          <span className="text-xs font-medium">Twitter</span>
+                        </div>
+                      </TwitterShareButton>
+
+                      {/* WhatsApp */}
+                      <WhatsappShareButton
+                        url={shareLink}
+                        title={shareText}
+                        onShareWindowClose={() => handleShareSuccess('WhatsApp')}
+                      >
+                        <div className="flex flex-col items-center gap-2 p-4 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
+                          <WhatsappIcon size={32} round />
+                          <span className="text-xs font-medium">WhatsApp</span>
+                        </div>
+                      </WhatsappShareButton>
+
+                      {/* Telegram */}
+                      <TelegramShareButton
+                        url={shareLink}
+                        title={shareText}
+                        onShareWindowClose={() => handleShareSuccess('Telegram')}
+                      >
+                        <div className="flex flex-col items-center gap-2 p-4 bg-blue-400 text-white rounded-lg hover:bg-blue-500 transition-colors">
+                          <TelegramIcon size={32} round />
+                          <span className="text-xs font-medium">Telegram</span>
+                        </div>
+                      </TelegramShareButton>
+
+                      {/* LinkedIn */}
+                      <LinkedinShareButton
+                        url={shareLink}
+                        title={shareTitle}
+                        summary={shareText}
+                        source="Unify"
+                        onShareWindowClose={() => handleShareSuccess('LinkedIn')}
+                      >
+                        <div className="flex flex-col items-center gap-2 p-4 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition-colors">
+                          <LinkedinIcon size={32} round />
+                          <span className="text-xs font-medium">LinkedIn</span>
+                        </div>
+                      </LinkedinShareButton>
+
+                      {/* Reddit */}
+                      <RedditShareButton
+                        url={shareLink}
+                        title={shareTitle}
+                        onShareWindowClose={() => handleShareSuccess('Reddit')}
+                      >
+                        <div className="flex flex-col items-center gap-2 p-4 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
+                          <RedditIcon size={32} round />
+                          <span className="text-xs font-medium">Reddit</span>
+                        </div>
+                      </RedditShareButton>
+
+                      {/* Email */}
+                      <EmailShareButton
+                        url={shareLink}
+                        subject={shareTitle}
+                        body={shareText}
+                        onShareWindowClose={() => handleShareSuccess('Email')}
+                      >
+                        <div className="flex flex-col items-center gap-2 p-4 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+                          <EmailIcon size={32} round />
+                          <span className="text-xs font-medium">Email</span>
+                        </div>
+                      </EmailShareButton>
+
+                      {/* Viber */}
+                      <ViberShareButton
+                        url={shareLink}
+                        title={shareText}
+                        onShareWindowClose={() => handleShareSuccess('Viber')}
+                      >
+                        <div className="flex flex-col items-center gap-2 p-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                          <ViberIcon size={32} round />
+                          <span className="text-xs font-medium">Viber</span>
+                        </div>
+                      </ViberShareButton>
+
+                      {/* Line */}
+                      <LineShareButton
+                        url={shareLink}
+                        title={shareText}
+                        onShareWindowClose={() => handleShareSuccess('Line')}
+                      >
+                        <div className="flex flex-col items-center gap-2 p-4 bg-green-400 text-white rounded-lg hover:bg-green-500 transition-colors">
+                          <LineIcon size={32} round />
+                          <span className="text-xs font-medium">Line</span>
+                        </div>
+                      </LineShareButton>
+
+                      {/* Pinterest (if post has images) */}
+                      {post?.fileUrls && post.fileUrls.length > 0 && (
+                        <PinterestShareButton
+                          url={shareLink}
+                          media={post.fileUrls[0]}
+                          description={shareText}
+                          onShareWindowClose={() => handleShareSuccess('Pinterest')}
+                        >
+                          <div className="flex flex-col items-center gap-2 p-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                            <PinterestIcon size={32} round />
+                            <span className="text-xs font-medium">Pinterest</span>
+                          </div>
+                        </PinterestShareButton>
+                      )}
+
+                      {/* Tumblr */}
+                      <TumblrShareButton
+                        url={shareLink}
+                        title={shareTitle}
+                        caption={shareText}
+                        tags={['Unify', 'SocialMedia']}
+                        onShareWindowClose={() => handleShareSuccess('Tumblr')}
+                      >
+                        <div className="flex flex-col items-center gap-2 p-4 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors">
+                          <TumblrIcon size={32} round />
+                          <span className="text-xs font-medium">Tumblr</span>
+                        </div>
+                      </TumblrShareButton>
+                    </div>
+
+                    {/* Additional Info */}
+                    <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                      <p>Click any platform to share this post. Some platforms may require you to be logged in.</p>
+                    </div>
+                  </div>
+                )}
               </ModalBody>
               <ModalFooter></ModalFooter>
             </>

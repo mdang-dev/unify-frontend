@@ -13,6 +13,7 @@ const publicRoutes = new Set([
   '/landing',
   '/password/reset/otp-verification',
   '/password/reset/confirm',
+  '/shared', // Allow shared post links to be accessed without authentication
 ]);
 
 const intlMiddleware = createMiddleware(routing);
@@ -57,7 +58,7 @@ export default async function middleware(req) {
       return NextResponse.redirect(redirectUrl);
     }
   }
-  
+
   return i18nResponse;
 }
 

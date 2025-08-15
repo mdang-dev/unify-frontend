@@ -4,7 +4,6 @@ import '../styles/fonts.css'; // Import optimized font loading
 import QueryProvider from '../query-client';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import React from 'react';
-import FacebookSDK from '../components/global/facebook-sdk';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -31,7 +30,6 @@ export default async function RootLayout({ children }) {
         className={`${geistSans.variable} ${geistMono.variable} ${montserrat.className} flex w-full`}
       >
         <QueryProvider>
-          <FacebookSDK />
           {children}
         </QueryProvider>
       </body>
