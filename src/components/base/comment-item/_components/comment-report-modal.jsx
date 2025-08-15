@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 import OtherReasonModal from '../../report-modal/_components/other-reason-modal';
 
 const CommentReportModal = ({ isOpen, onClose, onSubmit, commentId }) => {
@@ -28,7 +29,7 @@ const CommentReportModal = ({ isOpen, onClose, onSubmit, commentId }) => {
 
   const handleSubmit = () => {
     if (!selectedReason) {
-      alert(t('SelectReason'));
+      toast.error(t('SelectReason'));
       return;
     }
     if (selectedReason !== 'Other') {

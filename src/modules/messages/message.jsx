@@ -25,6 +25,7 @@ import { callCommandApi } from '@/src/apis/call/command/call.command.api';
 import { addToast } from '@heroui/react';
 import FileUploadProgress from './_components/file-upload-progress';
 import { optimizeImage } from '@/src/utils/image-optimization.util';
+import { toast } from 'sonner';
 
  const Messages = () => {
   const t = useTranslations('Messages');
@@ -169,7 +170,7 @@ import { optimizeImage } from '@/src/utils/image-optimization.util';
   const handleSendMessage = useCallback(() => {
     if (!chatPartner) {
       addToast({
-        title: 'Error',
+        title: t('Error'),
         description: t('ErrorSendingMessage'),
         timeout: 3000,
         color: 'danger',
@@ -178,7 +179,7 @@ import { optimizeImage } from '@/src/utils/image-optimization.util';
     }
     if (!sendMessage) {
       addToast({
-        title: 'Error',
+        title: t('Error'),
         description: t('ChatSystemNotReady'),
         timeout: 3000,
         color: 'danger',
@@ -294,7 +295,7 @@ import { optimizeImage } from '@/src/utils/image-optimization.util';
     } catch (error) {
       console.error('Error processing files:', error);
       addToast({
-        title: 'Error',
+        title: t('Error'),
         description: t('ErrorProcessingFiles'),
         timeout: 3000,
         color: 'danger',
@@ -377,7 +378,7 @@ import { optimizeImage } from '@/src/utils/image-optimization.util';
     if (fileObj.preview) {
       window.open(fileObj.preview, '_blank');
     } else {
-      alert(t('NoPreviewAvailable'));
+      toast.error(t('NoPreviewAvailable'));
     }
   };
 
@@ -417,7 +418,7 @@ import { optimizeImage } from '@/src/utils/image-optimization.util';
         },
         onError: () => {
           addToast({
-            title: 'Error',
+            title: t('Error'),
             description: t('ErrorCalling'),
             timeout: 3000,
             color: 'danger',
@@ -437,7 +438,7 @@ import { optimizeImage } from '@/src/utils/image-optimization.util';
         },
         onError: () => {
           addToast({
-            title: 'Error',
+            title: t('Error'),
             description: t('ErrorCalling'),
             timeout: 3000,
             color: 'danger',

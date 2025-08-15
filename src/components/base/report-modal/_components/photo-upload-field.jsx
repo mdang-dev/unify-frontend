@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useRef, useCallback } from 'react';
 import { PhotoIcon, XMarkIcon, CloudArrowUpIcon } from '@heroicons/react/24/outline';
+import { toast } from 'sonner';
 
 const PhotoUploadField = ({ urls, setUrls, maxImages = 5, disabled = false }) => {
   const [isDragOver, setIsDragOver] = React.useState(false);
@@ -20,7 +21,7 @@ const PhotoUploadField = ({ urls, setUrls, maxImages = 5, disabled = false }) =>
 
     // Check if adding these files would exceed the limit
     if (urls.length + selectedFiles.length > maxImages) {
-      alert(`You can only upload up to ${maxImages} images.`);
+      toast.error(`You can only upload up to ${maxImages} images.`);
       return;
     }
 
@@ -31,12 +32,12 @@ const PhotoUploadField = ({ urls, setUrls, maxImages = 5, disabled = false }) =>
       }
 
       if (!allowedTypes.includes(file.type)) {
-        alert(`${file.name} is not a supported image type.`);
+        toast.error(`${file.name} is not a supported image type.`);
         return false;
       }
 
       if (file.size > maxFileSize) {
-        alert(`${file.name} exceeds the 10MB size limit.`);
+        toast.error(`${file.name} exceeds the 10MB size limit.`);
         return false;
       }
 

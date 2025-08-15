@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { toast } from 'sonner';
 
 const ImpersonationModal = ({ isOpen, onClose, onSubmit, userId }) => {
   const [selectedImpersonation, setSelectedImpersonation] = React.useState('');
@@ -13,7 +14,7 @@ const ImpersonationModal = ({ isOpen, onClose, onSubmit, userId }) => {
 
   const handleSubmit = () => {
     if (!selectedImpersonation) {
-      alert('Please select who is being impersonated.');
+      toast.error('Please select who is being impersonated.');
       return;
     }
     onSubmit(userId, `This account is impersonating someone else: ${selectedImpersonation}`);
