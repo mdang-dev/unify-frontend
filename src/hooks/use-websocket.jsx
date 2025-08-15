@@ -6,7 +6,7 @@ import { COOKIE_KEYS } from '../constants/cookie-keys.constant';
 
 export const useWebSocket = (userId) => {
   const [client, setClient] = useState(null);
-  const [connected, setConnected(false);
+  const [connected, setConnected] = useState(false);
   const [error, setError] = useState(null);
   const clientRef = useRef(null);
   const retryCountRef = useRef(0);

@@ -248,101 +248,6 @@ export const useChat = (user, chatPartner) => {
     }
   }, [chatMessages, saveMessageStates]);
 
-  // WebSocket
-  const connectWebSocket = useCallback(async () => {
-    if (!user?.id || !chatPartner || isConnected) return;
-
-    try {
-      const token = getCookie(COOKIE_KEYS.AUTH_TOKEN);
-      if (!token) {
-        console.error('No auth token found for WebSocket connection');
-        return;
-      }
-
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-      const wsUrl = `${apiUrl}/ws`;
-
-      const stompClient = new Client({
-        webSocketFactory: () => new SockJS(wsUrl),
-        connectHeaders: {
-          userId: user.id,
-          token: `Bearer ${token}`,
-        },
-        // ✅ OPTIMIZED: Balanced heartbeat settings
-        heartbeatIncoming: 20000,
-        heartbeatOutgoing: 20000,
-        debug: false,
-        onConnect: () => {
-          setIsConnected(true);
-          console.log('WebSocket connected for chat');
-          
-          // Subscribe to chat topic
-          stompClient.subscribe(`/topic/chat/${chatPartner}`, (message) => {
-            try {
-              const data = JSON.parse(message.body);
-              handleIncomingMessage(data);
-            } catch (error) {
-              console.error('Error parsing incoming message:', error);
-            }
-          });
-        },
-        onDisconnect: () => {
-          setIsConnected(false);
-          console.log('WebSocket disconnected from chat');
-        },
-        onStompError: (frame) => {
-          console.error('STOMP Error:', frame);
-          setIsConnected(false);
-        },
-        onWebSocketError: (event) => {
-          console.error('WebSocket Error:', event);
-          setIsConnected(false);
-        },
-      });
-
-      stompClientRef.current = stompClient;
-      stompClient.activate();
-    } catch (error) {
-      console.error('Failed to connect WebSocket:', error);
-      setIsConnected(false);
-      
-      // ✅ OPTIMIZED: Retry connection with exponential backoff
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-      reconnectTimeoutRef.current = setTimeout(connectWebSocket, 5000);
-    }
-  }, [user?.id, chatPartner, isConnected, handleIncomingMessage]);
-
-  // ✅ REMOVED: Complex sync mechanisms that cause race conditions
-  // Keeping only the basic WebSocket reconnection without aggressive syncing
-
-  // ✅ OPTIMIZED: Cleanup function for timeouts and intervals
-  const cleanupTimeouts = useCallback(() => {
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
-    }
-  }, []);
-
-  useEffect(() => {
-    if (user?.id && chatPartner) {
-      connectWebSocket();
-    }
-
-    return () => {
-      cleanupTimeouts();
-      if (stompClientRef.current) {
-        try {
-          stompClientRef.current.deactivate();
-        } catch (error) {
-          console.warn('Error deactivating WebSocket client:', error);
-        }
-        stompClientRef.current = null;
-      }
-    };
-  }, [user?.id, chatPartner, connectWebSocket, cleanupTimeouts]);
-
   // ✅ COMPLETELY REWRITTEN: Simplified, bulletproof message handling
   const handleIncomingMessage = useCallback(
     (message) => {
@@ -422,7 +327,107 @@ export const useChat = (user, chatPartner) => {
       console.error('❌ Error handling incoming message:', error);
     }
   }, [chatPartner, user?.id, queryClient]);
-  
+
+  // WebSocket
+  const connectWebSocket = useCallback(async () => {
+    if (!user?.id || !chatPartner || isConnected) return;
+
+    try {
+      const token = getCookie(COOKIE_KEYS.AUTH_TOKEN);
+      if (!token) {
+        console.error('No auth token found for WebSocket connection');
+        return;
+      }
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+      const wsUrl = `${apiUrl}/ws`;
+
+      const stompClient = new Client({
+        webSocketFactory: () => new SockJS(wsUrl),
+        connectHeaders: {
+          userId: user.id,
+          token: `Bearer ${token}`,
+        },
+        // ✅ OPTIMIZED: Balanced heartbeat settings
+        heartbeatIncoming: 20000,
+        heartbeatOutgoing: 20000,
+        debug: (str) => {
+          // Only log critical STOMP errors in development
+          if (process.env.NODE_ENV === 'development' && str.includes('error')) {
+            console.warn('STOMP Error:', str);
+          }
+        },
+        onConnect: () => {
+          setIsConnected(true);
+          console.log('WebSocket connected for chat');
+          
+          // Subscribe to chat topic
+          stompClient.subscribe(`/topic/chat/${chatPartner}`, (message) => {
+            try {
+              const data = JSON.parse(message.body);
+              handleIncomingMessage(data);
+            } catch (error) {
+              console.error('Error parsing incoming message:', error);
+            }
+          });
+        },
+        onDisconnect: () => {
+          setIsConnected(false);
+          console.log('WebSocket disconnected from chat');
+        },
+        onStompError: (frame) => {
+          console.error('STOMP Error:', frame);
+          setIsConnected(false);
+        },
+        onWebSocketError: (event) => {
+          console.error('WebSocket Error:', event);
+          setIsConnected(false);
+        },
+      });
+
+      stompClientRef.current = stompClient;
+      stompClient.activate();
+    } catch (error) {
+      console.error('Failed to connect WebSocket:', error);
+      setIsConnected(false);
+      
+      // ✅ OPTIMIZED: Retry connection with exponential backoff
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      reconnectTimeoutRef.current = setTimeout(connectWebSocket, 5000);
+    }
+  }, [user?.id, chatPartner, isConnected, handleIncomingMessage]);
+
+  // ✅ REMOVED: Complex sync mechanisms that cause race conditions
+  // Keeping only the basic WebSocket reconnection without aggressive syncing
+
+  // ✅ OPTIMIZED: Cleanup function for timeouts and intervals
+  const cleanupTimeouts = useCallback(() => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user?.id && chatPartner) {
+      connectWebSocket();
+    }
+
+    return () => {
+      cleanupTimeouts();
+      if (stompClientRef.current) {
+        try {
+          stompClientRef.current.deactivate();
+        } catch (error) {
+          console.warn('Error deactivating WebSocket client:', error);
+        }
+        stompClientRef.current = null;
+      }
+    };
+  }, [user?.id, chatPartner, connectWebSocket, cleanupTimeouts]);
+
   // ✅ REAL-TIME: Handle chat list updates from WebSocket
   const handleChatListUpdate = useCallback(
     (message) => {
@@ -685,13 +690,17 @@ export const useChat = (user, chatPartner) => {
         }
         
         try {
-          // Check if message exists in backend
-          const messages = await chatQueryApi.getMessages(user?.id, chatPartner);
-          const confirmedMessage = messages.find(msg => 
-            msg.id === messageId || msg.clientTempId === messageId
-          );
+          // Check if message exists in backend using the efficient status check
+          const response = await chatQueryApi.checkMessageStatus(messageId);
           
-          if (confirmedMessage) {
+          if (response?.exists && response?.serverConfirmed) {
+            // Message confirmed by backend - create a minimal response object
+            const confirmedMessage = {
+              id: messageId,
+              serverConfirmed: true,
+              timestamp: response.timestamp,
+              status: response.status
+            };
             resolve(confirmedMessage);
           } else {
             // Check again in 1 second
@@ -710,8 +719,8 @@ export const useChat = (user, chatPartner) => {
   // ✅ OPTIMIZED: Debounced confirmation check with cleanup
   const checkConfirmation = useCallback(async (messageId) => {
     try {
-      const response = await chatQueryApi.getMessageById(messageId);
-      if (response?.data) {
+      const response = await chatQueryApi.checkMessageStatus(messageId);
+      if (response?.exists && response?.serverConfirmed) {
         // Message confirmed by backend
         setChatMessages(prev => 
           prev.map(msg => 
