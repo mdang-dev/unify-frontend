@@ -11,13 +11,17 @@ import { Input } from '@/src/components/ui/input';
 import { useMutation } from '@tanstack/react-query';
 import { setTokenCookie } from '@/src/utils/cookies.util';
 import { useAuthStore } from '@/src/stores/auth.store';
-import { redirect } from 'next/navigation';
+import { redirect, useRouter, useSearchParams } from 'next/navigation';
 import { authCommandApi } from '@/src/apis/auth/command/auth.command.api';
 import { useEffect } from 'react';
 import { useUser } from '@heroui/react';
 
 export default function LoginPage() {
   const t = useTranslations('Auth.Login');
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirect') || '/';
+  
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -69,7 +73,7 @@ export default function LoginPage() {
         setTokenCookie(token);
         const { scope } = JSON.parse(atob(token.split('.')[1]));
         if (scope === 'ROLE_ADMIN') redirect('/manage/users/list');
-        redirect('/');
+        router.push(redirectTo);
       },
       onError: (err) => {
         console.error('❌ Login error:', err);
