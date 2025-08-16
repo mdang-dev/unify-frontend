@@ -116,7 +116,7 @@ const SharedPostPage = () => {
   // Show login prompt for unauthenticated users
   if (!hasToken) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-neutral-900">
+      <div className="min-h-screen mx-auto flex items-center justify-center bg-gray-50 dark:bg-neutral-900">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -158,7 +158,7 @@ const SharedPostPage = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-neutral-900">
+      <div className="min-h-screen mx-auto flex items-center justify-center bg-gray-50 dark:bg-neutral-900">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -175,7 +175,7 @@ const SharedPostPage = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-neutral-900">
+      <div className="min-h-screen mx-auto flex items-center justify-center bg-gray-50 dark:bg-neutral-900">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -206,7 +206,7 @@ const SharedPostPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-neutral-900">
+    <div className="min-h-screen mx-auto bg-gray-50 dark:bg-neutral-900">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
