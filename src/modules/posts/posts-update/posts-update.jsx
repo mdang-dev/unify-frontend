@@ -9,7 +9,7 @@ import PostSwitch from '../_components/post-switch';
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/src/lib/utils';
 import { toast } from 'sonner';
-import { redirect, useParams } from 'next/navigation';
+import { redirect, useParams, useRouter } from 'next/navigation';
 import { Spinner } from '@heroui/react';
 import {
   Select as ShSelect,
@@ -31,6 +31,7 @@ import { postsQueryApi } from '@/src/apis/posts/query/posts.query.api';
 
 const PostsUpdate = () => {
   const { openModal } = useModalStore();
+  const router = useRouter();
   const fileInputRef = useRef(null);
   const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
@@ -262,6 +263,11 @@ const PostsUpdate = () => {
         description: 'Your post was updated successfully.',
         duration: 3000,
       });
+
+      // Redirect to user's profile page after successful update
+      if (user?.username) {
+        router.push(`/profile/${user.username}`);
+      }
     } catch (error) {
       toast.error('Encountered an error', {
         description: 'Error: ' + (error?.message || error),
