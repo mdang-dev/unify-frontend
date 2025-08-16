@@ -10,12 +10,9 @@ import unify_icon_lightmode from '@/public/images/unify_icon_lightmode.svg';
 import { Input } from '@/src/components/ui/input';
 import { useMutation } from '@tanstack/react-query';
 import { setTokenCookie } from '@/src/utils/cookies.util';
-import { useAuthStore } from '@/src/stores/auth.store';
 import { redirect, useRouter, useSearchParams } from 'next/navigation';
 import { authCommandApi } from '@/src/apis/auth/command/auth.command.api';
 import { useEffect } from 'react';
-import { useUser } from '@heroui/react';
-import { Turnstile } from '@marsidev/react-turnstile';
 
 export default function LoginPage() {
   const t = useTranslations('Auth.Login');
@@ -230,9 +227,6 @@ export default function LoginPage() {
                 Forgot your password?
               </Link>
             </div>
-          </div>
-          <div className="flex items-center justify-center">
-            <Turnstile siteKey="0x4AAAAAABsTZMIhxNzGU9zy" className="m-auto" />
           </div>
           <div>
             <button
