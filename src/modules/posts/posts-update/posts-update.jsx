@@ -22,7 +22,7 @@ import { Textarea as ShTextarea } from '@/src/components/ui/textarea';
 import MediaPreview from '../_components/media-preview';
 import User from './_components/user';
 import { useAuthStore } from '@/src/stores/auth.store';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { postsCommandApi } from '@/src/apis/posts/command/posts.command.api';
 import { hashtagCommandApi } from '@/src/apis/hashtag/command/hashtag.command.api';
 import { mediaCommandApi } from '@/src/apis/media/command/media.command.api';
@@ -46,6 +46,7 @@ const PostsUpdate = () => {
   const { user } = useAuthStore();
   const [prompt, setPrompt] = useState('');
   const [promptLoading, setPromptLoading] = useState(false);
+  const queryClient = useQueryClient();
 
   const updatePostMutation = useMutation({
     mutationFn: postsCommandApi.updatePost,
@@ -259,6 +260,7 @@ const PostsUpdate = () => {
       const updatedPost = await updatePostMutation.mutateAsync(newPost);
       if (!updatedPost) return;
 
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.POSTS_BY_USER, post?.user?.id] });
       toast.success('Post updated', {
         description: 'Your post was updated successfully.',
         duration: 3000,

@@ -1,4 +1,4 @@
-import cloudinary from '@/src/configs/cloudinary.config';
+import { uploadFile } from '@/src/utils/upload-media.util';
 import { NextResponse } from 'next/server';
 
 // CORS headers for React Native compatibility
@@ -30,11 +30,12 @@ export async function GET(req) {
   try {
     const response = NextResponse.json({
       status: 'ok',
-      message: 'Upload API is ready',
+      message: 'Upload API is ready (Supabase)',
       timestamp: new Date().toISOString(),
       endpoint: '/api/upload',
       methods: ['GET', 'POST', 'OPTIONS'],
-      cors: 'enabled'
+      cors: 'enabled',
+      storage: 'supabase'
     });
 
     return addCorsHeaders(response);
@@ -53,9 +54,9 @@ export async function GET(req) {
   }
 }
 
-// Enhanced POST method with better error handling and logging
+// Enhanced POST method with Supabase Storage
 export async function POST(req) {
-  console.log('📋 POST request received for file upload');
+  console.log('📋 POST request received for file upload (Supabase)');
 
   try {
     // Log request details for debugging
@@ -90,10 +91,18 @@ export async function POST(req) {
         continue;
       }
 
-      // File size limit (10MB)
-      const maxSize = 10 * 1024 * 1024; // 10MB
+      // File size limit (50MB for Supabase)
+      const maxSize = 50 * 1024 * 1024; // 50MB
       if (file.size > maxSize) {
         errors.push(`File ${i + 1} (${file.name}): File too large (${file.size} bytes, max: ${maxSize})`);
+        continue;
+      }
+
+      // File type validation (optional)
+      const allowedTypes = ['image/', 'video/', 'audio/'];
+      const isValidType = allowedTypes.some(type => file.type.startsWith(type));
+      if (!isValidType) {
+        errors.push(`File ${i + 1} (${file.name}): Unsupported file type (${file.type})`);
         continue;
       }
 
@@ -112,41 +121,18 @@ export async function POST(req) {
 
     console.log(`📋 Processing ${validFiles.length} valid files`);
 
+    // Upload files to Supabase Storage
     const uploadPromises = validFiles.map(async (file, index) => {
       try {
         console.log(`📋 Starting upload for file ${index + 1}: ${file.name}`);
 
-        const arrayBuffer = await file.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
+        const result = await uploadFile(file, 'uploads');
 
-        return new Promise((resolve, reject) => {
-          const uploadStream = cloudinary.uploader.upload_stream(
-            {
-              resource_type: 'auto',
-              folder: 'uploads',
-              // Add timeout and other options for better reliability
-              timeout: 60000, // 60 seconds
-            },
-            (error, result) => {
-              if (error) {
-                console.error(`❌ Cloudinary error for file ${file.name}:`, error);
-                reject(new Error(`Upload failed for ${file.name}: ${error.message}`));
-              } else {
-                console.log(`✅ Successfully uploaded file ${file.name} to ${result.secure_url}`);
-                resolve({
-                  url: result.secure_url,
-                  file_type: result.format,
-                  size: result.bytes,
-                  media_type: result.resource_type.toUpperCase(),
-                  original_name: file.name,
-                  public_id: result.public_id,
-                });
-              }
-            }
-          );
+        if (result.error) {
+          throw new Error(result.error);
+        }
 
-          uploadStream.end(buffer);
-        });
+        return result.data;
       } catch (error) {
         console.error(`❌ Error processing file ${file.name}:`, error);
         throw new Error(`Failed to process ${file.name}: ${error.message}`);
@@ -204,6 +190,7 @@ export async function POST(req) {
       error: 'Upload failed',
       message: error.message,
       timestamp: new Date().toISOString(),
+      storage: 'supabase',
       ...(process.env.NODE_ENV === 'development' && {
         stack: error.stack,
         details: error.toString(),
