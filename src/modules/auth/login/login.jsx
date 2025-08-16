@@ -15,13 +15,14 @@ import { redirect, useRouter, useSearchParams } from 'next/navigation';
 import { authCommandApi } from '@/src/apis/auth/command/auth.command.api';
 import { useEffect } from 'react';
 import { useUser } from '@heroui/react';
+import { Turnstile } from '@marsidev/react-turnstile';
 
 export default function LoginPage() {
   const t = useTranslations('Auth.Login');
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirect') || '/';
-  
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -222,12 +223,17 @@ export default function LoginPage() {
             </div>
 
             <div className="text-sm">
-              <Link href="/password/reset" className="font-medium text-black hover:underline dark:text-white">
+              <Link
+                href="/password/reset"
+                className="font-medium text-black hover:underline dark:text-white"
+              >
                 Forgot your password?
               </Link>
             </div>
           </div>
-
+          <div className="flex items-center justify-center">
+            <Turnstile siteKey="0x4AAAAAABsTZMIhxNzGU9zy" className="m-auto" />
+          </div>
           <div>
             <button
               type="submit"
