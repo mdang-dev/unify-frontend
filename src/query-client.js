@@ -1,9 +1,10 @@
 'use client';
-
 import { isServer, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import UserHydrator from './modules/user-hydrator';
 import { ToastProvider } from '@heroui/toast';
-import { ThemeProvider } from 'next-themes';
+import { ThemeProvider, useTheme } from 'next-themes';
+import { useState, useEffect, useRef } from 'react';
+import CaptchaScreen from './components/base/captcha-screen';
 
 function makeQueryClient() {
   return new QueryClient({
@@ -31,6 +32,16 @@ export function getQueryClient() {
 
 export default function QueryProvider({ children }) {
   const client = getQueryClient();
+  const [token, setToken] = useState(null);
+  const isProd = process.env.NODE_ENV === 'production';
+
+  if (!token && isProd) {
+    return (
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <CaptchaScreen setToken={setToken} />
+      </ThemeProvider>
+    );
+  }
 
   return (
     <QueryClientProvider client={client}>
