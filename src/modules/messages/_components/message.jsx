@@ -4,6 +4,7 @@ import { useAuthStore } from '@/src/stores/auth.store';
 import { File, FileText, FileImage, FileVideo, FileMusic } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { postsQueryApi } from '@/src/apis/posts/query/posts.query.api';
 import EnhancedMedia from './enhanced-media';
 
@@ -14,6 +15,7 @@ const POST_LINK_REGEX = /https?:\/\/localhost:3000\/posts\/([0-9a-fA-F\-]{36})/g
 const POST_SHARE_REGEX = /^POST_SHARE:([0-9a-fA-F\-]{36})$/;
 
 const Message = ({ messages, messagesEndRef, avatar, onRetryMessage }) => {
+  const t = useTranslations('Messages');
   const user = useAuthStore((s) => s.user);
   const currentUser = user?.id;
   const [openPostId, setOpenPostId] = useState(null);
@@ -32,7 +34,7 @@ const Message = ({ messages, messagesEndRef, avatar, onRetryMessage }) => {
   };
 
   const getFileName = (fileUrl) => {
-    if (!fileUrl) return 'unknown_file';
+    if (!fileUrl) return t('UnknownFile');
     const fullName = fileUrl.split('/').pop();
     return fullName.replace(/^[0-9a-fA-F-]+-/, '');
   };

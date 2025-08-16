@@ -9,7 +9,7 @@ import PostSwitch from '../_components/post-switch';
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/src/lib/utils';
 import { toast } from 'sonner';
-import { redirect, useParams } from 'next/navigation';
+import { redirect, useParams, useRouter } from 'next/navigation';
 import { Spinner } from '@heroui/react';
 import {
   Select as ShSelect,
@@ -31,6 +31,7 @@ import { postsQueryApi } from '@/src/apis/posts/query/posts.query.api';
 
 const PostsUpdate = () => {
   const { openModal } = useModalStore();
+  const router = useRouter();
   const fileInputRef = useRef(null);
   const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
@@ -154,7 +155,7 @@ const PostsUpdate = () => {
     const validFiles = selectedFiles.filter((file) => allowedTypes.includes(file.type));
 
     if (validFiles.length === 0) {
-      alert('Only images (png, jpeg, jpg, gif) and videos (mp4, webm) are allowed.');
+      toast.error('Only images (png, jpeg, jpg, gif) and videos (mp4, webm) are allowed.');
       return;
     }
 
@@ -262,6 +263,11 @@ const PostsUpdate = () => {
         description: 'Your post was updated successfully.',
         duration: 3000,
       });
+
+      // Redirect to user's profile page after successful update
+      if (user?.username) {
+        router.push(`/profile/${user.username}`);
+      }
     } catch (error) {
       toast.error('Encountered an error', {
         description: 'Error: ' + (error?.message || error),
@@ -398,7 +404,7 @@ const PostsUpdate = () => {
     if (!prompt.trim()) return;
     setPromptLoading(true);
     try {
-      const response = await fetch(`https://unify-mobile.app.n8n.cloud/webhook/generate-post`, {
+      const response = await fetch(`https://n8nunify.id.vn/webhook/generate-post`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: prompt.trim() }),
@@ -424,17 +430,17 @@ const PostsUpdate = () => {
             try {
               await addMultipleImagesFromUrls(responseData.imageUrls, 'ai-generated-image');
             } catch (error) {
-              addToast({ title: 'Images failed', description: 'AI suggested images but failed to add them to your post.', timeout: 3000, color: 'warning' });
+              toast.warning('Images failed', { description: 'AI suggested images but failed to add them to your post.', duration: 3000 });
             }
           } else if (responseData.imageUrl) {
             try {
               await addImageFromUrl(responseData.imageUrl, 'ai-generated-image.jpg');
             } catch (error) {
-              addToast({ title: 'Image failed', description: 'AI suggested an image but failed to add it to your post.', timeout: 3000, color: 'warning' });
+              toast.warning('Image failed', { description: 'AI suggested an image but failed to add it to your post.', duration: 3000 });
             }
           }
         } else {
-          addToast({ title: 'Invalid response format', description: 'Received unexpected response format from AI service.', timeout: 3000, color: 'warning' });
+          toast.warning('Invalid response format', { description: 'Received unexpected response format from AI service.', duration: 3000 });
         }
       } else {
         let responseData = data;
@@ -449,18 +455,18 @@ const PostsUpdate = () => {
           try {
             await addMultipleImagesFromUrls(responseData.imageUrls, 'ai-generated-image');
           } catch (error) {
-            addToast({ title: 'Images failed', description: 'AI suggested images but failed to add them to your post.', timeout: 3000, color: 'warning' });
+            toast.warning('Images failed', { description: 'AI suggested images but failed to add them to your post.', duration: 3000 });
           }
         } else if (responseData?.imageUrl) {
           try {
             await addImageFromUrl(responseData.imageUrl, 'ai-generated-image.jpg');
           } catch (error) {
-            addToast({ title: 'Image failed', description: 'AI suggested an image but failed to add it to your post.', timeout: 3000, color: 'warning' });
+            toast.warning('Image failed', { description: 'AI suggested an image but failed to add it to your post.', duration: 3000 });
           }
         }
       }
     } catch (error) {
-      addToast({ title: 'Prompt failed', description: error.message || 'Failed to send prompt. Please try again.', timeout: 3000, color: 'danger' });
+      toast.error('Prompt failed', { description: error.message || 'Failed to send prompt. Please try again.', duration: 3000 });
     } finally {
       setPromptLoading(false);
     }

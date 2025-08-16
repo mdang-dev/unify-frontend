@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import ProfileTabs from '../_components/profile-tab';
 import { addToast, ToastProvider } from '@heroui/toast';
 import { useFollow } from '@/src/hooks/use-follow';
@@ -17,6 +18,7 @@ import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
 import { userQueryApi } from '@/src/apis/user/query/user.query.api';
 import NavButton from '../_components/nav-button';
 const OthersProfile = () => {
+  const t = useTranslations('OthersProfile');
   const [activeTab, setActiveTab] = useState('post');
   const [userReels, setUserReels] = useState([]);
   const [openList, setOpenList] = useState(false);
@@ -51,8 +53,8 @@ const OthersProfile = () => {
         {
           onSuccess: () => {
             addToast({
-              title: 'Success',
-              description: 'Report user successful.',
+              title: t('ReportUser.Success'),
+              description: t('ReportUser.ReportUserSuccessful'),
               timeout: 3000,
 
               color: 'success',
@@ -84,7 +86,7 @@ const OthersProfile = () => {
             }
 
             addToast({
-              title: 'Fail to report post',
+              title: t('ReportUser.FailToReportUser'),
               description: errorMessage,
               timeout: 3000,
               color: errorColor,
@@ -98,7 +100,7 @@ const OthersProfile = () => {
     [createUserReport]
   );
 
-  if (loading) return <p className="text-center text-gray-500">Loading...</p>;
+  if (loading) return <p className="text-center text-gray-500">{t('Loading')}</p>;
 
   return (
     <>
@@ -146,15 +148,15 @@ const OthersProfile = () => {
                 <span className="font-bold text-neutral-800 dark:text-white">
                   {userInfo.posts || 0}
                 </span>{' '}
-                <span className="font-bold text-gray-500 dark:text-gray-300">posts</span>
+                <span className="font-bold text-gray-500 dark:text-gray-300">{t('Posts')}</span>
               </div>
               <div className="text-center">
                 <span className="font-bold text-neutral-800 dark:text-white">{followersCount}</span>{' '}
-                <span className="font-bold text-gray-500 dark:text-gray-300">followers</span>
+                <span className="font-bold text-gray-500 dark:text-gray-300">{t('Followers')}</span>
               </div>
               <div className="text-center">
                 <span className="font-bold text-neutral-800 dark:text-white">{followingCount}</span>{' '}
-                <span className="font-bold text-gray-500 dark:text-gray-300">following</span>
+                <span className="font-bold text-gray-500 dark:text-gray-300">{t('Following')}</span>
               </div>
             </div>
 
@@ -169,8 +171,8 @@ const OthersProfile = () => {
                 followingId={userInfo?.id}
                 classFollow="bg-red-500 font-bold py-2 px-8 rounded-lg w-full text-white text-md"
                 classFollowing="bg-gray-700 hover:bg-gray-600 font-bold py-2 px-8 rounded-lg w-full text-white text-md"
-                contentFollow="Follow"
-                contentFollowing="Unfollow"
+                contentFollow={t('Follow')}
+                contentFollowing={t('Unfollow')}
               />
               <Link
                 href={{
@@ -185,7 +187,7 @@ const OthersProfile = () => {
                 className="flex w-full items-center justify-center rounded-lg bg-gray-200 px-4 py-2 font-bold transition-colors hover:bg-zinc-400 dark:bg-neutral-700 dark:hover:bg-gray-600"
               >
                 <i className="fa-brands fa-facebook-messenger mr-2"></i>
-                <span>Message</span>
+                <span>{t('Message')}</span>
               </Link>
             </div>
           </div>
@@ -230,16 +232,16 @@ const OthersProfile = () => {
                 // onClick={() => handleReportUser(userInfo.id)}
                 onClick={openReportModal}
               >
-                Report
+                {t('Report')}
               </button>
               <button className="w-full py-3.5 text-sm font-semibold text-neutral-800 transition-all duration-200 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-neutral-800">
-                Share
+                {t('Share')}
               </button>
               <button
                 onClick={() => setOpenList(false)}
                 className="w-full rounded-b-xl py-3.5 text-sm font-semibold text-gray-500 transition-all duration-200 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-neutral-700"
               >
-                Close
+                {t('Close')}
               </button>
             </div>
           </div>

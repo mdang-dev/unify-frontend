@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { X, Upload } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 
 // File type configurations with custom icons from @/Pic
 const FILE_TYPE_CONFIG = {
@@ -207,6 +208,7 @@ const FileUploadProgress = ({
   showFileInfo = true,
   className = ''
 }) => {
+  const t = useTranslations('Messages');
   const [uploadProgress, setUploadProgress] = useState({});
 
   // Memoized file type info - optimized for performance
@@ -252,15 +254,15 @@ const FileUploadProgress = ({
     });
   }, [files]);
 
-  // Early return if no files
-  if (!files || files.length === 0) {
-    return null;
-  }
-
   // Calculate total size - memoized for performance
   const totalSize = useMemo(() => {
     return files.reduce((total, fileObj) => total + fileObj.file.size, 0);
   }, [files]);
+
+  // Early return if no files
+  if (!files || files.length === 0) {
+    return null;
+  }
 
   return (
     <div className={cn('space-y-3', className)}>
@@ -279,7 +281,7 @@ const FileUploadProgress = ({
             onClick={onClearAll}
             className="px-3 py-1.5 text-sm text-red-400 hover:text-red-300 transition-colors border border-red-500 rounded-lg hover:bg-red-500/10"
           >
-            Clear All
+            {t('ClearAll')}
           </button>
         )}
       </div>
@@ -302,7 +304,7 @@ const FileUploadProgress = ({
                 <button
                   onClick={() => handleRemove(index)}
                   className="absolute top-2 right-2 z-10 p-1 text-neutral-400 hover:text-red-400 transition-colors bg-neutral-600 dark:bg-neutral-600 rounded-full shadow-sm hover:bg-neutral-500 opacity-0 group-hover:opacity-100"
-                  title="Remove file"
+                  title={t('RemoveFile')}
                 >
                   <X className="w-4 h-4" />
                 </button>

@@ -13,6 +13,10 @@ const publicRoutes = new Set([
   '/landing',
   '/password/reset/otp-verification',
   '/password/reset/confirm',
+]);
+
+// Routes that can be accessed by both authenticated and unauthenticated users
+const sharedRoutes = new Set([
   '/shared', // Allow shared post links to be accessed without authentication
 ]);
 
@@ -27,10 +31,11 @@ export default async function middleware(req) {
   const token = (await cookies()).get(COOKIE_KEYS.AUTH_TOKEN)?.value;
 
   const isPublic = [...publicRoutes].some((route) => pathname.startsWith(route));
+  const isShared = [...sharedRoutes].some((route) => pathname.startsWith(route));
   const isProtected = [...protectedRoutes].some((route) => pathname.startsWith(route));
 
   // If not authenticated and accessing a protected route, redirect to login
-  if (!isPublic && !token) {
+  if (!isPublic && !isShared && !token) {
     return NextResponse.redirect(new URL('/login', req.nextUrl));
   }
 
@@ -52,7 +57,7 @@ export default async function middleware(req) {
     }
 
     // If the user is an admin (roleId === 1) and accesses non-admin route, redirect to admin dashboard
-    if (roleId === 1 && !isProtected) {
+    if (roleId === 1 && !isProtected && !isShared) {
       const redirectUrl = req.nextUrl.clone();
       redirectUrl.pathname = '/manage/users/list';
       return NextResponse.redirect(redirectUrl);

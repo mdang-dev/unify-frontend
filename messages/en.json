@@ -226,12 +226,16 @@
         "FileTooLarge": "File too large",
         "FileExceedsSize": "{filename} exceeds {size}MB.",
         "ErrorProcessingFiles": "Failed to process some files. Please try again.",
-        "ErrorSendingMessage": "Bạn cần chọn người nhận trước khi gửi tin nhắn!",
+        "ErrorSendingMessage": "You need to select a recipient before sending a message!",
         "ChatSystemNotReady": "Chat system not ready. Please try again.",
-        "ErrorCalling": "Error when calling !",
+        "ErrorCalling": "Error when calling!",
         "NoPreviewAvailable": "No preview available for this file.",
         "LastMessage": "Last message",
-        "LastUpdated": "Last updated"
+        "LastUpdated": "Last updated",
+        "Error": "Error",
+        "ClearAll": "Clear All",
+        "RemoveFile": "Remove file",
+        "UnknownFile": "Unknown file"
     },
     "Streams": {
         "Title": "Live Streams",
@@ -245,6 +249,27 @@
         "Followers": "Followers",
         "Following": "Following",
         "Posts": "Posts"
+    },
+    "OthersProfile": {
+        "Loading": "Loading...",
+        "Posts": "posts",
+        "Followers": "followers",
+        "Following": "following",
+        "Follow": "Follow",
+        "Unfollow": "Unfollow",
+        "Message": "Message",
+        "Report": "Report",
+        "Share": "Share",
+        "Close": "Close",
+        "ReportUser": {
+            "Success": "Success",
+            "ReportUserSuccessful": "Report user successful.",
+            "FailToReportUser": "Fail to report user",
+            "CannotReportOwnContent": "You cannot report your own content.",
+            "AlreadyReportedContent": "You have already reported this content.",
+            "FailedToConnectServer": "Failed to connect to the server.",
+            "UnknownError": "Unknown error"
+        }
     },
     "Posts": {
         "Title": "Create Post",

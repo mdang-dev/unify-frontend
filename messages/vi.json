@@ -228,10 +228,14 @@
         "ErrorProcessingFiles": "Không thể xử lý một số tệp. Vui lòng thử lại.",
         "ErrorSendingMessage": "Bạn cần chọn người nhận trước khi gửi tin nhắn!",
         "ChatSystemNotReady": "Hệ thống chat chưa sẵn sàng. Vui lòng thử lại.",
-        "ErrorCalling": "Lỗi khi gọi điện !",
+        "ErrorCalling": "Lỗi khi gọi điện!",
         "NoPreviewAvailable": "Không có xem trước cho tệp này.",
         "LastMessage": "Tin nhắn cuối",
-        "LastUpdated": "Cập nhật lần cuối"
+        "LastUpdated": "Cập nhật lần cuối",
+        "Error": "Lỗi",
+        "ClearAll": "Xóa tất cả",
+        "RemoveFile": "Xóa tệp",
+        "UnknownFile": "Tệp không xác định"
     },
     "Streams": {
         "Title": "Phát trực tiếp",
@@ -245,6 +249,27 @@
         "Followers": "Người theo dõi",
         "Following": "Đang theo dõi",
         "Posts": "Bài viết"
+    },
+    "OthersProfile": {
+        "Loading": "Đang tải...",
+        "Posts": "bài viết",
+        "Followers": "người theo dõi",
+        "Following": "đang theo dõi",
+        "Follow": "Theo dõi",
+        "Unfollow": "Bỏ theo dõi",
+        "Message": "Tin nhắn",
+        "Report": "Báo cáo",
+        "Share": "Chia sẻ",
+        "Close": "Đóng",
+        "ReportUser": {
+            "Success": "Thành công",
+            "ReportUserSuccessful": "Báo cáo người dùng thành công.",
+            "FailToReportUser": "Không thể báo cáo người dùng",
+            "CannotReportOwnContent": "Bạn không thể báo cáo nội dung của chính mình.",
+            "AlreadyReportedContent": "Bạn đã báo cáo nội dung này trước đó.",
+            "FailedToConnectServer": "Không thể kết nối đến máy chủ.",
+            "UnknownError": "Lỗi không xác định"
+        }
     },
     "Posts": {
         "Title": "Tạo bài viết",
