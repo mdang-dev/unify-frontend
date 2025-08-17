@@ -14,6 +14,7 @@ import { useTranslations } from 'next-intl';
 import { authCommandApi } from '@/src/apis/auth/command/auth.command.api';
 import { ParticleEffect } from '@/src/components/base/captcha-screen';
 import { useTheme } from 'next-themes';
+import { Eye, EyeOff } from 'lucide-react';
 
 const RegisterPage = () => {
   const t = useTranslations('Auth.Register');
@@ -55,6 +56,9 @@ const RegisterPage = () => {
     year: '',
   });
 
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const registerMutation = useMutation({
     mutationFn: authCommandApi.register,
   });
@@ -62,52 +66,78 @@ const RegisterPage = () => {
   const validateForm = () => {
     let newErrors = {};
 
-    if (!formData.firstName.trim()) newErrors.firstName = t('Validation.FirstNameRequired');
-    else if (!/^[A-Za-z]+$/.test(formData.firstName))
-      newErrors.firstName = t('Validation.FirstNameLettersOnly');
+    // First name validation
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = "First name is required";
+    }
 
-    if (!formData.lastName.trim()) newErrors.lastName = t('Validation.LastNameRequired');
-    else if (!/^[A-Za-z]+$/.test(formData.lastName))
-      newErrors.lastName = t('Validation.LastNameLettersOnly');
+    // Last name validation
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = "Last name is required";
+    }
 
-    if (!formData.username.trim()) newErrors.username = t('Validation.UsernameRequired');
-    else if (!/^[A-Za-z0-9]+$/.test(formData.username))
-      newErrors.username = t('Validation.UsernameNoSpecialChars');
-    else if (formData.username.length > 30) newErrors.username = t('Validation.UsernameMaxLength');
+    // Username validation - matches backend pattern: ^[a-zA-Z0-9_]{3,20}$
+    if (!formData.username.trim()) {
+      newErrors.username = "Username is required";
+    } else if (!/^[a-zA-Z0-9_]{3,20}$/.test(formData.username)) {
+      newErrors.username = "Username must be 3-20 characters long and contain only letters, numbers, and underscores";
+    }
 
-    if (!formData.email.trim()) newErrors.email = t('Validation.EmailRequired');
-    else if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(formData.email))
-      newErrors.email = t('Validation.EmailInvalid');
+    // Email validation
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Invalid email format";
+    }
 
-    if (!formData.password.trim()) newErrors.password = t('Validation.PasswordRequired');
-    else if (formData.password.length < 8) newErrors.password = t('Validation.PasswordMinLength');
+    // Password validation - matches backend pattern: ^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$
+    if (!formData.password.trim()) {
+      newErrors.password = "Password is required";
+    } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$/.test(formData.password)) {
+      newErrors.password = "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one number";
+    }
 
-    if (!formData.confirmPassword.trim())
-      newErrors.confirmPassword = t('Validation.ConfirmPasswordRequired');
-    else if (formData.confirmPassword !== formData.password)
-      newErrors.confirmPassword = t('Validation.PasswordsDoNotMatch');
+    // Confirm password validation
+    if (!formData.confirmPassword.trim()) {
+      newErrors.confirmPassword = "Please confirm your password";
+    } else if (formData.confirmPassword !== formData.password) {
+      newErrors.confirmPassword = "Passwords do not match";
+    }
 
+    // Birthday validation
     if (!date.day || !date.month || !date.year) {
-      newErrors.birthDay = t('Validation.BirthDayRequired');
+      newErrors.birthDay = "Birthday is required";
+    } else {
+      const today = new Date();
+      const birthDate = new Date(
+        `${date.year}-${months.indexOf(date.month) + 1}-${date.day}`
+      );
+      
+      // Check if birthday is in the past
+      if (birthDate >= today) {
+        newErrors.birthDay = "Birthday must be in the past";
+      } else {
+        // Age validation (must be at least 13)
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (
+          monthDiff < 0 ||
+          (monthDiff === 0 && today.getDate() < birthDate.getDate())
+        ) {
+          age--;
+        }
+        if (age < 13) {
+          newErrors.birthDay = "You must be at least 13 years old";
+        }
+      }
     }
 
-    const today = new Date();
-    const birthDate = new Date(`${date.year}-${months.indexOf(date.month) + 1}-${date.day}`);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    if (age < 13) {
-      newErrors.birthDay = t('Validation.AgeRequirement');
-    }
-
+    // Terms agreement validation
     if (!formData.agreeToTerms) {
-      newErrors.agreeToTerms = t('Validation.TermsRequired');
+      newErrors.agreeToTerms = "You must agree to the terms of service";
     }
 
     setErrors(newErrors);
-
     return Object.keys(newErrors).length === 0;
   };
 
@@ -134,19 +164,37 @@ const RegisterPage = () => {
     )}-${String(date.day).padStart(2, '0')}`;
 
     const requestData = {
-      ...formData,
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      username: formData.username,
+      email: formData.email,
+      password: formData.password,
+      gender: formData.gender === "true", // Convert string to boolean
       birthDay: fullDate,
     };
 
-    registerMutation.mutate(requestData, {
-      onSuccess: () => {
-        setTimeout(() => {
-          router.push('/login');
-        }, 1500);
-      },
+         registerMutation.mutate(requestData, {
+       onSuccess: () => {
+         setTimeout(() => {
+           router.push("/login");
+         }, 1500);
+       },
       onError: (err) => {
-        console.error('❌ Register error:', err?.message);
-        setServerError(err?.message || 'Something went wrong. Please try again.');
+        console.error('❌ Register error:', err);
+        // Handle specific backend error messages
+        if (err?.response?.data) {
+          // Backend validation errors come as array of field errors
+          if (Array.isArray(err.response.data)) {
+            const errorMessages = err.response.data.map(error => error.message || error).join(', ');
+            setServerError(errorMessages);
+          } else {
+            setServerError(err.response.data);
+          }
+        } else if (err?.message) {
+          setServerError(err.message);
+        } else {
+          setServerError("Something went wrong. Please try again.");
+        }
       },
     });
   };
@@ -157,9 +205,9 @@ const RegisterPage = () => {
         <ParticleEffect theme={theme} />
         <form onSubmit={handleSubmit}>
           <div className={`grid gap-5`}>
-            <div align="center">
-              <FullUnifyLogoIcon className="mr-7" />
-            </div>
+                         <div align="center">
+               <FullUnifyLogoIcon className="mr-7" />
+             </div>
             <div className="flex gap-2">
               <div className="basis-1/2">
                 <Input
@@ -202,32 +250,52 @@ const RegisterPage = () => {
               />
               {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
             </div>
-            <div className="basis-1/2">
-              <Input
-                name="password"
-                placeholder={t('Password')}
-                className="h-12 dark:bg-neutral-900"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-              />
-              {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
-            </div>
+                         <div className="basis-1/2">
+               <div className="relative">
+                 <Input
+                   name="password"
+                   placeholder={t('Password')}
+                   className="h-12 pr-10"
+                   type={showPassword ? "text" : "password"}
+                   value={formData.password}
+                   onChange={handleChange}
+                 />
+                 <button
+                   type="button"
+                   onClick={() => setShowPassword(!showPassword)}
+                   className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-400 hover:text-neutral-500 dark:hover:text-neutral-300"
+                 >
+                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                 </button>
+               </div>
+               {errors.password && (
+                 <p className="text-red-500 text-sm">{errors.password}</p>
+               )}
+             </div>
 
-            <div className="basis-1/2">
-              <Input
-                name="confirmPassword"
-                placeholder={t('ConfirmPassword')}
-                className="h-12 dark:bg-neutral-900"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-              />
+                         <div className="basis-1/2">
+               <div className="relative">
+                 <Input
+                   name="confirmPassword"
+                   placeholder={t('ConfirmPassword')}
+                   className="h-12 pr-10"
+                   type={showConfirmPassword ? "text" : "password"}
+                   value={formData.confirmPassword}
+                   onChange={handleChange}
+                 />
+                 <button
+                   type="button"
+                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                   className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-400 hover:text-neutral-500 dark:hover:text-neutral-300"
+                 >
+                   {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                 </button>
+               </div>
 
-              {errors.confirmPassword && (
-                <p className="text-sm text-red-500">{errors.confirmPassword}</p>
-              )}
-            </div>
+               {errors.confirmPassword && (
+                 <p className="text-red-500 text-sm">{errors.confirmPassword}</p>
+               )}
+             </div>
 
             <div className="flex gap-2">
               <RadioGroup
