@@ -78,7 +78,7 @@ const CommentItemComponent = ({
         if (parsed?.message) errorMessage = parsed.message;
       } catch {}
       const isDuplicate = errorMessage === 'You have reported this content before.';
-      
+
       if (isDuplicate) {
         toast.warning(t('YouHaveReportedBefore'));
       } else {
@@ -132,7 +132,7 @@ const CommentItemComponent = ({
     <>
       <Card
         key={comment.id}
-        className="mb-2 overflow-visible border-none bg-transparent p-0 shadow-none rounded-none"
+        className="mb-2 overflow-visible rounded-none border-none bg-transparent p-0 shadow-none"
         data-comment-id={comment.id}
       >
         <div className="flex items-start gap-3">
@@ -178,7 +178,8 @@ const CommentItemComponent = ({
                 onPress={() => onReplyClick(comment)}
                 aria-label="Reply to comment"
               >
-                <i className="fa-solid fa-reply mr-1"></i>{t('Reply')}
+                <i className="fa-solid fa-reply mr-1"></i>
+                {t('Reply')}
               </Button>
               {comment.replies && comment.replies.length > 0 && (
                 <Button
@@ -244,7 +245,7 @@ const CommentItemComponent = ({
           </div>
         </div>
         {isShown && allReplies.length > 0 && (
-          <div className="mt-2 flex w-full flex-col items-end border-l-2 border-gray-200 bg-gray-50/60 pl-8 dark:border-neutral-700 dark:bg-neutral-800/40">
+          <div className="mt-2 flex w-full flex-col items-end   pl-8">
             {allReplies.map((reply) => (
               <Reply
                 key={reply.id}

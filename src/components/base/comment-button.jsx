@@ -102,11 +102,12 @@ export default function CommentButton({ children, className = '', postId }) {
         isKeyboardDismissDisabled
         isOpen={isOpen}
         onOpenChange={onOpenChange}
+        className="!h-[600px]"
       >
         <ModalContent>
           {(onClose) => (
             <>
-              <ModalHeader className="flex flex-col gap-1">Comments</ModalHeader>
+              <ModalHeader className="flex flex-col gap-1">Comment</ModalHeader>
               <ModalBody ref={commentsContainerRef}>
                 {isLoading ? (
                   [...Array(5)].map((_, index) => <CommentSkeleton key={index} />)

@@ -102,39 +102,50 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete, scrollToC
     if (!Array.isArray(comments) || comments.length === 0) return;
 
     if (process.env.NODE_ENV === 'development') {
-      console.log('[PostDetailModal] Scrolling to comment:', scrollToCommentId, 'Total comments:', comments.length);
-      console.log('[PostDetailModal] Comments data:', comments.map(c => ({ id: c.id, content: c.content?.substring(0, 50) })));
+      console.log(
+        '[PostDetailModal] Scrolling to comment:',
+        scrollToCommentId,
+        'Total comments:',
+        comments.length
+      );
+      console.log(
+        '[PostDetailModal] Comments data:',
+        comments.map((c) => ({ id: c.id, content: c.content?.substring(0, 50) }))
+      );
     }
 
     const timer = window.setTimeout(() => {
       const selector = `[data-comment-id="${scrollToCommentId}"]`;
       if (process.env.NODE_ENV === 'development') {
         console.log('[PostDetailModal] Looking for selector:', selector);
-        console.log('[PostDetailModal] All comment elements:', document.querySelectorAll('[data-comment-id]'));
+        console.log(
+          '[PostDetailModal] All comment elements:',
+          document.querySelectorAll('[data-comment-id]')
+        );
       }
-      
+
       const commentElement = document.querySelector(selector);
       if (commentElement) {
         if (process.env.NODE_ENV === 'development') {
           console.log('[PostDetailModal] Found comment element, scrolling...', commentElement);
         }
         commentElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        
+
         // Force highlight with multiple approaches
         commentElement.style.backgroundColor = 'rgba(107, 114, 128, 0.6)';
         commentElement.style.padding = '12px';
         commentElement.style.margin = '-12px';
         commentElement.style.transform = 'scale(1.02)';
         commentElement.style.boxShadow = '0 0 20px rgba(107, 114, 128, 0.3)';
-        
+
         // Also add CSS class
         commentElement.classList.add('flash-highlight');
-        
+
         if (process.env.NODE_ENV === 'development') {
           console.log('[PostDetailModal] Highlight classes added:', commentElement.className);
           console.log('[PostDetailModal] Inline styles applied:', commentElement.style.cssText);
         }
-        
+
         window.setTimeout(() => {
           commentElement.style.backgroundColor = '';
           commentElement.style.padding = '';
@@ -146,7 +157,12 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete, scrollToC
       } else {
         if (process.env.NODE_ENV === 'development') {
           console.warn('[PostDetailModal] Comment element not found for ID:', scrollToCommentId);
-          console.warn('[PostDetailModal] Available comment IDs:', Array.from(document.querySelectorAll('[data-comment-id]')).map(el => el.getAttribute('data-comment-id')));
+          console.warn(
+            '[PostDetailModal] Available comment IDs:',
+            Array.from(document.querySelectorAll('[data-comment-id]')).map((el) =>
+              el.getAttribute('data-comment-id')
+            )
+          );
         }
       }
     }, 500); // Increased delay
@@ -160,7 +176,10 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete, scrollToC
     if (!Array.isArray(comments) || comments.length === 0) return;
 
     if (process.env.NODE_ENV === 'development') {
-      console.log('[PostDetailModal] Post data loaded, attempting fallback scroll to comment:', scrollToCommentId);
+      console.log(
+        '[PostDetailModal] Post data loaded, attempting fallback scroll to comment:',
+        scrollToCommentId
+      );
     }
 
     // Wait a bit more for DOM to fully render
@@ -172,14 +191,14 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete, scrollToC
           console.log('[PostDetailModal] Fallback scroll successful');
         }
         commentElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        
+
         // Force highlight with inline styles
         commentElement.style.backgroundColor = 'rgba(107, 114, 128, 0.6)';
         commentElement.style.padding = '12px';
         commentElement.style.margin = '-12px';
         commentElement.style.transform = 'scale(1.02)';
         commentElement.style.boxShadow = '0 0 20px rgba(107, 114, 128, 0.3)';
-        
+
         commentElement.classList.add('flash-highlight');
         window.setTimeout(() => {
           commentElement.style.backgroundColor = '';
@@ -399,7 +418,10 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete, scrollToC
 
   if (!postData) {
     return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={handleClose}>
+      <div
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+        onClick={handleClose}
+      >
         <div
           className="flex h-[600px] w-[900px] flex-row overflow-hidden rounded-xl bg-white dark:bg-neutral-900"
           onClick={(e) => e.stopPropagation()}
@@ -412,18 +434,18 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete, scrollToC
             <PostSkeleton />
             <div className="mt-6 space-y-3">
               {[...Array(4)].map((_, idx) => (
-                <div key={idx} className="h-3 w-full rounded bg-gray-200 dark:bg-neutral-800" />)
-              )}
+                <div key={idx} className="h-3 w-full rounded bg-gray-200 dark:bg-neutral-800" />
+              ))}
             </div>
           </div>
 
           {/* Close Button */}
           <button
-            className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-2xl font-bold text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+            className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-2xl font-bold text-gray-300 transition-colors hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
             onClick={handleClose}
             aria-label="Close"
           >
-            ×
+            ✕
           </button>
         </div>
       </div>
@@ -432,13 +454,18 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete, scrollToC
 
   // Show main post detail modal
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={handleClose}>
-      <div className="flex h-[600px] w-[900px] flex-row overflow-hidden rounded-xl bg-white dark:bg-neutral-900" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      onClick={handleClose}
+    >
+      <div
+        className="flex h-[700px] w-[1150px] flex-row overflow-hidden rounded-xl bg-white dark:bg-neutral-900"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Media Section */}
-        <div className="relative w-1/2 bg-black">
+        <div className="relative h-full w-1/2 bg-black">
           <Slider srcs={postData.media || []} onImageClick={() => {}} />
         </div>
-
         {/* Content Section */}
         <div className="flex w-1/2 flex-col">
           {/* Header */}
@@ -457,7 +484,7 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete, scrollToC
                 {postData.user?.username}
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 rounded-lg border border-white/20 bg-white/100 px-3 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-gray-800/10">
               <Bookmark
                 postId={postData.id}
                 className="!text-xl transition-opacity hover:opacity-90"
@@ -467,12 +494,18 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete, scrollToC
               {isOwner ? (
                 <>
                   <Tooltip content="Delete" placement="bottom">
-                    <button onClick={handleOpenDeleteModal} className="p-2 text-red-500 hover:opacity-80">
+                    <button
+                      onClick={handleOpenDeleteModal}
+                      className="p-2 text-red-400 hover:opacity-80"
+                    >
                       <i className="fa-solid fa-trash"></i>
                     </button>
                   </Tooltip>
                   <Tooltip content="Update" placement="bottom">
-                    <button onClick={() => router.push(`/posts/${postData.id}`)} className="p-2 hover:opacity-80">
+                    <button
+                      onClick={() => router.push(`/posts/${postData.id}`)}
+                      className="p-2 hover:opacity-80"
+                    >
                       <i className="fa-solid fa-pen"></i>
                     </button>
                   </Tooltip>
@@ -492,19 +525,20 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete, scrollToC
                 </>
               ) : (
                 <Tooltip content="Report" placement="bottom">
-                  <button onClick={() => setIsReportOpen(true)} className="p-2 text-red-500 hover:opacity-80">
+                  <button
+                    onClick={() => setIsReportOpen(true)}
+                    className="p-2 text-red-400 hover:opacity-80"
+                  >
                     <i className="fa-solid fa-flag"></i>
                   </button>
                 </Tooltip>
               )}
               <Tooltip content="Share" placement="bottom">
-                <button onClick={handleShare} className="p-2 hover:opacity-80">
+                <button onClick={handleShare} className="hover:opacity-80">
                   <i className="fa-solid fa-share-nodes"></i>
                 </button>
               </Tooltip>
             </div>
-
-
           </div>
 
           {/* Comments Section */}
@@ -564,7 +598,9 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete, scrollToC
                 </div>
               ) : (
                 <div className="flex h-full items-center justify-center">
-                  <p className="font-medium text-zinc-500 dark:text-zinc-400">{t('NoCommentsYet')}</p>
+                  <p className="font-medium text-zinc-500 dark:text-zinc-400">
+                    {t('NoCommentsYet')}
+                  </p>
                 </div>
               )}
             </div>
@@ -583,10 +619,10 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete, scrollToC
 
         {/* Close Button */}
         <button
-          className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-2xl font-bold text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+          className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-2xl font-bold text-zinc-100 transition-colors hover:text-zinc-400 dark:text-zinc-300 dark:hover:text-neutral-600"
           onClick={handleClose}
         >
-          ×
+          ✕
         </button>
       </div>
     </div>

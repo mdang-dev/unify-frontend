@@ -40,7 +40,6 @@ const PostsCreate = () => {
   const [promptLoading, setPromptLoading] = useState(false);
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
-  
 
   const savePostMutation = useMutation({
     mutationFn: postsCommandApi.savedPost,
@@ -174,7 +173,7 @@ const PostsCreate = () => {
     }
   };
 
-    const handleSave = async () => {
+  const handleSave = async () => {
     setLoading(true);
 
     if (files.length === 0) {
@@ -256,7 +255,7 @@ const PostsCreate = () => {
   const removeFile = (file) => {
     // Find the index of the file in previews
     const previewIndex = previews.findIndex((item) => item.url === file.url);
-    
+
     if (previewIndex !== -1) {
       // Remove from both arrays using the same index
       setPreviews((prev) => prev.filter((_, index) => index !== previewIndex));
@@ -287,7 +286,7 @@ const PostsCreate = () => {
       }
 
       const data = await response.json();
-      
+
       // Clear previous AI-generated data before processing new data
       setCaption('');
       setAudience('PUBLIC');
@@ -301,38 +300,38 @@ const PostsCreate = () => {
         }
       });
       // Remove AI-generated images in reverse order to maintain correct indices
-      aiGeneratedIndices.reverse().forEach(index => {
-        setPreviews(prev => prev.filter((_, i) => i !== index));
-        setFiles(prev => prev.filter((_, i) => i !== index));
+      aiGeneratedIndices.reverse().forEach((index) => {
+        setPreviews((prev) => prev.filter((_, i) => i !== index));
+        setFiles((prev) => prev.filter((_, i) => i !== index));
       });
-      
+
       // Handle the new response format with array structure
       if (Array.isArray(data) && data.length > 0) {
         // Find the parse action response
-        const parseAction = data.find(item => item.action === 'parse');
+        const parseAction = data.find((item) => item.action === 'parse');
         if (parseAction && parseAction.response && parseAction.response.output) {
           const responseData = parseAction.response.output;
-          
+
           // Update caption if provided
           if (responseData.captions) {
             setCaption(responseData.captions);
           }
-          
+
           // Update audience if provided
           if (responseData.audience) {
             setAudience(responseData.audience);
           }
-          
+
           // Update comment visibility if provided
           if (typeof responseData.isCommentVisible === 'boolean') {
             setIsCommentVisible(!responseData.isCommentVisible); // Invert because our state is "turn off commenting"
           }
-          
+
           // Update like visibility if provided
           if (typeof responseData.isLikeVisible === 'boolean') {
             setIsLikeVisible(!responseData.isLikeVisible); // Invert because our state is "hide like counts"
           }
-          
+
           // Handle imageUrls array if provided
           if (responseData.imageUrls && Array.isArray(responseData.imageUrls)) {
             try {
@@ -369,27 +368,27 @@ const PostsCreate = () => {
         if (data.output && typeof data.output === 'object') {
           responseData = data.output;
         }
-        
+
         // Update caption if provided
         if (responseData.captions) {
           setCaption(responseData.captions);
         }
-        
+
         // Update audience if provided
         if (responseData.audience) {
           setAudience(responseData.audience);
         }
-        
+
         // Update comment visibility if provided
         if (typeof responseData.isCommentVisible === 'boolean') {
           setIsCommentVisible(!responseData.isCommentVisible);
         }
-        
+
         // Update like visibility if provided
         if (typeof responseData.isLikeVisible === 'boolean') {
           setIsLikeVisible(!responseData.isLikeVisible);
         }
-        
+
         // Handle imageUrls array if provided
         if (responseData.imageUrls && Array.isArray(responseData.imageUrls)) {
           try {
@@ -424,7 +423,6 @@ const PostsCreate = () => {
           duration: 3000,
         });
       }
-      
     } catch (error) {
       console.error('Error sending prompt:', error);
       toast.error('Prompt failed', {
@@ -447,20 +445,20 @@ const PostsCreate = () => {
     try {
       // Remove data URL prefix if present
       const base64Data = base64String.replace(/^data:image\/[a-z]+;base64,/, '');
-      
+
       // Convert base64 to binary
       const byteCharacters = atob(base64Data);
       const byteNumbers = new Array(byteCharacters.length);
-      
+
       for (let i = 0; i < byteCharacters.length; i++) {
         byteNumbers[i] = byteCharacters.charCodeAt(i);
       }
-      
+
       const byteArray = new Uint8Array(byteNumbers);
-      
+
       // Create File object
       const file = new File([byteArray], filename, { type: mimeType });
-      
+
       return file;
     } catch (error) {
       toast.error('Conversion failed', {
@@ -499,7 +497,7 @@ const PostsCreate = () => {
 
     // Add file to state
     setFiles((prevFiles) => [...prevFiles, file]);
-    
+
     // Create preview
     const newPreview = {
       url: URL.createObjectURL(file),
@@ -512,12 +510,12 @@ const PostsCreate = () => {
   const addMultipleBase64Images = (base64Array, filenamePrefix = 'image') => {
     const maxFiles = 12;
     const remainingSlots = maxFiles - files.length;
-    
+
     if (base64Array.length === 0) return;
-    
+
     // Limit the number of images that can be added
     const imagesToAdd = base64Array.slice(0, remainingSlots);
-    
+
     if (imagesToAdd.length < base64Array.length) {
       toast.warning('Some images skipped', {
         description: `Only ${remainingSlots} images were added due to file limit.`,
@@ -536,34 +534,34 @@ const PostsCreate = () => {
       // Create a canvas to draw the image
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      
+
       // Create a new image object
       const img = new Image();
       img.crossOrigin = 'anonymous'; // Handle CORS issues
-      
+
       return new Promise((resolve, reject) => {
         img.onload = () => {
           try {
             // Set canvas dimensions to match image
             canvas.width = img.width;
             canvas.height = img.height;
-            
+
             // Draw image on canvas
             ctx.drawImage(img, 0, 0);
-            
+
             // Convert canvas to base64
             const base64String = canvas.toDataURL(mimeType, 0.8); // 0.8 quality for smaller size
-            
+
             resolve(base64String);
           } catch (error) {
             reject(new Error('Failed to convert image to base64'));
           }
         };
-        
+
         img.onerror = () => {
           reject(new Error('Failed to load image from URL'));
         };
-        
+
         // Set source to trigger loading
         img.src = imageUrl;
       });
@@ -593,12 +591,12 @@ const PostsCreate = () => {
   const addMultipleImagesFromUrls = async (urlArray, filenamePrefix = 'image') => {
     const maxFiles = 12;
     const remainingSlots = maxFiles - files.length;
-    
+
     if (urlArray.length === 0) return;
-    
+
     // Limit the number of images that can be added
     const imagesToAdd = urlArray.slice(0, remainingSlots);
-    
+
     if (imagesToAdd.length < urlArray.length) {
       addToast({
         title: 'Some images skipped',
@@ -612,11 +610,11 @@ const PostsCreate = () => {
     for (let i = 0; i < imagesToAdd.length; i++) {
       const url = imagesToAdd[i];
       const filename = `${filenamePrefix}_${i + 1}.jpg`;
-      
+
       try {
         await addImageFromUrl(url, filename);
         // Small delay to prevent overwhelming the browser
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       } catch (error) {
         console.error(`Failed to process image ${i + 1}:`, error);
       }
@@ -628,10 +626,8 @@ const PostsCreate = () => {
     // Only fill the prompt box, don't auto-submit
   };
 
-
   return (
     <>
-      
       <div className="h-screen overflow-hidden bg-gray-50 dark:bg-neutral-900">
         <div className="mx-auto h-full max-w-7xl px-4 py-4">
           <div className="mb-4 flex items-center justify-between">
@@ -667,12 +663,12 @@ const PostsCreate = () => {
                 onClick={handleSave}
                 disabled={loading || files.length === 0}
                 className={cn(
-                  'rounded-lg px-4 py-2 text-sm font-medium text-white',
-                  'bg-indigo-600 hover:bg-indigo-700',
+                  'rounded-lg px-4 py-2 text-sm font-medium',
+                  'bg-neutral-800 text-white hover:bg-zinc-200 hover:text-neutral-800',
+                  'dark:bg-zinc-200 dark:text-neutral-800 dark:hover:bg-neutral-400 dark:hover:text-white',
                   'disabled:cursor-not-allowed disabled:opacity-50',
                   'transition-colors duration-200'
                 )}
-
               >
                 {loading ? 'Creating...' : 'Create Post'}
               </button>
@@ -755,16 +751,18 @@ const PostsCreate = () => {
                 <div className="flex items-center justify-between border-b border-gray-200 pb-4 dark:border-neutral-700">
                   <User user={user} />
                 </div>
-                
+
                 {/* AI Prompt Section - Above Caption */}
                 <div className="rounded-lg bg-gradient-to-r from-purple-50 to-blue-50 p-3 shadow-sm dark:from-purple-900/20 dark:to-blue-900/20">
                   <div className="mb-2 flex items-center gap-2">
                     <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-r from-purple-500 to-blue-500">
                       <i className="fa-solid fa-robot text-xs text-white"></i>
                     </div>
-                    <span className="text-xs font-medium text-gray-900 dark:text-gray-100">AI Assistant</span>
+                    <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
+                      AI Assistant
+                    </span>
                   </div>
-                  
+
                   <div className="flex gap-2">
                     <Textarea
                       value={prompt}
@@ -775,19 +773,20 @@ const PostsCreate = () => {
                       className="flex-1"
                       disabled={promptLoading}
                       classNames={{
-                        input: "bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm text-xs",
-                        inputWrapper: "border border-transparent bg-gradient-to-r from-purple-200/50 to-blue-200/50 dark:from-purple-700/30 dark:to-blue-700/30 backdrop-blur-sm hover:from-purple-300/50 hover:to-blue-300/50 dark:hover:from-purple-600/30 dark:hover:to-blue-600/30 transition-all duration-300"
+                        input: 'bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm text-xs',
+                        inputWrapper:
+                          'border border-transparent bg-gradient-to-r from-purple-200/50 to-blue-200/50 dark:from-purple-700/30 dark:to-blue-700/30 backdrop-blur-sm hover:from-purple-300/50 hover:to-blue-300/50 dark:hover:from-purple-600/30 dark:hover:to-blue-600/30 transition-all duration-300',
                       }}
                     />
                     <button
                       onClick={handlePromptSubmit}
                       disabled={promptLoading || !prompt.trim()}
                       className={cn(
-                        'flex h-6 w-6 items-center justify-center rounded-md',
+                        'flex h-10 w-10 items-center justify-center rounded-xl',
                         'bg-gradient-to-r from-purple-500 to-blue-500 text-white',
                         'hover:from-purple-600 hover:to-blue-600',
                         'disabled:cursor-not-allowed disabled:opacity-50',
-                        'transition-all duration-300 shadow-sm hover:shadow-md',
+                        'shadow-sm transition-all duration-300 hover:shadow-md',
                         'transform hover:scale-105 active:scale-95'
                       )}
                     >
@@ -798,19 +797,21 @@ const PostsCreate = () => {
                       )}
                     </button>
                   </div>
-                  
+
                   {/* Example Prompts */}
-                  <div className="mt-3 pt-3 border-t border-purple-200/50 dark:border-purple-700/30">
+                  <div className="mt-3 border-t border-purple-200/50 pt-3 dark:border-purple-700/30">
                     <div className="mb-2 flex items-center gap-2">
                       <i className="fa-solid fa-lightbulb text-xs text-purple-500"></i>
-                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Try these examples:</span>
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                        Try these examples:
+                      </span>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <button
-                        onClick={() => handleExamplePrompt("A cat playing on the grass")}
+                        onClick={() => handleExamplePrompt('A cat playing on the grass')}
                         disabled={promptLoading}
                         className={cn(
-                          'px-3 py-1 text-xs font-medium rounded-full transition-all duration-200',
+                          'rounded-full px-3 py-1 text-xs font-medium transition-all duration-200',
                           'bg-purple-100 text-purple-700 hover:bg-purple-200',
                           'dark:bg-purple-900/30 dark:text-purple-300 dark:hover:bg-purple-900/50',
                           'disabled:cursor-not-allowed disabled:opacity-50',
@@ -820,10 +821,10 @@ const PostsCreate = () => {
                         🐱 A cat playing on the grass
                       </button>
                       <button
-                        onClick={() => handleExamplePrompt("A beautiful sunset over the ocean")}
+                        onClick={() => handleExamplePrompt('A beautiful sunset over the ocean')}
                         disabled={promptLoading}
                         className={cn(
-                          'px-3 py-1 text-xs font-medium rounded-full transition-all duration-200',
+                          'rounded-full px-3 py-1 text-xs font-medium transition-all duration-200',
                           'bg-blue-100 text-blue-700 hover:bg-blue-200',
                           'dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50',
                           'disabled:cursor-not-allowed disabled:opacity-50',
@@ -844,7 +845,7 @@ const PostsCreate = () => {
                     value={caption}
                     onChange={(e) => setCaption(e.target.value)}
                     placeholder="Write your caption here..."
-                    className="w-full bg-white text-gray-900 dark:bg-neutral-800 dark:text-gray-100 placeholder:text-neutral-500 dark:placeholder:text-neutral-400"
+                    className="w-full bg-white text-gray-900 placeholder:text-neutral-500 dark:bg-neutral-800 dark:text-gray-100 dark:placeholder:text-neutral-400"
                   />
                 </div>
 
@@ -853,7 +854,7 @@ const PostsCreate = () => {
                     Audience
                   </label>
                   <ShSelect value={audience} onValueChange={setAudience}>
-                    <ShSelectTrigger className="w-full bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100">
+                    <ShSelectTrigger className="w-full bg-white text-gray-900 dark:bg-neutral-800 dark:text-gray-100">
                       <ShSelectValue placeholder="Select audience" />
                     </ShSelectTrigger>
                     <ShSelectContent className="bg-white dark:bg-neutral-800">

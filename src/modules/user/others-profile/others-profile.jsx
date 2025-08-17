@@ -100,11 +100,13 @@ const OthersProfile = () => {
     [createUserReport]
   );
 
+
   if (loading) return <p className="text-center text-gray-500">{t('Loading')}</p>;
+
 
   return (
     <>
-    {/* <ToastProvider placement={'top-right'} /> */}
+      {/* <ToastProvider placement={'top-right'} /> */}
       <div className="mx-auto max-w-4xl py-6">
         {/* Profile Header */}
         <div className="flex px-4 sm:px-6">
@@ -136,7 +138,7 @@ const OthersProfile = () => {
 
           <div className="ml-12 flex-1">
             <div className="flex items-center justify-between">
-              <h3 className="max-w-[200px] truncate text-2xl font-normal text-neutral-800 dark:text-white">
+              <h3 className="max-w-[200px] truncate text-2xl font-semibold text-neutral-800 dark:text-white">
                 {userInfo.username}
               </h3>
               <NavButton onClick={() => setOpenList(true)} iconClass="fa-solid fa-ellipsis" />
@@ -148,6 +150,7 @@ const OthersProfile = () => {
                 <span className="font-bold text-neutral-800 dark:text-white">
                   {userInfo.posts || 0}
                 </span>{' '}
+
                 <span className="font-bold text-gray-500 dark:text-gray-300">{t('Posts')}</span>
               </div>
               <div className="text-center">
@@ -157,6 +160,7 @@ const OthersProfile = () => {
               <div className="text-center">
                 <span className="font-bold text-neutral-800 dark:text-white">{followingCount}</span>{' '}
                 <span className="font-bold text-gray-500 dark:text-gray-300">{t('Following')}</span>
+
               </div>
             </div>
 
@@ -184,7 +188,7 @@ const OthersProfile = () => {
                     fullname: userInfo.firstName + ' ' + userInfo.lastName,
                   },
                 }}
-                className="flex w-full items-center justify-center rounded-lg bg-gray-200 px-4 py-2 font-bold transition-colors hover:bg-zinc-400 dark:bg-neutral-700 dark:hover:bg-gray-600"
+                className="flex w-full items-center justify-center rounded-lg bg-neutral-900 px-4 py-2 font-semibold text-zinc-100 transition-colors hover:bg-zinc-200 hover:text-neutral-900 dark:bg-zinc-100 dark:text-neutral-900 dark:hover:bg-neutral-700 dark:hover:text-zinc-100"
               >
                 <i className="fa-brands fa-facebook-messenger mr-2"></i>
                 <span>{t('Message')}</span>
