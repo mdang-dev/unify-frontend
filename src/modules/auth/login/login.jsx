@@ -6,22 +6,23 @@ import { motion } from 'framer-motion';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
-import unify_icon_lightmode from '@/public/images/unify_icon_lightmode.svg';
 import { Input } from '@/src/components/ui/input';
 import { useMutation } from '@tanstack/react-query';
 import { setTokenCookie } from '@/src/utils/cookies.util';
-import { useAuthStore } from '@/src/stores/auth.store';
 import { redirect, useRouter, useSearchParams } from 'next/navigation';
 import { authCommandApi } from '@/src/apis/auth/command/auth.command.api';
 import { useEffect } from 'react';
-import { useUser } from '@heroui/react';
+import { ParticleEffect } from '@/src/components/base/captcha-screen';
+import { useTheme } from 'next-themes';
 
 export default function LoginPage() {
   const t = useTranslations('Auth.Login');
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirect') || '/';
-  
+  const { theme } = useTheme();
+  const logoLight = '/images/unify_icon_2.svg';
+  const logoDark = '/images/unify_icon_lightmode.svg';
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -89,7 +90,8 @@ export default function LoginPage() {
   if (!onMounted) return null;
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-white px-4 py-12 dark:bg-black sm:px-6 lg:px-8">
+    <div className="flex min-h-screen w-full items-center justify-center bg-white px-4 py-12 dark:bg-neutral-900 sm:px-6 lg:px-8">
+      <ParticleEffect theme={theme} />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -106,7 +108,7 @@ export default function LoginPage() {
             }}
           >
             <Image
-              src={unify_icon_lightmode}
+              src={theme === 'dark' ? logoLight : logoDark}
               alt="Unify Logo"
               width={126}
               height={128}
@@ -222,12 +224,14 @@ export default function LoginPage() {
             </div>
 
             <div className="text-sm">
-              <Link href="/password/reset" className="font-medium text-black hover:underline dark:text-white">
+              <Link
+                href="/password/reset"
+                className="font-medium text-black hover:underline dark:text-white"
+              >
                 Forgot your password?
               </Link>
             </div>
           </div>
-
           <div>
             <button
               type="submit"

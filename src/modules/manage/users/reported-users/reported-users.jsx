@@ -15,6 +15,7 @@ import { useReportedUsersStore } from '@/src/stores/reported-users.store';
 import ReportedUsersFilters from './_components/reported-users-filters';
 import ReportedUsersTable from './_components/reported-users-table';
 import TableLoading from '../../_components/table-loading';
+import { toast } from 'sonner';
 
 const ReportedUsers = () => {
   const router = useRouter();
@@ -164,7 +165,7 @@ const ReportedUsers = () => {
     if (action === 'view') {
       router.push(`/manage/users/detail/${report.reportedId}`);
     } else if (action === 'reports') {
-      alert(`View reports for user: ${report.reportedId}`);
+      toast.info(`View reports for user: ${report.reportedId}`);
     }
   };
 

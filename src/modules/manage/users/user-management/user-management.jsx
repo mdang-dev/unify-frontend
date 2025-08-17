@@ -36,6 +36,7 @@ import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
 import { userQueryApi } from '@/src/apis/user/query/user.query.api';
 import { useRouter } from 'next/navigation';
 import { useUserManagementStore } from '@/src/stores/user-management.store';
+import { toast } from 'sonner';
 
 const UserManagement = () => {
   const router = useRouter();
@@ -170,7 +171,7 @@ const UserManagement = () => {
     if (action === 'view') {
       router.push(`/manage/users/detail/${user.id}`);
     } else {
-      alert(`${action} action for user: ${user.username}`);
+      toast.info(`${action} action for user: ${user.username}`);
     }
   };
 

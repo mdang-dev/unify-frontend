@@ -32,6 +32,7 @@ import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-quer
 import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
 import { postsQueryApi } from '@/src/apis/posts/query/posts.query.api';
 import { usePostManagementStore } from '@/src/stores/post-management.store';
+import { toast } from 'sonner';
 
 // Post status options
 export const POST_STATUSES = [
@@ -190,7 +191,7 @@ const PostManagement = () => {
     if (action === 'view') {
       router.push(`/manage/posts/${postId}`);
     } else {
-      alert(`${action} action for post: ${postId}`);
+      toast.info(`${action} action for post: ${postId}`);
     }
   };
 

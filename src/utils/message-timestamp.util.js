@@ -23,7 +23,7 @@ export const createTemporaryTimestamp = () => {
  */
 export const areTimestampsClose = (timestamp1, timestamp2, toleranceMs = 10000) => {
   if (!timestamp1 || !timestamp2) return false;
-  
+
   try {
     const time1 = new Date(timestamp1).getTime();
     const time2 = new Date(timestamp2).getTime();
@@ -42,7 +42,7 @@ export const areTimestampsClose = (timestamp1, timestamp2, toleranceMs = 10000) 
 export const createServerBoundMessage = (message) => {
   return {
     ...message,
-    timestamp: null // Server sẽ tạo timestamp với timezone Việt Nam
+    timestamp: null, // Server sẽ tạo timestamp với timezone Việt Nam
   };
 };
 
@@ -63,6 +63,6 @@ export const mergeWithServerMessage = (optimisticMessage, serverMessage) => {
     isOptimistic: false,
     backendConfirmed: true,
     isFailed: false,
-    error: undefined
+    error: undefined,
   };
-}; 
+};

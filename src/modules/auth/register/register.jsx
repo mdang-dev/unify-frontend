@@ -1,55 +1,58 @@
-"use client";
+'use client';
 
-import { Input } from "@/src/components/ui/input";
-import { Label } from "@/src/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/src/components/ui/radio-group";
-import FullUnifyLogoIcon from "@/src/components/global/FullUnifyLogoIcon_Auth";
-import { Button } from "@/src/components/ui/button";
-import DateSelector from "@/src/components/global/DateInput";
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { Input } from '@/src/components/ui/input';
+import { Label } from '@/src/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/src/components/ui/radio-group';
+import FullUnifyLogoIcon from '@/src/components/global/FullUnifyLogoIcon_Auth';
+import { Button } from '@/src/components/ui/button';
+import DateSelector from '@/src/components/global/DateInput';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { authCommandApi } from '@/src/apis/auth/command/auth.command.api';
+import { ParticleEffect } from '@/src/components/base/captcha-screen';
+import { useTheme } from 'next-themes';
 
 const RegisterPage = () => {
   const t = useTranslations('Auth.Register');
   const [errors, setErrors] = useState({});
-  const [serverError, setServerError] = useState("");
+  const [serverError, setServerError] = useState('');
   const router = useRouter();
+  const { theme } = useTheme();
 
   const months = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
 
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    username: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    gender: "true",
+    firstName: '',
+    lastName: '',
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    gender: 'true',
     status: 0,
     agreeToTerms: false,
   });
 
   const [date, setDate] = useState({
-    day: "",
-    month: "",
-    year: "",
+    day: '',
+    month: '',
+    year: '',
   });
 
   const registerMutation = useMutation({
@@ -59,8 +62,7 @@ const RegisterPage = () => {
   const validateForm = () => {
     let newErrors = {};
 
-    if (!formData.firstName.trim())
-      newErrors.firstName = t('Validation.FirstNameRequired');
+    if (!formData.firstName.trim()) newErrors.firstName = t('Validation.FirstNameRequired');
     else if (!/^[A-Za-z]+$/.test(formData.firstName))
       newErrors.firstName = t('Validation.FirstNameLettersOnly');
 
@@ -71,18 +73,14 @@ const RegisterPage = () => {
     if (!formData.username.trim()) newErrors.username = t('Validation.UsernameRequired');
     else if (!/^[A-Za-z0-9]+$/.test(formData.username))
       newErrors.username = t('Validation.UsernameNoSpecialChars');
-    else if (formData.username.length > 30)
-      newErrors.username = t('Validation.UsernameMaxLength');
+    else if (formData.username.length > 30) newErrors.username = t('Validation.UsernameMaxLength');
 
     if (!formData.email.trim()) newErrors.email = t('Validation.EmailRequired');
-    else if (
-      !/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(formData.email)
-    )
+    else if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(formData.email))
       newErrors.email = t('Validation.EmailInvalid');
 
     if (!formData.password.trim()) newErrors.password = t('Validation.PasswordRequired');
-    else if (formData.password.length < 8)
-      newErrors.password = t('Validation.PasswordMinLength');
+    else if (formData.password.length < 8) newErrors.password = t('Validation.PasswordMinLength');
 
     if (!formData.confirmPassword.trim())
       newErrors.confirmPassword = t('Validation.ConfirmPasswordRequired');
@@ -94,15 +92,10 @@ const RegisterPage = () => {
     }
 
     const today = new Date();
-    const birthDate = new Date(
-      `${date.year}-${months.indexOf(date.month) + 1}-${date.day}`
-    );
+    const birthDate = new Date(`${date.year}-${months.indexOf(date.month) + 1}-${date.day}`);
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (
-      monthDiff < 0 ||
-      (monthDiff === 0 && today.getDate() < birthDate.getDate())
-    ) {
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
       age--;
     }
     if (age < 13) {
@@ -126,7 +119,7 @@ const RegisterPage = () => {
     }));
     setErrors((prevErrors) => ({
       ...prevErrors,
-      [name]: "",
+      [name]: '',
     }));
   };
 
@@ -135,9 +128,10 @@ const RegisterPage = () => {
 
     if (!validateForm()) return;
 
-    const fullDate = `${date.year}-${String(
-      months.indexOf(date.month) + 1
-    ).padStart(2, "0")}-${String(date.day).padStart(2, "0")}`;
+    const fullDate = `${date.year}-${String(months.indexOf(date.month) + 1).padStart(
+      2,
+      '0'
+    )}-${String(date.day).padStart(2, '0')}`;
 
     const requestData = {
       ...formData,
@@ -147,19 +141,20 @@ const RegisterPage = () => {
     registerMutation.mutate(requestData, {
       onSuccess: () => {
         setTimeout(() => {
-          router.push("/login");
+          router.push('/login');
         }, 1500);
       },
       onError: (err) => {
         console.error('❌ Register error:', err?.message);
-        setServerError(err?.message || "Something went wrong. Please try again.");
+        setServerError(err?.message || 'Something went wrong. Please try again.');
       },
     });
   };
 
   return (
-    <div className={`w-full grid place-content-center`}>
+    <div className={`grid w-full place-content-center dark:bg-neutral-900`}>
       <div>
+        <ParticleEffect theme={theme} />
         <form onSubmit={handleSubmit}>
           <div className={`grid gap-5`}>
             <div align="center">
@@ -170,86 +165,75 @@ const RegisterPage = () => {
                 <Input
                   name="firstName"
                   placeholder={t('FirstName')}
-                  className="h-12"
+                  className="h-12 dark:bg-neutral-900"
                   value={formData.firstName}
                   onChange={handleChange}
                 />
-                {errors.firstName && (
-                  <p className="text-red-500 text-sm">{errors.firstName}</p>
-                )}
+                {errors.firstName && <p className="text-sm text-red-500">{errors.firstName}</p>}
               </div>
               <div className="basis-1/2">
                 <Input
                   name="lastName"
                   placeholder={t('LastName')}
-                  className="h-12"
+                  className="h-12 dark:bg-neutral-900"
                   value={formData.lastName}
                   onChange={handleChange}
                 />
-                {errors.lastName && (
-                  <p className="text-red-500 text-sm">{errors.lastName}</p>
-                )}
+                {errors.lastName && <p className="text-sm text-red-500">{errors.lastName}</p>}
               </div>
             </div>
             <div className="basis-1/2">
               <Input
                 name="username"
                 placeholder={t('Username')}
-                className="h-12"
+                className="h-12 dark:bg-neutral-900"
                 value={formData.username}
                 onChange={handleChange}
               />
-              {errors.username && (
-                <p className="text-red-500 text-sm">{errors.username}</p>
-              )}
+              {errors.username && <p className="text-sm text-red-500">{errors.username}</p>}
             </div>
             <div className="basis-1/2">
               <Input
                 name="email"
                 placeholder={t('Email')}
-                className="h-12"
+                className="h-12 dark:bg-neutral-900"
                 value={formData.email}
                 onChange={handleChange}
               />
-              {errors.email && (
-                <p className="text-red-500 text-sm">{errors.email}</p>
-              )}
+              {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
             </div>
             <div className="basis-1/2">
               <Input
                 name="password"
                 placeholder={t('Password')}
-                className="h-12"
+                className="h-12 dark:bg-neutral-900"
                 type="password"
                 value={formData.password}
                 onChange={handleChange}
               />
-              {errors.password && (
-                <p className="text-red-500 text-sm">{errors.password}</p>
-              )}
+              {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
             </div>
 
             <div className="basis-1/2">
               <Input
                 name="confirmPassword"
                 placeholder={t('ConfirmPassword')}
-                className="h-12"
+                className="h-12 dark:bg-neutral-900"
                 type="password"
                 value={formData.confirmPassword}
                 onChange={handleChange}
               />
 
               {errors.confirmPassword && (
-                <p className="text-red-500 text-sm">{errors.confirmPassword}</p>
+                <p className="text-sm text-red-500">{errors.confirmPassword}</p>
               )}
             </div>
 
             <div className="flex gap-2">
               <RadioGroup
-                onValueChange={(value) =>
-                  setFormData({ ...formData, gender: value })
-                }
+                onValueChange={(value) => setFormData({ ...formData, gender: value })}
                 defaultValue="true"
+                className="dark:bg-neutral-900"
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="true" id="r1" defaultChecked={true} />
@@ -263,16 +247,12 @@ const RegisterPage = () => {
             </div>
             <div className="basis-1/2">
               <DateSelector date={date} setDate={setDate} months={months} />
-              {errors.birthDay && (
-                <p className="text-red-500 text-sm">{errors.birthDay}</p>
-              )}
+              {errors.birthDay && <p className="text-sm text-red-500">{errors.birthDay}</p>}
             </div>
 
-            {serverError && (
-              <p className="text-red-500 text-sm">{serverError}</p>
-            )}
+            {serverError && <p className="text-sm text-red-500">{serverError}</p>}
 
-            <div className="flex items-center gap-1 m-auto">
+            <div className="m-auto flex items-center gap-1">
               <span>{t('AlreadyHaveAccount')}</span>
               <Link href="/login" className="text-[#0F00E1]">
                 {t('SignIn')}
@@ -292,19 +272,17 @@ const RegisterPage = () => {
                 }
               />
               <Label htmlFor="terms" className="text-sm">
-                {t('AgreeToTerms')}{" "}
+                {t('AgreeToTerms')}{' '}
                 <Link href="/landing" className="text-blue-600 underline">
                   {t('TermsOfService')}
                 </Link>
               </Label>
             </div>
-            {errors.agreeToTerms && (
-              <p className="text-red-500 text-sm">{errors.agreeToTerms}</p>
-            )}
+            {errors.agreeToTerms && <p className="text-sm text-red-500">{errors.agreeToTerms}</p>}
 
-            <Button 
-              type="submit" 
-              className="text-2xl p-6 mt-3"
+            <Button
+              type="submit"
+              className="mt-3 p-6 text-2xl"
               disabled={registerMutation.isPending}
             >
               {registerMutation.isPending ? t('SigningUp') : t('SignUp')}
