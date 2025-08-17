@@ -122,7 +122,7 @@ const ReplyComponent = ({
 
   return (
     <>
-      <div className="mb-2 flex w-full items-start gap-2 rounded-lg border-l-2 border-gray-200 bg-gray-50/60 pl-8 dark:border-neutral-700 dark:bg-neutral-800/40">
+      <div className="mb-2 pt-2 flex w-full items-start gap-2 rounded-lg border-l-2 border-gray-200 bg-zinc-50/30 pl-8 dark:border-neutral-700 dark:bg-neutral-800">
         <div className="relative mt-1 h-8 w-8 overflow-hidden rounded-full border border-zinc-300 dark:border-zinc-700">
           {reply.avatarUrl ? (
             <Image

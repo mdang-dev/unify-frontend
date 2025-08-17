@@ -13,7 +13,8 @@ import dynamic from 'next/dynamic';
 const PostDetailModal = dynamic(() => import('../../post-detail-modal'), { ssr: false });
 
 const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
-  const { notifications, unreadCount, markAllAsRead, markAsRead, isFetching } = useNotification(userId);
+  const { notifications, unreadCount, markAllAsRead, markAsRead, isFetching } =
+    useNotification(userId);
   const { requestPermission, permission, isSupported } = useDesktopNotifications();
   const [postModalOpen, setPostModalOpen] = useState(false);
   const [selectedPostId, setSelectedPostId] = useState(null);
@@ -67,91 +68,104 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
   }, [notifications]);
 
   // ✅ Imitate share: open modal locally with parsed postId/commentId
-  const openFromNotification = useCallback((notification) => {
-    if (!notification) return;
-    let postId = null;
-    let commentId = null;
+  const openFromNotification = useCallback(
+    (notification) => {
+      if (!notification) return;
+      let postId = null;
+      let commentId = null;
 
-    const lowerType = notification.type?.toLowerCase?.() || '';
+      const lowerType = notification.type?.toLowerCase?.() || '';
 
-    // ✅ NEW: Try to parse data field first (JSON string with commentId and postId)
-    if (notification.data) {
-      try {
-        const data = JSON.parse(notification.data);
-        if (data.postId) postId = data.postId;
-        if (data.commentId) commentId = data.commentId;
-        
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[NotificationModal] Parsed data field:', data);
-        }
-      } catch (e) {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('[NotificationModal] Failed to parse data field:', e);
+      // ✅ NEW: Try to parse data field first (JSON string with commentId and postId)
+      if (notification.data) {
+        try {
+          const data = JSON.parse(notification.data);
+          if (data.postId) postId = data.postId;
+          if (data.commentId) commentId = data.commentId;
+
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[NotificationModal] Parsed data field:', data);
+          }
+        } catch (e) {
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('[NotificationModal] Failed to parse data field:', e);
+          }
         }
       }
-    }
 
-    // Fallback: Try multiple places for postId if not found in data
-    if (!postId) {
-      postId =
-        notification?.data?.postId ||
-        notification?.data?.post?.id ||
-        notification?.postId ||
-        notification?.post?.id ||
-        null;
+      // Fallback: Try multiple places for postId if not found in data
+      if (!postId) {
+        postId =
+          notification?.data?.postId ||
+          notification?.data?.post?.id ||
+          notification?.postId ||
+          notification?.post?.id ||
+          null;
 
-      if (!postId && notification.link) {
-        // Extract from link (supports absolute URLs, locale prefixes, query strings)
+        if (!postId && notification.link) {
+          // Extract from link (supports absolute URLs, locale prefixes, query strings)
+          try {
+            const link = notification.link;
+            const path = (() => {
+              try {
+                const u = new URL(
+                  link,
+                  typeof window !== 'undefined' ? window.location.origin : 'http://localhost'
+                );
+                return u.pathname;
+              } catch {
+                return link; // relative path
+              }
+            })();
+            const match = path.match(/\/posts\/([^\/?#]+)/);
+            if (match) postId = match[1];
+          } catch {}
+        }
+      }
+
+      // Fallback: Comment id from multiple places if not found in data
+      if (
+        !commentId &&
+        (lowerType === 'comment' || lowerType === 'reply' || lowerType === 'comment_reply')
+      ) {
+        commentId =
+          notification?.data?.commentId ||
+          notification?.data?.comment?.id ||
+          notification?.commentId ||
+          notification?.comment?.id ||
+          null;
+      }
+
+      if (process.env.NODE_ENV === 'development') {
+        // Debug log
+        // eslint-disable-next-line no-console
+        console.debug('[NotificationModal] parsed ids =>', {
+          postId,
+          commentId,
+          raw: notification,
+        });
+      }
+
+      if (postId) {
+        setSelectedPostId(postId);
+        setSelectedCommentId(commentId || null);
+        setPostModalOpen(true);
+      } else if (notification.link) {
+        // Fallback: navigate if cannot parse postId
         try {
-          const link = notification.link;
-          const path = (() => {
-            try {
-              const u = new URL(link, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
-              return u.pathname;
-            } catch {
-              return link; // relative path
-            }
-          })();
-          const match = path.match(/\/posts\/([^\/?#]+)/);
-          if (match) postId = match[1];
+          window.location.href = notification.link;
         } catch {}
       }
-    }
 
-    // Fallback: Comment id from multiple places if not found in data
-    if (!commentId && (lowerType === 'comment' || lowerType === 'reply' || lowerType === 'comment_reply')) {
-      commentId =
-        notification?.data?.commentId ||
-        notification?.data?.comment?.id ||
-        notification?.commentId ||
-        notification?.comment?.id ||
-        null;
-    }
-
-    if (process.env.NODE_ENV === 'development') {
-      // Debug log
-      // eslint-disable-next-line no-console
-      console.debug('[NotificationModal] parsed ids =>', { postId, commentId, raw: notification });
-    }
-
-    if (postId) {
-      setSelectedPostId(postId);
-      setSelectedCommentId(commentId || null);
-      setPostModalOpen(true);
-    } else if (notification.link) {
-      // Fallback: navigate if cannot parse postId
-      try {
-        window.location.href = notification.link;
-      } catch {}
-    }
-
-    // Mark as read optimistically
-    if (notification.id) {
-      try {
-        markAsRead({ notificationId: notification.id });
-      } catch {}
-    }
-  }, [markAsRead]);
+      // Mark as read optimistically
+      if (notification.id) {
+        try {
+          markAsRead({ notificationId: notification.id });
+        } catch {}
+      }
+    },
+    [markAsRead]
+  );
 
   const renderNotification = (notification) => {
     if (!notification || !notification.type) {
@@ -196,7 +210,7 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
               {isSupported && permission !== 'granted' && (
                 <button
                   onClick={handleRequestDesktopNotifications}
-                  className="text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
+                  className="text-xs text-neutral-800 hover:text-zinc-400 dark:text-white dark:hover:text-zinc-400"
                   title="Enable desktop notifications"
                 >
                   <i className="fa-solid fa-desktop mr-1"></i>
@@ -206,7 +220,7 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
               {unreadCount > 0 && (
                 <button
                   onClick={handleMarkAllAsRead}
-                  className="text-sm text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
+                  className="text-sm text-neutral-800 hover:text-zinc-400 dark:text-white dark:hover:text-zinc-400"
                   disabled={isFetching}
                 >
                   {isFetching ? 'Marking...' : 'Mark all as read'}
@@ -226,7 +240,7 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
             sortedNotifications.map((notification, index) => (
               <div key={notification.id} className="space-y-2">
                 {renderNotification(notification)}
-              
+
                 {index < sortedNotifications.length - 1 && (
                   <hr className="my-5 border-white dark:border-black" />
                 )}
@@ -234,7 +248,7 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
             ))
           ) : (
             <div className="flex flex-col items-center justify-center py-8">
-              <i className="mb-4 fa-solid fa-bell text-4xl text-gray-300 dark:text-gray-600"></i>
+              <i className="fa-solid fa-bell mb-4 text-4xl text-gray-300 dark:text-gray-600"></i>
               <p className="text-center text-gray-400 dark:text-gray-600">No notifications yet</p>
               <p className="mt-2 text-center text-sm text-gray-300 dark:text-gray-700">
                 When you get notifications, they&apos;ll show up here
