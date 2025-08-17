@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { useMutation } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { authCommandApi } from '@/src/apis/auth/command/auth.command.api';
+import { Eye, EyeOff } from 'lucide-react';
 
 const RegisterPage = () => {
   const t = useTranslations('Auth.Register');
@@ -51,6 +52,9 @@ const RegisterPage = () => {
     month: "",
     year: "",
   });
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const registerMutation = useMutation({
     mutationFn: authCommandApi.register,
@@ -165,12 +169,12 @@ const RegisterPage = () => {
       birthDay: fullDate,
     };
 
-    registerMutation.mutate(requestData, {
-      onSuccess: () => {
-        setTimeout(() => {
-          router.push("/login");
-        }, 1500);
-      },
+         registerMutation.mutate(requestData, {
+       onSuccess: () => {
+         setTimeout(() => {
+           router.push("/login");
+         }, 1500);
+       },
       onError: (err) => {
         console.error('❌ Register error:', err);
         // Handle specific backend error messages
@@ -196,9 +200,9 @@ const RegisterPage = () => {
       <div>
         <form onSubmit={handleSubmit}>
           <div className={`grid gap-5`}>
-            <div align="center">
-              <FullUnifyLogoIcon className="mr-7" />
-            </div>
+                         <div align="center">
+               <FullUnifyLogoIcon className="mr-7" />
+             </div>
             <div className="flex gap-2">
               <div className="basis-1/2">
                 <Input
@@ -249,34 +253,52 @@ const RegisterPage = () => {
                 <p className="text-red-500 text-sm">{errors.email}</p>
               )}
             </div>
-            <div className="basis-1/2">
-              <Input
-                name="password"
-                placeholder={t('Password')}
-                className="h-12"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-              />
-              {errors.password && (
-                <p className="text-red-500 text-sm">{errors.password}</p>
-              )}
-            </div>
+                         <div className="basis-1/2">
+               <div className="relative">
+                 <Input
+                   name="password"
+                   placeholder={t('Password')}
+                   className="h-12 pr-10"
+                   type={showPassword ? "text" : "password"}
+                   value={formData.password}
+                   onChange={handleChange}
+                 />
+                 <button
+                   type="button"
+                   onClick={() => setShowPassword(!showPassword)}
+                   className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-400 hover:text-neutral-500 dark:hover:text-neutral-300"
+                 >
+                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                 </button>
+               </div>
+               {errors.password && (
+                 <p className="text-red-500 text-sm">{errors.password}</p>
+               )}
+             </div>
 
-            <div className="basis-1/2">
-              <Input
-                name="confirmPassword"
-                placeholder={t('ConfirmPassword')}
-                className="h-12"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-              />
+                         <div className="basis-1/2">
+               <div className="relative">
+                 <Input
+                   name="confirmPassword"
+                   placeholder={t('ConfirmPassword')}
+                   className="h-12 pr-10"
+                   type={showConfirmPassword ? "text" : "password"}
+                   value={formData.confirmPassword}
+                   onChange={handleChange}
+                 />
+                 <button
+                   type="button"
+                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                   className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-400 hover:text-neutral-500 dark:hover:text-neutral-300"
+                 >
+                   {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                 </button>
+               </div>
 
-              {errors.confirmPassword && (
-                <p className="text-red-500 text-sm">{errors.confirmPassword}</p>
-              )}
-            </div>
+               {errors.confirmPassword && (
+                 <p className="text-red-500 text-sm">{errors.confirmPassword}</p>
+               )}
+             </div>
 
             <div className="flex gap-2">
               <RadioGroup
