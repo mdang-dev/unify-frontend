@@ -137,7 +137,7 @@ const Slider = ({ srcs = [], onImageClick }) => {
   const containerStyle = {
     aspectRatio: mediaAspectRatio,
     minHeight: '300px',
-    maxHeight: '600px', // Fixed max height instead of viewport-based
+    maxHeight: '700px', // Fixed max height instead of viewport-based
   };
 
   return (
@@ -192,14 +192,18 @@ const Slider = ({ srcs = [], onImageClick }) => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="w-full h-full"
+          className="relative h-full w-full overflow-hidden"
         >
           {isVideo(srcs[currentIndex]) ? (
             <PostVideo src={srcs[currentIndex]?.url} />
           ) : (
             <div className="relative h-full w-full">
               <Image
-                src={srcs[currentIndex]?.url && typeof srcs[currentIndex].url === 'string' ? srcs[currentIndex].url : '/images/unify_icon_2.png'}
+                src={
+                  srcs[currentIndex]?.url && typeof srcs[currentIndex].url === 'string'
+                    ? srcs[currentIndex].url
+                    : '/images/unify_icon_2.png'
+                }
                 alt={`Post media ${currentIndex + 1}`}
                 fill
                 className="cursor-pointer object-cover"
