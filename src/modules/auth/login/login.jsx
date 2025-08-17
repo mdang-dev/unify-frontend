@@ -129,7 +129,7 @@ export default function LoginPage() {
             {t('Subtitle')}{' '}
             <Link
               href="/register"
-              className="font-medium text-black hover:underline dark:text-white"
+              className="font-bold text-black hover:underline hover:text-neutral-700 dark:text-white dark:hover:text-neutral-200 transition-colors duration-200"
             >
               {t('SignUp')}
             </Link>
