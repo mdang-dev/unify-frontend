@@ -32,13 +32,25 @@ export function getQueryClient() {
 
 export default function QueryProvider({ children }) {
   const client = getQueryClient();
-  const [token, setToken] = useState(null);
+  const [token, setToken] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('verified') || null;
+    }
+    return null;
+  });
   const isProd = process.env.NODE_ENV === 'production';
+
+  const handleSetToken = (newToken) => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('verified', newToken);
+    }
+    setToken(newToken);
+  };
 
   if (!token && isProd) {
     return (
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-        <CaptchaScreen setToken={setToken} />
+        <CaptchaScreen setToken={handleSetToken} />
       </ThemeProvider>
     );
   }

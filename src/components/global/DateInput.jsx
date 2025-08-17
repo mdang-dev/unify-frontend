@@ -1,7 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/src/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/src/components/ui/select';
 
 const DateSelector = ({ date, setDate, months }) => {
   const [daysInMonth, setDaysInMonth] = useState(31);
@@ -13,9 +19,9 @@ const DateSelector = ({ date, setDate, months }) => {
       setDaysInMonth(days);
 
       if (parseInt(date.day) > days) {
-        setDate(prev => ({
+        setDate((prev) => ({
           ...prev,
-          day: days.toString().padStart(2, '0')
+          day: days.toString().padStart(2, '0'),
         }));
       }
     }
@@ -32,8 +38,11 @@ const DateSelector = ({ date, setDate, months }) => {
 
   return (
     <div className="grid grid-cols-3 gap-2">
-      <Select value={date.month} onValueChange={(value) => setDate(prev => ({ ...prev, month: value }))}>
-        <SelectTrigger className="h-12">
+      <Select
+        value={date.month}
+        onValueChange={(value) => setDate((prev) => ({ ...prev, month: value }))}
+      >
+        <SelectTrigger className="h-12 dark:bg-neutral-900">
           <SelectValue placeholder="Month" />
         </SelectTrigger>
         <SelectContent>
@@ -45,8 +54,11 @@ const DateSelector = ({ date, setDate, months }) => {
         </SelectContent>
       </Select>
 
-      <Select value={date.day} onValueChange={(value) => setDate(prev => ({ ...prev, day: value }))}>
-        <SelectTrigger className="h-12">
+      <Select
+        value={date.day}
+        onValueChange={(value) => setDate((prev) => ({ ...prev, day: value }))}
+      >
+        <SelectTrigger className="h-12 dark:bg-neutral-900">
           <SelectValue placeholder="Day" />
         </SelectTrigger>
         <SelectContent>
@@ -58,8 +70,11 @@ const DateSelector = ({ date, setDate, months }) => {
         </SelectContent>
       </Select>
 
-      <Select value={date.year} onValueChange={(value) => setDate(prev => ({ ...prev, year: value }))}>
-        <SelectTrigger className="h-12">
+      <Select
+        value={date.year}
+        onValueChange={(value) => setDate((prev) => ({ ...prev, year: value }))}
+      >
+        <SelectTrigger className="h-12 dark:bg-neutral-900">
           <SelectValue placeholder="Year" />
         </SelectTrigger>
         <SelectContent>
@@ -74,4 +89,4 @@ const DateSelector = ({ date, setDate, months }) => {
   );
 };
 
-export default DateSelector; 
+export default DateSelector;

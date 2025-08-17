@@ -5,7 +5,7 @@ import { Turnstile } from '@marsidev/react-turnstile';
 import { useTheme } from 'next-themes';
 
 // Simple particle effect component
-function ParticleEffect({ theme }) {
+export function ParticleEffect({ theme }) {
   const canvasRef = useRef(null);
   const particlesRef = useRef([]);
   const animationRef = useRef(null);
@@ -105,7 +105,7 @@ export default function CaptchaScreen({ setToken }) {
   if (!isClient) return null;
 
   return (
-    <div className="relative flex h-screen w-full items-center justify-center overflow-hidden bg-white dark:bg-gray-900">
+    <div className="relative flex h-screen w-full items-center justify-center overflow-hidden bg-white dark:bg-neutral-900">
       {/* Background particle effect */}
       <ParticleEffect theme={theme} />
 
@@ -136,7 +136,7 @@ export default function CaptchaScreen({ setToken }) {
         </h1>
 
         {/* Status notification */}
-        <div className="mb-6 rounded-2xl border border-gray-200 bg-gray-50 p-4 shadow-xl backdrop-blur-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="mb-6 rounded-2xl border border-gray-200 bg-gray-50 p-4 shadow-xl backdrop-blur-sm dark:border-gray-500 dark:bg-neutral-900/20">
           {isVerifying ? (
             <div className="flex items-center justify-center space-x-3">
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-600 border-t-transparent dark:border-gray-400"></div>
@@ -168,7 +168,7 @@ export default function CaptchaScreen({ setToken }) {
         {/* Captcha */}
         <div className="mb-4">
           <Turnstile
-            siteKey="0x4AAAAAABsTZMIhxNzGU9zy"
+            siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
             className="m-auto"
             theme={theme === 'dark' ? 'dark' : 'light'}
             onSuccess={(token) => {
