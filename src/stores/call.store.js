@@ -55,17 +55,12 @@ export const useCallStore = create((set, get) => ({
         const data = await response.json();
         csrfToken = data.token;
       } else {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn(`CSRF token fetch failed with status: ${response.status}`);
-        }
+        // Remove unnecessary warning logs
       }
     } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        if (error.name === 'AbortError') {
-          console.warn('CSRF token fetch timed out');
-        } else {
-          console.warn('Failed to fetch CSRF token for call:', error.message);
-        }
+      // Only log critical CSRF token errors
+      if (error.name !== 'AbortError') {
+        console.error('Failed to fetch CSRF token for call:', error.message);
       }
       // Continue without CSRF token if fetch fails
     }
@@ -131,15 +126,10 @@ export const useCallStore = create((set, get) => ({
         {},
         JSON.stringify({ ...msg, from: get().userId })
       );
-      if (process.env.NODE_ENV === 'development') {
-        // Log successful signal transmission for debugging
-        console.log('[STOMP] Signal sent', msg);
-      }
+      // Remove unnecessary debug logs
     } else {
-      if (process.env.NODE_ENV === 'development') {
-        // Log connection issue for debugging
-        console.warn('[STOMP] Not connected, cannot send');
-      }
+      // Only log critical connection issues
+      console.warn('Not connected, cannot send signal');
     }
   },
   startCall: async (otherUser) => {

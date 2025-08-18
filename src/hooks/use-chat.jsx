@@ -21,7 +21,7 @@ const sortMessages = (arr) => {
   if (!Array.isArray(arr) || arr.length === 0) return [];
   
   // Early return for single item
-  if (arr.length === 1) return arr;
+  if (arr.length === 1) return [];
   
   return [...arr].sort((a, b) => {
     // Compare timestamps first (most important)
@@ -43,13 +43,123 @@ const sortMessages = (arr) => {
 };
 
 export const useChat = (user, chatPartner) => {
-  const [chatMessages, setChatMessages] = useState([]);
+  // ✅ FIX: Sử dụng Map để isolate messages theo conversation
+  const [conversationMessages, setConversationMessages] = useState(new Map());
+  
+  // ✅ FIX: Message queue cho từng conversation
+  const messageQueueRef = useRef(new Map());
+  
+  // ✅ FIX: Track conversation hiện tại bằng ref để tránh stale closure
+  const currentChatPartnerRef = useRef(null);
+  
   const [isConnected, setIsConnected] = useState(false);
   const stompClientRef = useRef(null);
   const messagesEndRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const queryClient = useQueryClient();
   const sendingMessagesRef = useRef(new Set()); // Track messages currently being sent
+
+  // ✅ FIX: Expose current conversation messages
+  const chatMessages = conversationMessages.get(chatPartner) || [];
+
+  // ✅ FIX: Track conversation hiện tại
+  useEffect(() => {
+    currentChatPartnerRef.current = chatPartner;
+    
+    // ✅ FIX: Initialize conversation nếu chưa có
+    if (chatPartner && !conversationMessages.has(chatPartner)) {
+      setConversationMessages(prev => new Map(prev).set(chatPartner, []));
+    }
+    
+    // ✅ FIX: Load queued messages khi switch conversation
+    if (chatPartner) {
+      loadQueuedMessages(chatPartner);
+    }
+  }, [chatPartner, conversationMessages]);
+
+  // ✅ FIX: Load queued messages khi switch conversation
+  const loadQueuedMessages = useCallback((conversationId) => {
+    const queuedMessages = messageQueueRef.current.get(conversationId) || [];
+    
+    if (queuedMessages.length > 0) {
+      console.log(`📱 Loading ${queuedMessages.length} queued messages for: ${conversationId}`);
+      
+      // Process queued messages
+      queuedMessages.forEach(message => {
+        processMessageForCurrentConversation(message);
+      });
+      
+      // Clear queue
+      messageQueueRef.current.delete(conversationId);
+    }
+  }, []);
+
+  // ✅ FIX: Helper function để xác định conversation của message
+  const getMessageConversation = useCallback((message, userId) => {
+    if (message.sender === userId) return message.receiver;
+    if (message.receiver === userId) return message.sender;
+    return null;
+  }, []);
+
+  // ✅ FIX: Queue message cho conversation khác
+  const queueMessageForConversation = useCallback((message, conversationId) => {
+    if (!conversationId) return;
+    
+    const queue = messageQueueRef.current.get(conversationId) || [];
+    queue.push(message);
+    messageQueueRef.current.set(conversationId, queue);
+    
+    console.log(`📬 Queued message for conversation: ${conversationId}`);
+  }, []);
+
+  // ✅ FIX: Xử lý message cho conversation hiện tại
+  const processMessageForCurrentConversation = useCallback((message) => {
+    const currentChatPartner = currentChatPartnerRef.current;
+    if (!currentChatPartner) return;
+
+    setConversationMessages(prev => {
+      const currentMessages = prev.get(currentChatPartner) || [];
+      const updatedMessages = addOrUpdateMessage(currentMessages, message);
+      
+      // ✅ FIX: Sync to cache
+      queryClient.setQueryData([QUERY_KEYS.MESSAGES, user?.id, currentChatPartner], updatedMessages);
+      
+      return new Map(prev).set(currentChatPartner, updatedMessages);
+    });
+  }, [user?.id, queryClient]);
+
+  // ✅ FIX: Helper function để thêm hoặc cập nhật message
+  const addOrUpdateMessage = useCallback((currentMessages, newMessage) => {
+    // Check if message already exists (by ID or clientTempId)
+    const existingIndex = currentMessages.findIndex(
+      (msg) =>
+        (msg.id && msg.id === newMessage.id) ||
+        (msg.clientTempId && msg.clientTempId === newMessage.clientTempId) ||
+        (msg.content === newMessage.content &&
+          msg.sender === newMessage.sender &&
+          msg.receiver === newMessage.receiver &&
+          areTimestampsClose(msg.timestamp, newMessage.timestamp))
+    );
+
+    if (existingIndex !== -1) {
+      // Update existing message with server data
+      const updated = [...currentMessages];
+      updated[existingIndex] = mergeWithServerMessage(updated[existingIndex], newMessage);
+      console.log('🔄 Updated existing message:', newMessage.content);
+      return sortMessages(updated);
+    } else {
+      // Add new message
+      const newMsg = {
+        ...newMessage,
+        messageState: 'sent',
+        backendConfirmed: true,
+        isOptimistic: false,
+        isFailed: false,
+      };
+      console.log('➕ Added new message:', newMessage.content);
+      return sortMessages([...currentMessages, newMsg]);
+    }
+  }, []);
 
   // ✅ PERSISTENCE: Save/load message states to/from localStorage
   const getMessageStatesKey = () => `message_states_${user?.id}_${chatPartner}`;
@@ -206,7 +316,12 @@ export const useChat = (user, chatPartner) => {
         };
       });
       
-      setChatMessages(sortMessages(mergedMessages));
+      // ✅ FIX: Update conversation messages thay vì global chatMessages
+      setConversationMessages(prev => {
+        const updated = new Map(prev);
+        updated.set(chatPartner, sortMessages(mergedMessages));
+        return updated;
+      });
     }
   }, [messages, chatPartner, queryClient, user?.id, loadMessageStates]);
 
@@ -241,27 +356,31 @@ export const useChat = (user, chatPartner) => {
       maxWebSocketFrameSize: 32 * 1024,
       onConnect: () => {
         setIsConnected(true);
+        // Remove unnecessary success logs
         console.log('✅ WebSocket connected for user:', user?.id);
         
         // ✅ SIMPLIFIED: Subscribe to channels without complex sync
         client.subscribe(`/user/${user?.id}/queue/messages`, handleIncomingMessage);
         client.subscribe(`/user/${user?.id}/queue/chat-list-update`, handleChatListUpdate);
         client.subscribe(`/user/${user?.id}/queue/errors`, (error) => {
-          console.error('❌ WS error:', error);
+          // Only log critical WebSocket errors
+          console.error('WebSocket error:', error);
         });
         
       },
       onStompError: (error) => {
-        console.error('❌ STOMP error:', error);
+        // Only log critical STOMP errors
+        console.error('STOMP error:', error);
         setIsConnected(false);
       },
       onWebSocketClose: () => {
-        console.warn('⚠️ WebSocket closed, attempting reconnection...');
+        // Remove unnecessary warning logs
         setIsConnected(false);
         reconnectTimeoutRef.current = setTimeout(connectWebSocket, 5000);
       },
       onWebSocketError: (error) => {
-        console.error('❌ WebSocket error:', error);
+        // Only log critical WebSocket errors
+        console.error('WebSocket error:', error);
         setIsConnected(false);
       },
     });
@@ -281,153 +400,130 @@ export const useChat = (user, chatPartner) => {
     };
   }, [connectWebSocket]);
 
-  // ✅ COMPLETELY REWRITTEN: Simplified, bulletproof message handling
+  // ✅ FIX: WebSocket message handler với conversation isolation
   const handleIncomingMessage = useCallback(
     (message) => {
-    try {
-      const newMessage = JSON.parse(message.body);
-      
-      // Basic validation
-      if (!newMessage?.sender || !newMessage?.receiver) {
-        console.warn('Invalid message structure:', newMessage);
-        return;
-      }
-      
-      // ✅ BULLETPROOF: Single source of truth for message updates
-      const updateMessages = (updateFn) => {
-        // Update local state
-        setChatMessages(prev => {
-          const updated = updateFn(prev);
-          
-          // Immediately sync to cache (atomic operation)
-          if (chatPartner && user?.id) {
-            queryClient.setQueryData([QUERY_KEYS.MESSAGES, user?.id, chatPartner], updated);
-          }
-          
-          return updated;
-        });
-      };
-      
-      // ✅ SIMPLIFIED: One clear logic path
-      updateMessages(prev => {
-        // Check if message already exists (by ID or clientTempId)
-        const existingIndex = prev.findIndex(msg => 
-          (msg.id && msg.id === newMessage.id) ||
-          (msg.clientTempId && msg.clientTempId === newMessage.clientTempId) ||
-          (msg.content === newMessage.content && 
-           msg.sender === newMessage.sender && 
-           msg.receiver === newMessage.receiver &&
-           areTimestampsClose(msg.timestamp, newMessage.timestamp))
-        );
+      try {
+        const newMessage = JSON.parse(message.body);
         
-        if (existingIndex !== -1) {
-          // Update existing message with server data
-          const updated = [...prev];
-          updated[existingIndex] = mergeWithServerMessage(updated[existingIndex], newMessage);
-          console.log('🔄 Updated existing message:', newMessage.content);
-          return sortMessages(updated);
-        } else {
-          // Add new message
-          const newMsg = {
-            ...newMessage,
-            messageState: 'sent',
-            backendConfirmed: true,
-            isOptimistic: false,
-            isFailed: false
-          };
-          console.log('➕ Added new message:', newMessage.content);
-          return sortMessages([...prev, newMsg]);
+        // Basic validation
+        if (!newMessage?.sender || !newMessage?.receiver) {
+          console.warn('Invalid message structure:', newMessage);
+          return;
         }
-      });
-      
-      // ✅ SIMPLIFIED: Update chat list
-      const otherUserId = newMessage.sender === user?.id ? newMessage.receiver : newMessage.sender;
-      const oldList = queryClient.getQueryData([QUERY_KEYS.CHAT_LIST, user?.id]) || [];
-      
-      const existingChatIndex = oldList.findIndex((chat) => chat.userId === otherUserId);
-      if (existingChatIndex >= 0) {
-        const updated = [...oldList];
-        updated[existingChatIndex] = {
-          ...updated[existingChatIndex],
-          lastMessage: newMessage.content || (newMessage.fileUrls?.length ? 'Đã gửi file' : ''),
-          lastUpdated: newMessage.timestamp,
-          hasNewMessage: newMessage.sender !== user?.id
-        };
-        queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user?.id], updated);
+
+        // ✅ FIX: Xác định conversation của message
+        const messageConversation = getMessageConversation(newMessage, user?.id);
+        const currentChatPartner = currentChatPartnerRef.current;
+        
+        console.log(`📨 Received message: ${newMessage.sender} -> ${newMessage.receiver}`);
+        console.log(`📱 Current conversation: ${currentChatPartner}, Message conversation: ${messageConversation}`);
+        
+        if (messageConversation === currentChatPartner) {
+          // ✅ FIX: Message cho conversation hiện tại - xử lý ngay
+          console.log('✅ Processing message for current conversation');
+          processMessageForCurrentConversation(newMessage);
+        } else {
+          // ✅ FIX: Message cho conversation khác - đưa vào queue
+          console.log('📬 Queuing message for other conversation');
+          queueMessageForConversation(newMessage, messageConversation);
+          
+          // ✅ FIX: Chỉ cập nhật chat list, không cập nhật messages
+          queryClient.invalidateQueries([QUERY_KEYS.CHAT_LIST, user?.id]);
+        }
+
+        // ✅ FIX: Update chat list
+        const otherUserId =
+          newMessage.sender === user?.id ? newMessage.receiver : newMessage.sender;
+        const oldList = queryClient.getQueryData([QUERY_KEYS.CHAT_LIST, user?.id]) || [];
+
+        const existingChatIndex = oldList.findIndex((chat) => chat.userId === otherUserId);
+        if (existingChatIndex >= 0) {
+          const updated = [...oldList];
+          updated[existingChatIndex] = {
+            ...updated[existingChatIndex],
+            lastMessage: newMessage.content || (newMessage.fileUrls?.length ? 'Đã gửi file' : ''),
+            lastUpdated: newMessage.timestamp,
+            hasNewMessage: newMessage.sender !== user?.id,
+          };
+          queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user?.id], updated);
+        }
+        
+      } catch (error) {
+        console.error('❌ Error handling incoming message:', error);
       }
-      
-    } catch (error) {
-      console.error('❌ Error handling incoming message:', error);
-    }
-  }, [chatPartner, user?.id, queryClient]);
-  
+    },
+    [user?.id, queryClient, getMessageConversation, processMessageForCurrentConversation, queueMessageForConversation]
+  );
+
   // ✅ REAL-TIME: Handle chat list updates from WebSocket
   const handleChatListUpdate = useCallback(
     (message) => {
-    try {
-      const updateData = JSON.parse(message.body);
-      
-      // ✅ FIX: Handle notification instead of full chat list
-      if (updateData.type === 'chat-list-update') {
-        return;
-      }
-      
-      if (Array.isArray(updateData)) {
-        const currentList = queryClient.getQueryData([QUERY_KEYS.CHAT_LIST, user?.id]) || [];
-        
-        const currentChatMap = new Map();
+      try {
+        const updateData = JSON.parse(message.body);
+
+        // ✅ FIX: Handle notification instead of full chat list
+        if (updateData.type === 'chat-list-update') {
+          queryClient.invalidateQueries([QUERY_KEYS.CHAT_LIST, user?.id]);
+          return;
+        }
+
+        if (Array.isArray(updateData)) {
+          const currentList = queryClient.getQueryData([QUERY_KEYS.CHAT_LIST, user?.id]) || [];
+
+          const currentChatMap = new Map();
           currentList.forEach((chat) => {
-          currentChatMap.set(chat.userId, {
-            lastMessage: chat.lastMessage,
-            lastUpdated: chat.lastUpdated,
+            currentChatMap.set(chat.userId, {
+              lastMessage: chat.lastMessage,
+              lastUpdated: chat.lastUpdated,
               hasNewMessage: chat.hasNewMessage,
+            });
           });
-        });
-        
+
           const mergedList = updateData.map((backendChat) => {
-          const currentChat = currentChatMap.get(backendChat.userId);
-          
-          if (currentChat) {
-            const optimisticTime = new Date(currentChat.lastUpdated).getTime();
-            const now = new Date().getTime();
+            const currentChat = currentChatMap.get(backendChat.userId);
+
+            if (currentChat) {
+              const optimisticTime = new Date(currentChat.lastUpdated).getTime();
+              const now = new Date().getTime();
               const isRecentOptimistic = currentChat.hasNewMessage && now - optimisticTime < 5000;
-            
-            if (isRecentOptimistic) {
-              return {
-                ...backendChat,
-                lastMessage: currentChat.lastMessage,
-                lastUpdated: currentChat.lastUpdated,
+
+              if (isRecentOptimistic) {
+                return {
+                  ...backendChat,
+                  lastMessage: currentChat.lastMessage,
+                  lastUpdated: currentChat.lastUpdated,
                   hasNewMessage: currentChat.hasNewMessage,
-              };
-            } else {
-              const backendTime = new Date(backendChat.lastMessageTime || 0).getTime();
-              const currentTime = new Date(currentChat.lastUpdated || 0).getTime();
-              
-              return {
-                ...backendChat,
-                lastMessage: backendChat.lastMessage || currentChat.lastMessage,
+                };
+              } else {
+                const backendTime = new Date(backendChat.lastMessageTime || 0).getTime();
+                const currentTime = new Date(currentChat.lastUpdated || 0).getTime();
+
+                return {
+                  ...backendChat,
+                  lastMessage: backendChat.lastMessage || currentChat.lastMessage,
                   lastUpdated:
                     backendTime > currentTime
                       ? new Date(backendChat.lastMessageTime).toISOString()
                       : currentChat.lastUpdated,
                   hasNewMessage: false,
-              };
-            }
-          } else {
-            return {
-              ...backendChat,
+                };
+              }
+            } else {
+              return {
+                ...backendChat,
                 lastUpdated: backendChat.lastMessageTime
                   ? new Date(backendChat.lastMessageTime).toISOString()
                   : new Date().toISOString(),
-            };
-          }
-        });
-        
-        queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user?.id], mergedList);
+              };
+            }
+          });
+
+          queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user?.id], mergedList);
+        }
+      } catch (error) {
+        // Silent error handling
       }
-    } catch (error) {
-      // Silent error handling
-    }
     },
     [queryClient, user?.id]
   );
@@ -436,8 +532,6 @@ export const useChat = (user, chatPartner) => {
   // Messages now rely on immediate WebSocket/HTTP response for confirmation
 
   // ✅ REMOVED: Separate HTTP send function - now integrated into main sendMessage
-
-
 
   const sendMessage = async (content, files, receiverId) => {
     const target = receiverId || chatPartner;
@@ -477,12 +571,15 @@ export const useChat = (user, chatPartner) => {
     };
     
     try {
-      // ✅ ATOMIC: Add optimistic message immediately
-      setChatMessages(prev => {
-        const updated = sortMessages([...prev, optimisticMessage]);
+      // ✅ FIX: Add optimistic message to current conversation
+      setConversationMessages(prev => {
+        const currentMessages = prev.get(target) || [];
+        const updated = sortMessages([...currentMessages, optimisticMessage]);
+        
         // Immediately sync to cache
         queryClient.setQueryData([QUERY_KEYS.MESSAGES, user?.id, target], updated);
-        return updated;
+        
+        return new Map(prev).set(target, updated);
       });
       
       // ✅ BULLETPROOF: Handle file uploads first
@@ -490,11 +587,15 @@ export const useChat = (user, chatPartner) => {
       if (files && files.length > 0) {
         try {
           // Update status to uploading
-          setChatMessages(prev => prev.map(msg => 
-            msg.id === messageId 
-              ? { ...msg, messageState: 'uploading' }
-              : msg
-          ));
+          setConversationMessages(prev => {
+            const currentMessages = prev.get(target) || [];
+            const updated = currentMessages.map(msg => 
+              msg.id === messageId 
+                ? { ...msg, messageState: 'uploading' }
+                : msg
+            );
+            return new Map(prev).set(target, updated);
+          });
           
           uploadedFileUrls = await uploadFiles(files);
           console.log('✅ Files uploaded successfully:', uploadedFileUrls.length);
@@ -569,8 +670,9 @@ export const useChat = (user, chatPartner) => {
       
       // ✅ BULLETPROOF: Update message to sent state
       if (success) {
-        setChatMessages(prev => {
-          const updated = prev.map(msg => 
+        setConversationMessages(prev => {
+          const currentMessages = prev.get(target) || [];
+          const updated = currentMessages.map(msg => 
             msg.id === messageId 
               ? mergeWithServerMessage(msg, backendResponse)
               : msg
@@ -578,7 +680,7 @@ export const useChat = (user, chatPartner) => {
           
           // Immediately sync to cache
           queryClient.setQueryData([QUERY_KEYS.MESSAGES, user?.id, target], updated);
-          return updated;
+          return new Map(prev).set(target, updated);
         });
         
         console.log('✅ Message successfully sent and confirmed');
@@ -588,8 +690,9 @@ export const useChat = (user, chatPartner) => {
       console.error('❌ Send message failed:', error);
       
       // ✅ BULLETPROOF: Mark as failed
-      setChatMessages(prev => {
-        const updated = prev.map(msg => 
+      setConversationMessages(prev => {
+        const currentMessages = prev.get(target) || [];
+        const updated = currentMessages.map(msg => 
           msg.id === messageId 
             ? {
                 ...msg,
@@ -603,7 +706,7 @@ export const useChat = (user, chatPartner) => {
         
         // Sync failed state to cache
         queryClient.setQueryData([QUERY_KEYS.MESSAGES, user?.id, target], updated);
-        return updated;
+        return new Map(prev).set(target, updated);
       });
     } finally {
       // ✅ CLEANUP: Always remove from sending set
@@ -652,7 +755,11 @@ export const useChat = (user, chatPartner) => {
     console.log('🔄 User initiated retry for message:', message.content);
     
     // Remove the failed message and resend
-    setChatMessages(prev => prev.filter(msg => msg.id !== message.id));
+    setConversationMessages(prev => {
+      const currentMessages = prev.get(chatPartner) || [];
+      const filtered = currentMessages.filter(msg => msg.id !== message.id);
+      return new Map(prev).set(chatPartner, filtered);
+    });
     
     // Resend the message
     await sendMessage(message.content, [], message.receiver || chatPartner);
@@ -668,4 +775,4 @@ export const useChat = (user, chatPartner) => {
     isConnected,
     retryMessage, // ✅ Only expose user-initiated retry
   };
-};    
+};
