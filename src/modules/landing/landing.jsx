@@ -3,9 +3,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import Image from 'next/image';
-import TectNetwork from '@/public/images/tech_network.png';
-import DataSecurity from '@/public/images/data_security.png';
-import Community from '@/public/images/community.png';
+import TectNetwork from '@/public/images/t.jpg';
+import DataSecurity from '@/public/images/p.jpg';
+import Community from '@/public/images/c.jpg';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import gsap from 'gsap';
 import { useRouter } from 'next/navigation';
@@ -24,6 +24,7 @@ export default function Landing() {
     renderer.shadowMap.enabled = true;
 
     const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x262626);
     const camera = new THREE.PerspectiveCamera(
       45,
       window.innerWidth / window.innerHeight,
@@ -42,10 +43,12 @@ export default function Landing() {
 
     const geometry = new THREE.TorusKnotGeometry(1, 0.3, 128, 16);
     const material = new THREE.MeshStandardMaterial({
-      color: 0x4f46e5,
-      metalness: 0.7,
-      roughness: 0.2,
+      color: 0xffffff, 
+      metalness: 0.2,  
+      roughness: 0.2,  
+      emissive: 0x000000,  
     });
+
     const torus = new THREE.Mesh(geometry, material);
     torus.castShadow = true;
     torus.receiveShadow = true;
@@ -69,7 +72,7 @@ export default function Landing() {
     }
     particlesGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     const particlesMaterial = new THREE.PointsMaterial({
-      color: 0x4f46e5,
+      color: 0xffffff, // Neutral 800
       size: 0.05,
       transparent: true,
       opacity: 0.8,
@@ -169,11 +172,11 @@ export default function Landing() {
   return (
     <div
       ref={contentRef}
-      className="no-scrollbar relative w-full overflow-y-auto overflow-x-hidden scroll-smooth bg-gradient-to-b from-gray-900 to-indigo-900"
+      className="no-scrollbar relative w-full overflow-y-auto overflow-x-hidden scroll-smooth bg-neutral-800 dark:bg-neutral-900"
     >
       <canvas ref={canvasRef} className="absolute left-0 top-0 h-screen w-full" />
 
-      <div className="relative z-10 flex h-screen flex-col items-center justify-center px-4 text-center text-white">
+      <div className="relative z-10 flex h-screen flex-col items-center justify-center px-4 text-center text-zinc-200">
         <h1 className="title mb-4 text-5xl font-bold">Welcome to Unify</h1>
         <p className="subtitle mb-8 max-w-2xl text-lg">
           Connect, share, and grow with our community-driven platform.
@@ -181,11 +184,11 @@ export default function Landing() {
         <div className="buttons flex gap-4">
           <button
             onClick={() => router.push('/register')}
-            className="rounded-lg bg-indigo-600 px-6 py-3 font-semibold shadow-lg transition-transform hover:scale-105 hover:bg-indigo-500"
+            className="rounded-lg bg-neutral-700 px-6 py-3 font-semibold text-zinc-200 shadow-lg transition-transform hover:scale-105 hover:bg-neutral-600"
           >
             Get Started
           </button>
-          <button className="rounded-lg bg-white px-6 py-3 font-semibold text-indigo-600 shadow-lg transition-transform hover:scale-105 hover:bg-gray-100">
+          <button className="rounded-lg bg-zinc-200 px-6 py-3 font-semibold text-neutral-800 shadow-lg transition-transform hover:scale-105 hover:bg-zinc-300">
             Learn More
           </button>
         </div>
@@ -193,111 +196,112 @@ export default function Landing() {
 
       <div className="relative z-10 w-full py-12">
         <div className="mx-auto max-w-6xl px-4">
-          {/* Section 1: Terms of Service with collapsible items and scrollable content */}
+          {/* Section 1 */}
           <div className="terms-section terms-card mb-12 grid translate-y-20 rotate-1 scale-100 grid-cols-1 items-start gap-6 p-6 opacity-0 md:grid-cols-2">
-            <div className="text-white">
+            <div className="text-zinc-200">
               <h2 className="terms-heading mb-4 text-2xl font-bold">Terms of Service</h2>
-              <div className="space-y-3 text-sm text-gray-200">
-                <details className="rounded-lg bg-white/5 p-4 shadow-sm backdrop-blur-md">
-                  <summary className="cursor-pointer list-none font-semibold text-white">Overview</summary>
+              <div className="space-y-3 text-sm text-zinc-300">
+                <details className="rounded-lg bg-neutral-700/50 p-4 shadow-sm backdrop-blur-md">
+                  <summary className="cursor-pointer list-none font-semibold text-zinc-200">
+                    Overview
+                  </summary>
                   <p className="mt-2 leading-relaxed">
-                    Workaholics creates technologies to help people connect and grow businesses. These Terms govern your use of Unify and other products unless separate terms apply.
+                    Workaholics creates technologies to help people connect and grow businesses...
                   </p>
                 </details>
-                <details className="rounded-lg bg-white/5 p-4 shadow-sm backdrop-blur-md">
-                  <summary className="cursor-pointer list-none font-semibold text-white">Agreement</summary>
+                <details className="rounded-lg bg-neutral-700/50 p-4 shadow-sm backdrop-blur-md">
+                  <summary className="cursor-pointer list-none font-semibold text-zinc-200">
+                    Agreement
+                  </summary>
                   <p className="mt-2 leading-relaxed">
-                    These Terms constitute an agreement between you and Workaholics. If you do not agree, please do not use our services.
+                    These Terms constitute an agreement between you and Workaholics...
                   </p>
                 </details>
-                <details className="rounded-lg bg-white/5 p-4 shadow-sm backdrop-blur-md">
-                  <summary className="cursor-pointer list-none font-semibold text-white">Fees & Ads</summary>
+                <details className="rounded-lg bg-neutral-700/50 p-4 shadow-sm backdrop-blur-md">
+                  <summary className="cursor-pointer list-none font-semibold text-zinc-200">
+                    Fees & Ads
+                  </summary>
                   <p className="mt-2 leading-relaxed">
-                    You do not incur fees for using Unify unless specified. We display relevant ads based on your data preferences.
+                    You do not incur fees for using Unify unless specified...
                   </p>
                 </details>
-                <details className="rounded-lg bg-white/5 p-4 shadow-sm backdrop-blur-md">
-                  <summary className="cursor-pointer list-none font-semibold text-white">Data Use</summary>
-                  <ScrollArea className="mt-2 max-h-48 rounded-md border border-white/10 p-3">
-                    <div className="space-y-2 text-sm leading-relaxed">
-                      <p>
-                        We do not sell your personal data. We do not share information that directly identifies you unless you grant permission.
-                      </p>
-                      <p>
-                        Advertisers provide audience preferences. We show their ads to people who might be interested and provide performance metrics.
-                      </p>
-                      <p>
-                        We may update these practices over time. Please review this section regularly.
-                      </p>
+                <details className="rounded-lg bg-neutral-700/50 p-4 shadow-sm backdrop-blur-md">
+                  <summary className="cursor-pointer list-none font-semibold text-zinc-200">
+                    Data Use
+                  </summary>
+                  <ScrollArea className="mt-2 max-h-48 rounded-md border border-neutral-600 p-3 dark:border-neutral-700">
+                    <div className="space-y-2 text-sm leading-relaxed text-zinc-300">
+                      <p>We do not sell your personal data...</p>
                     </div>
                   </ScrollArea>
                 </details>
               </div>
             </div>
-            <Image src={TectNetwork} alt="Tech Network" className="terms-image h-80 w-full rounded-xl object-cover" />
+            <Image
+              src={TectNetwork}
+              alt="Tech Network"
+              className="terms-image h-80 w-full rounded-xl object-cover"
+            />
           </div>
 
           <div className="divider mb-12"></div>
 
-          {/* Section 2: Privacy Policy */}
+          {/* Section 2 */}
           <div className="terms-section terms-card mb-12 grid translate-y-20 rotate-1 scale-100 grid-cols-1 items-start gap-6 p-6 opacity-0 md:grid-cols-2">
-            <div className="order-2 text-white md:order-1">
+            <div className="order-2 text-zinc-200 md:order-1">
               <h2 className="terms-heading mb-4 text-2xl font-bold">Privacy Policy</h2>
-              <div className="space-y-3 text-sm text-gray-200">
-                <p className="leading-relaxed">
-                  Understand the types of information we collect and how we use and share that information.
-                </p>
+              <div className="space-y-3 text-sm text-zinc-300">
+                <p className="leading-relaxed">Understand the types of information we collect...</p>
                 <ul className="list-inside list-disc space-y-1">
-                  <li>How we collect, use, share, store, and transfer information</li>
-                  <li>Your rights and where to manage your information</li>
-                  <li>Examples to make our practices clear and accessible</li>
+                  <li>How we collect, use, share...</li>
+                  <li>Your rights and where to manage...</li>
+                  <li>Examples to make our practices clear...</li>
                 </ul>
-                <ScrollArea className="max-h-48 rounded-md border border-white/10 p-3">
-                  <div className="space-y-2 text-sm leading-relaxed">
-                    <p>
-                      You can shape your experience by adjusting privacy settings in the products you use.
-                    </p>
-                    <p>
-                      We include links to resources so you can learn more about topics that interest you.
-                    </p>
+                <ScrollArea className="max-h-48 rounded-md border border-neutral-600 p-3 dark:border-neutral-700">
+                  <div className="space-y-2 text-sm leading-relaxed text-zinc-300">
+                    <p>You can shape your experience...</p>
                   </div>
                 </ScrollArea>
               </div>
             </div>
-            <Image src={DataSecurity} alt="Data Security" className="order-1 h-80 w-full rounded-xl object-cover md:order-2" />
+            <Image
+              src={DataSecurity}
+              alt="Data Security"
+              className="order-1 h-80 w-full rounded-xl object-cover md:order-2"
+            />
           </div>
 
           <div className="divider mb-12"></div>
 
-          {/* Section 3: Community Standards */}
+          {/* Section 3 */}
           <div className="terms-section terms-card mb-12 grid translate-y-20 rotate-1 scale-100 grid-cols-1 items-start gap-6 p-6 opacity-0 md:grid-cols-2">
-            <div className="text-white">
+            <div className="text-zinc-200">
               <h2 className="terms-heading mb-4 text-2xl font-bold">Community Standards</h2>
-              <p className="mb-2 text-sm leading-relaxed text-gray-200">
-                Our standards outline what content is allowed and not allowed on our services.
+              <p className="mb-2 text-sm leading-relaxed text-zinc-300">
+                Our standards outline what content is allowed...
               </p>
-              <ul className="mb-3 grid list-inside list-disc gap-1 text-sm text-gray-200 md:grid-cols-2">
+              <ul className="mb-3 grid list-inside list-disc gap-1 text-sm text-zinc-300 md:grid-cols-2">
                 <li>Violence and Incitement</li>
                 <li>Bullying and Harassment</li>
                 <li>Hateful Conduct</li>
                 <li>Privacy Violations</li>
-                <li>Spam</li>
-                <li>Misinformation</li>
-                <li>Cybersecurity</li>
-                <li>Account Integrity</li>
               </ul>
-              <details className="rounded-lg bg-white/5 p-4 shadow-sm backdrop-blur-md">
-                <summary className="cursor-pointer list-none font-semibold text-white">More details</summary>
-                <ScrollArea className="mt-2 max-h-48 rounded-md border border-white/10 p-3">
-                  <ul className="list-inside list-disc space-y-1 text-sm leading-relaxed">
-                    <li>Standards apply globally and to all content, including AI-generated.</li>
-                    <li>Some content may require additional context or age restrictions.</li>
-                    <li>We value diverse perspectives and work with experts to refine policies.</li>
+              <details className="rounded-lg bg-neutral-700/50 p-4 shadow-sm backdrop-blur-md">
+                <summary className="cursor-pointer list-none font-semibold text-zinc-200">
+                  More details
+                </summary>
+                <ScrollArea className="mt-2 max-h-48 rounded-md border border-neutral-600 p-3 dark:border-neutral-700">
+                  <ul className="list-inside list-disc space-y-1 text-sm leading-relaxed text-zinc-300">
+                    <li>Standards apply globally...</li>
                   </ul>
                 </ScrollArea>
               </details>
             </div>
-            <Image src={Community} alt="Community" className="h-80 w-full rounded-xl object-cover" />
+            <Image
+              src={Community}
+              alt="Community"
+              className="h-80 w-full rounded-xl object-cover"
+            />
           </div>
         </div>
       </div>

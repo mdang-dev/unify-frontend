@@ -144,7 +144,7 @@ const ReplyComponent = ({
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="max-w-[100px] truncate text-xs font-semibold text-gray-900 dark:text-gray-100">
+            <span className="max-w-[100px] truncate text-xs font-bold text-neutral-900 dark:text-gray-100">
               {reply.username || 'Unknown'}
             </span>
             <span className="truncate text-xs text-gray-500 dark:text-gray-400">
