@@ -316,7 +316,7 @@ const Message = ({ messages, messagesEndRef, avatar, onRetryMessage }) => {
 
               {message.content && (
                 <div
-                  className={`rounded-2xl p-3 shadow-md ${
+                  className={`rounded-2xl p-3 pb-1 shadow-md ${
                     isCurrentUser
                       ? 'bg-blue-600 text-white'
                       : 'bg-zinc-700 text-white dark:bg-zinc-800'
@@ -325,6 +325,9 @@ const Message = ({ messages, messagesEndRef, avatar, onRetryMessage }) => {
                   }`}
                 >
                   {renderContent(message.content)}
+                  <div className="pb-1 text-[#d4d7de] dark:text-white text-xs">
+                      {formatMessageTime(message.timestamp)}
+                    </div>
                 </div>
               )}
 
@@ -332,9 +335,6 @@ const Message = ({ messages, messagesEndRef, avatar, onRetryMessage }) => {
               <div className={`mt-1 flex items-center gap-2 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
                 {isLastOfGroup && (
                   <div className="flex items-center gap-2">
-                    <div className="px-2 py-1 text-black dark:text-white text-xs">
-                      {formatMessageTime(message.timestamp)}
-                    </div>
                     
                     {/* ✅ MESSAGE STATUS: Show status alongside time for current user's last message */}
                     {shouldShowStatus && (
@@ -346,7 +346,6 @@ const Message = ({ messages, messagesEndRef, avatar, onRetryMessage }) => {
                           message.isOptimistic || 
                           (!message.backendConfirmed && !message.isFailed)) && (
                           <div className="flex items-center gap-1 text-xs text-gray-400">
-                            <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
                             <span>Sending</span>
                           </div>
                         )}
@@ -356,7 +355,6 @@ const Message = ({ messages, messagesEndRef, avatar, onRetryMessage }) => {
                           message.messageState === 'read') && 
                           message.backendConfirmed && !message.isFailed) && (
                           <div className="flex items-center gap-1 text-xs text-gray-400">
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                             <span>Sent</span>
                           </div>
                         )}

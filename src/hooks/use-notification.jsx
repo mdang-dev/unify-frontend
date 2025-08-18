@@ -17,6 +17,82 @@ export const useNotification = (userId) => {
   const router = useRouter();
   const { showNotificationByType } = useDesktopNotifications();
 
+  // ✅ NEW: Message batching for better performance
+  const messageBatchRef = useRef([]);
+  const batchTimeoutRef = useRef(null);
+  const BATCH_DELAY = 100; // 100ms batching
+
+  // ✅ NEW: Process batched messages
+  const processBatch = useCallback(() => {
+    if (messageBatchRef.current.length === 0) return;
+    
+    const batch = [...messageBatchRef.current];
+    messageBatchRef.current = [];
+    
+    // Process all notifications in batch for better performance
+    queryClient.setQueryData([QUERY_KEYS.NOTIFICATIONS, userId], (oldData) => {
+      if (!oldData) return oldData;
+      
+      const newPages = [...oldData.pages];
+      
+      // Process each notification in batch
+      batch.forEach(parsed => {
+        // Check if notification already exists (by sender, type, and recent timestamp)
+        const now = new Date();
+        const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+        
+        const existingIndex = newPages.findIndex(page => 
+          page.notifications?.some(n => 
+            n.sender?.id === parsed.sender?.id && 
+            n.type === parsed.type &&
+            new Date(n.timestamp) > fiveMinutesAgo
+          )
+        );
+
+        if (existingIndex !== -1) {
+          // Replace existing notification with new one
+          const pageIndex = existingIndex;
+          const notificationIndex = newPages[pageIndex].notifications.findIndex(n => 
+            n.sender?.id === parsed.sender?.id && 
+            n.type === parsed.type &&
+            new Date(n.timestamp) > fiveMinutesAgo
+          );
+          
+          if (notificationIndex !== -1) {
+            newPages[pageIndex] = {
+              ...newPages[pageIndex],
+              notifications: [
+                ...newPages[pageIndex].notifications.slice(0, notificationIndex),
+                parsed,
+                ...newPages[pageIndex].notifications.slice(notificationIndex + 1)
+              ]
+            };
+          }
+        } else {
+          // Insert the new notification to the first page
+          if (newPages[0] && newPages[0].notifications) {
+            newPages[0] = {
+              ...newPages[0],
+              notifications: [parsed, ...newPages[0].notifications]
+            };
+          }
+        }
+      });
+      
+      return { ...oldData, pages: newPages };
+    });
+
+    // Update unread count in batch
+    queryClient.setQueryData([QUERY_KEYS.NOTIFICATIONS_UNREAD_COUNT, userId], (oldCount) => {
+      return (oldCount || 0) + batch.length;
+    });
+
+    // Show desktop notifications for all batched messages
+    batch.forEach(parsed => {
+      showNotificationByType(parsed);
+    });
+  }, [queryClient, userId, showNotificationByType]);
+
   // ✅ NEW: Fetch unread count separately for performance
   const { data: unreadCount = 0 } = useQuery({
     queryKey: [QUERY_KEYS.NOTIFICATIONS_UNREAD_COUNT, userId],
@@ -68,68 +144,16 @@ export const useNotification = (userId) => {
       try {
         const parsed = JSON.parse(message.body);
         
-        // ✅ PERFORMANCE: Update notifications list with duplicate handling
-        queryClient.setQueryData([QUERY_KEYS.NOTIFICATIONS, userId], (oldData) => {
-          if (!oldData) return oldData;
-          
-          // Check if notification already exists (by sender, type, and recent timestamp)
-          const now = new Date();
-          const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
-          
-          const existingIndex = oldData.pages.findIndex(page => 
-            page.notifications?.some(n => 
-              n.sender?.id === parsed.sender?.id && 
-              n.type === parsed.type &&
-              new Date(n.timestamp) > fiveMinutesAgo
-            )
-          );
+        // Add to batch
+        messageBatchRef.current.push(parsed);
+        clearTimeout(batchTimeoutRef.current); // Clear any pending batch
+        batchTimeoutRef.current = setTimeout(processBatch, BATCH_DELAY);
 
-          if (existingIndex !== -1) {
-            // Replace existing notification with new one
-            const newPages = [...oldData.pages];
-            const pageIndex = existingIndex;
-            const notificationIndex = newPages[pageIndex].notifications.findIndex(n => 
-              n.sender?.id === parsed.sender?.id && 
-              n.type === parsed.type &&
-              new Date(n.timestamp) > fiveMinutesAgo
-            );
-            
-            if (notificationIndex !== -1) {
-              newPages[pageIndex] = {
-                ...newPages[pageIndex],
-                notifications: [
-                  ...newPages[pageIndex].notifications.slice(0, notificationIndex),
-                  parsed,
-                  ...newPages[pageIndex].notifications.slice(notificationIndex + 1)
-                ]
-              };
-              return { ...oldData, pages: newPages };
-            }
-          }
-
-          // Insert the new notification to the first page
-          const newPages = [...oldData.pages];
-          if (newPages[0] && newPages[0].notifications) {
-            newPages[0] = {
-              ...newPages[0],
-              notifications: [parsed, ...newPages[0].notifications]
-            };
-          }
-          return { ...oldData, pages: newPages };
-        });
-
-        // Update unread count
-        queryClient.setQueryData([QUERY_KEYS.NOTIFICATIONS_UNREAD_COUNT, userId], (oldCount) => {
-          return (oldCount || 0) + 1;
-        });
-
-        // ✅ NEW: Show desktop notification for new notifications
-        showNotificationByType(parsed);
       } catch (err) {
         console.error('❌ Failed to parse WebSocket message:', err);
       }
     },
-    [queryClient, userId, showNotificationByType]
+    [processBatch]
   );
 
   // 🔌 Set up WebSocket connection and subscription
@@ -167,17 +191,12 @@ export const useNotification = (userId) => {
             const data = await response.json();
             csrfToken = data.token;
           } else {
-            if (process.env.NODE_ENV === 'development') {
-              console.warn(`CSRF token fetch failed with status: ${response.status}`);
-            }
+            // Remove unnecessary warning logs
           }
         } catch (error) {
-          if (process.env.NODE_ENV === 'development') {
-            if (error.name === 'AbortError') {
-              console.warn('CSRF token fetch timed out');
-            } else {
-              console.warn('Failed to fetch CSRF token for notifications:', error.message);
-            }
+          // Only log critical CSRF token errors
+          if (error.name !== 'AbortError') {
+            console.error('Failed to fetch CSRF token for notifications:', error.message);
           }
           // Continue without CSRF token if fetch fails
         }
@@ -198,9 +217,8 @@ export const useNotification = (userId) => {
               // Subscribe to user-specific notification queue for real-time updates
               client.subscribe(`/user/${userId}/queue/notifications`, handleWebSocketMessage);
             } catch (error) {
-              if (process.env.NODE_ENV === 'development') {
-                console.error('❌ Failed to subscribe to notifications:', error);
-              }
+              // Only log critical subscription errors
+              console.error('Failed to subscribe to notifications:', error);
             }
           },
           onStompError: (frame) => {
@@ -219,10 +237,12 @@ export const useNotification = (userId) => {
           client.activate();
           stompClientRef.current = client;
         } catch (error) {
-          // Client activation failed - handle silently
+          // Only log critical activation errors
+          console.error('Client activation failed:', error);
         }
       } catch (error) {
-        // WebSocket setup failed - handle silently
+        // Only log critical WebSocket setup errors
+        console.error('WebSocket setup failed:', error);
       }
     };
 
@@ -236,6 +256,11 @@ export const useNotification = (userId) => {
         } catch (error) {
           // Handle cleanup errors silently
         }
+      }
+      
+      // ✅ NEW: Cleanup batch timeout
+      if (batchTimeoutRef.current) {
+        clearTimeout(batchTimeoutRef.current);
       }
     };
   }, [userId, refetch, handleWebSocketMessage]);

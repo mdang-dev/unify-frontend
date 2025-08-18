@@ -4,6 +4,11 @@ import SockJS from 'sockjs-client';
 import { getCookie } from '../utils/cookies.util';
 import { COOKIE_KEYS } from '../constants/cookie-keys.constant';
 
+// ✅ NEW: Global connection pool for better resource management
+const globalConnectionPool = new Map();
+const MAX_CONNECTIONS_PER_USER = 3;
+const MAX_TOTAL_CONNECTIONS = 10;
+
 export const useWebSocket = (userId) => {
   const [client, setClient] = useState(null);
   const [connected, setConnected] = useState(false);
@@ -16,8 +21,54 @@ export const useWebSocket = (userId) => {
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 5;
 
-  const createStompClient = useCallback(async () => {
+  // ✅ NEW: Connection pooling logic
+  const getConnectionFromPool = useCallback((channel) => {
+    const poolKey = `${userId}:${channel}`;
+    
+    if (globalConnectionPool.has(poolKey)) {
+      const connection = globalConnectionPool.get(poolKey);
+      if (connection && connection.connected) {
+        return connection;
+      } else {
+        // Remove stale connection
+        globalConnectionPool.delete(poolKey);
+      }
+    }
+    
+    // Check if we can create new connection
+    if (globalConnectionPool.size >= MAX_TOTAL_CONNECTIONS) {
+      // Close oldest connection
+      const oldestKey = globalConnectionPool.keys().next().value;
+      const oldestConnection = globalConnectionPool.get(oldestKey);
+      try {
+        oldestConnection?.deactivate();
+      } catch (err) {
+        // Ignore cleanup errors
+      }
+      globalConnectionPool.delete(oldestKey);
+    }
+    
+    return null; // Will create new connection
+  }, [userId]);
+
+  const addConnectionToPool = useCallback((channel, connection) => {
+    const poolKey = `${userId}:${channel}`;
+    globalConnectionPool.set(poolKey, connection);
+  }, [userId]);
+
+  const removeConnectionFromPool = useCallback((channel) => {
+    const poolKey = `${userId}:${channel}`;
+    globalConnectionPool.delete(poolKey);
+  }, [userId]);
+
+  const createStompClient = useCallback(async (channel = 'default') => {
     if (!userId) return null;
+
+    // ✅ OPTIMIZED: Check connection pool first
+    const existingConnection = getConnectionFromPool(channel);
+    if (existingConnection) {
+      return existingConnection;
+    }
 
     const token = getCookie(COOKIE_KEYS.AUTH_TOKEN);
     if (!token) {
@@ -72,7 +123,7 @@ export const useWebSocket = (userId) => {
     const wsUrl = `${apiUrl}/ws`;
 
     // Create STOMP client with optimized settings for real-time communication
-    return new Client({
+    const newClient = new Client({
       webSocketFactory: () => {
         return new SockJS(wsUrl);
       },
@@ -85,10 +136,7 @@ export const useWebSocket = (userId) => {
       heartbeatIncoming: 25000, // Increased for better stability
       heartbeatOutgoing: 25000, // Increased for better stability
       debug: (str) => {
-        // Only log critical STOMP errors in development
-        if (process.env.NODE_ENV === 'development' && str.includes('error')) {
-          console.warn('STOMP Error:', str);
-        }
+        // Remove debug logging - not needed in production
       },
       // ✅ OPTIMIZED: Balanced connection settings
       reconnectDelay: 0, // Disable auto-reconnect to use custom logic
@@ -98,15 +146,19 @@ export const useWebSocket = (userId) => {
         setError(null);
         retryCountRef.current = 0;
         reconnectAttemptsRef.current = 0;
+        
+        // ✅ NEW: Add to connection pool when connected
+        addConnectionToPool(channel, newClient);
       },
       onDisconnect: () => {
         // WebSocket disconnected - update connection state
         setConnected(false);
+        
+        // ✅ NEW: Remove from connection pool when disconnected
+        removeConnectionFromPool(channel);
       },
       onStompError: (frame) => {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('STOMP Error:', frame);
-        }
+        // Only log critical STOMP errors
         setError(`STOMP Error: ${frame.headers.message || 'Connection failed'}`);
         setConnected(false);
 
@@ -133,18 +185,15 @@ export const useWebSocket = (userId) => {
               try {
                 newClient.activate();
               } catch (err) {
-                if (process.env.NODE_ENV === 'development') {
-                  console.warn('Failed to activate new client:', err.message);
-                }
+                // Only log critical activation errors
+                console.error('Failed to activate new client:', err.message);
               }
             }
           }, delay);
         }
       },
       onWebSocketError: (event) => {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('❌ WebSocket Error:', event);
-        }
+        // Only log critical WebSocket errors
         setError(`WebSocket Error: ${event.message || 'Connection failed'}`);
         setConnected(false);
 
@@ -172,9 +221,8 @@ export const useWebSocket = (userId) => {
               try {
                 newClient.activate();
               } catch (err) {
-                if (process.env.NODE_ENV === 'development') {
-                  console.warn('Failed to activate new client:', err.message);
-                }
+                // Only log critical activation errors
+                console.error('Failed to activate new client:', err.message);
               }
             }
           }, delay);
@@ -230,9 +278,8 @@ export const useWebSocket = (userId) => {
         try {
           stompClient.activate();
         } catch (err) {
-          if (process.env.NODE_ENV === 'development') {
-            console.error('Error activating WebSocket client:', err);
-          }
+          // Only log critical activation errors
+          console.error('Error activating WebSocket client:', err);
           setError(`Failed to connect: ${err.message}`);
         }
       }
@@ -256,9 +303,7 @@ export const useWebSocket = (userId) => {
         try {
           clientRef.current.deactivate();
         } catch (err) {
-          if (process.env.NODE_ENV === 'development') {
-            console.warn('Error deactivating WebSocket client:', err.message);
-          }
+          // Ignore cleanup errors
         }
         clientRef.current = null;
       }
@@ -280,9 +325,7 @@ export const useWebSocket = (userId) => {
       try {
         clientRef.current.deactivate();
       } catch (err) {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('Error deactivating during manual reconnect:', err.message);
-        }
+        // Ignore deactivation errors
       }
     }
 
@@ -293,9 +336,8 @@ export const useWebSocket = (userId) => {
       try {
         newClient.activate();
       } catch (err) {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('Failed to activate client during manual reconnect:', err.message);
-        }
+        // Only log critical activation errors
+        console.error('Failed to activate client during manual reconnect:', err.message);
       }
     }
   }, [createStompClient]);
@@ -305,5 +347,10 @@ export const useWebSocket = (userId) => {
     connected,
     error,
     reconnect: manualReconnect,
+    // ✅ NEW: Connection pooling methods
+    getConnection: getConnectionFromPool,
+    addConnection: addConnectionToPool,
+    removeConnection: removeConnectionFromPool,
+    poolSize: globalConnectionPool.size,
   };
 };
