@@ -322,7 +322,10 @@ const RegisterPage = () => {
 
             <div className="m-auto flex items-center gap-1">
               <span>{t('AlreadyHaveAccount')}</span>
-              <Link href="/login" className="text-[#0F00E1]">
+              <Link
+                href="/login"
+                className="font-medium text-neutral-800 hover:underline dark:text-zinc-300"
+              >
                 {t('SignIn')}
               </Link>
             </div>
@@ -341,7 +344,10 @@ const RegisterPage = () => {
               />
               <Label htmlFor="terms" className="text-sm">
                 {t('AgreeToTerms')}{' '}
-                <Link href="/landing" className="text-blue-600 underline">
+                <Link
+                  href="/landing"
+                  className="font-medium text-neutral-800 underline dark:text-zinc-300"
+                >
                   {t('TermsOfService')}
                 </Link>
               </Label>
