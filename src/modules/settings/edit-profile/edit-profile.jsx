@@ -285,9 +285,17 @@ const EditProfile = () => {
     try {
       if (userData.avatar.file instanceof File) {
         const uploadedFile = await handleUploadAvatar();
-        avatarData = { url: uploadedFile.url };
+        avatarData = { 
+          id: null, // New avatar, no ID yet
+          url: uploadedFile.url,
+          createdAt: new Date().toISOString() // Current timestamp for new avatar
+        };
       } else if (userData.avatar?.url && userData.avatar.url !== defaultAvatar) {
-        avatarData = { url: userData.avatar.url };
+        avatarData = { 
+          id: userData.avatar.id || null, // Preserve existing avatar ID if available
+          url: userData.avatar.url,
+          createdAt: userData.avatar.createdAt || new Date().toISOString() // Use existing createdAt or current timestamp
+        };
       } else {
         avatarData = null; // Use default avatar
       }
