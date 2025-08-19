@@ -1,34 +1,38 @@
 'use client';
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Button, Modal, ModalBody, ModalContent, ModalHeader } from '@heroui/react';
+import { Button, Modal, ModalBody, ModalContent, ModalHeader, Spinner } from '@heroui/react';
+import { useQuery } from '@tanstack/react-query';
 import AdminReasonModal from '../../_components/admin-reason-modal';
 import { addToast } from '@heroui/toast';
+import { adminReportsQueryApi } from '@/src/apis/reports/query/admin-reports.query.api';
+import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
 
 const ReportDetail = () => {
-  const { reportId } = useParams();
+  const params = useParams();
+  const reportedId = params.reportedId;
 
-  // Placeholder data for UI demonstration
-  const reporters = useMemo(
-    () => Array.from({ length: 18 }, (_, i) => ({ name: `Reporter ${i + 1}`, username: `user_${i + 1}` })),
-    []
-  );
-  const proofImages = useMemo(
-    () =>
-      Array.from({ length: 16 }, (_, i) =>
-        `/images/${['avatar.png', 'avt-exp.jpg', 'A_black_image.jpg'][i % 3]}`
-      ),
-    []
-  );
 
   const [showAllReporters, setShowAllReporters] = useState(false);
   const [showAllProofs, setShowAllProofs] = useState(false);
-
   const [imagePreviewUrl, setImagePreviewUrl] = useState(null);
-
   const [isAdminReasonOpen, setIsAdminReasonOpen] = useState(false);
   const [adminReasonAction, setAdminReasonAction] = useState(null);
   const [isButtonLoading, setIsButtonLoading] = useState(false);
+
+  // Fetch report details from backend
+  const { data: reportDetailResponse, isLoading, error } = useQuery({
+    queryKey: [QUERY_KEYS.REPORT_DETAIL, reportedId],
+    queryFn: () => adminReportsQueryApi.getReportDetailByTarget(reportedId),
+    enabled: !!reportedId,
+  });
+
+  // Extract the first (and only) report from the array response
+  const reportDetail = Array.isArray(reportDetailResponse) && reportDetailResponse.length > 0 
+    ? reportDetailResponse[0] 
+    : reportDetailResponse;
+
+  console.log('reportDetail', reportDetail);
 
   const openAdminReasonModal = (action) => {
     setAdminReasonAction(action);
@@ -50,66 +54,176 @@ const ReportDetail = () => {
     }, 600);
   };
 
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 0: return 'Pending';
+      case 1: return 'Approved';
+      case 2: return 'Rejected';
+      case 3: return 'Resolved';
+      case 4: return 'Canceled';
+      default: return 'Unknown';
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Not specified';
+    try {
+      return new Date(dateString).toLocaleString('en-US', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return dateString;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="h-screen w-full px-6 pb-10">
+        <div className="mx-auto mb-6 flex max-w-7xl flex-col gap-6">
+          <div className="flex items-center justify-center h-64">
+            <Spinner size="lg" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-screen w-full px-6 pb-10">
+        <div className="mx-auto mb-6 flex max-w-7xl flex-col gap-6">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-red-600">Error Loading Report</h3>
+              <p className="text-sm text-muted-foreground">
+                {error.message || 'An error occurred while loading report details'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!reportDetail) {
+    return (
+      <div className="h-screen w-full px-6 pb-10">
+        <div className="mx-auto mb-6 flex max-w-7xl flex-col gap-6">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-muted-foreground">No Report Found</h3>
+              <p className="text-sm text-muted-foreground">
+                Report details not found for this user
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const { reportedEntity, reporters, images, status, reason, reportedAt } = reportDetail;
+
+  // Add default values to prevent undefined errors
+  const safeReporters = reporters || [];
+  const safeImages = images || [];
+  const safeStatus = status ?? 0;
+  const safeReason = reason || 'No reason provided';
+  const safeReportedAt = reportedAt || null;
+  const safeReportedEntity = reportedEntity || {};
+
   return (
     <div className="h-screen w-full px-6 pb-10">
       <div className="mx-auto mb-6 flex max-w-7xl flex-col gap-6">
         <div className="flex items-start justify-between gap-4">
           <h1 className="text-4xl font-bold">Report Detail</h1>
           <div className="flex items-center gap-2">
-            <Button color="success" onClick={() => openAdminReasonModal('approve')}>
+            <Button 
+              color="success" 
+              onClick={() => openAdminReasonModal('approve')}
+              disabled={safeStatus !== 0}
+            >
               Approve
             </Button>
-            <Button color="danger" variant="flat" onClick={() => openAdminReasonModal('reject')}>
+            <Button 
+              color="danger" 
+              variant="flat" 
+              onClick={() => openAdminReasonModal('reject')}
+              disabled={safeStatus !== 0}
+            >
               Reject
             </Button>
           </div>
         </div>
-        <p className="-mt-4 text-gray-500">Reported User ID: {reportId}</p>
+        <p className="-mt-4 text-gray-500">Reported User ID: {reportedId}</p>
 
         {/* Reporters Section */}
         <div className="rounded-lg border bg-card p-6">
-          <h2 className="mb-4 text-lg font-semibold">Reporters</h2>
+          <h2 className="mb-4 text-lg font-semibold">Reporters ({safeReporters.length})</h2>
           <div className="max-h-[360px] overflow-y-auto rounded-md">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {(showAllReporters ? reporters : reporters.slice(0, 6)).map((r, idx) => (
-                <div key={idx} className="rounded-md border p-4">
-                  <div className="font-medium">{r.name}</div>
-                  <div className="text-sm text-muted-foreground">@{r.username}</div>
+              {(showAllReporters ? safeReporters : safeReporters.slice(0, 6)).map((reporter, idx) => (
+                <div key={reporter.id} className="rounded-md border p-4">
+                  <div className="flex items-center gap-3">
+                    {reporter.avatar?.url && (
+                      <img 
+                        src={reporter.avatar.url} 
+                        alt={reporter.username}
+                        className="h-10 w-10 rounded-full object-cover"
+                      />
+                    )}
+                    <div>
+                      <div className="font-medium">{reporter.firstName} {reporter.lastName}</div>
+                      <div className="text-sm text-muted-foreground">@{reporter.username}</div>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
-          {reporters.length > 6 && (
+          {safeReporters.length > 6 && (
             <div className="mt-4">
-              <button className="rounded-md border px-3 py-1 text-sm" onClick={() => setShowAllReporters((s) => !s)}>
-                {showAllReporters ? 'Show less' : `Show all (${reporters.length})`}
-              </button>
+              <Button size="sm" variant="bordered" onClick={() => setShowAllReporters((s) => !s)}>
+                {showAllReporters ? 'Show less' : `Show all (${safeReporters.length})`}
+              </Button>
             </div>
           )}
         </div>
 
         {/* Proofs Section */}
         <div className="rounded-lg border bg-card p-6">
-          <h2 className="mb-4 text-lg font-semibold">Proofs</h2>
-          <div className="max-h-[420px] overflow-y-auto rounded-md">
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-              {(showAllProofs ? proofImages : proofImages.slice(0, 8)).map((src, idx) => (
-                <button
-                  key={`${src}-${idx}`}
-                  type="button"
-                  className="group aspect-square overflow-hidden rounded-md border"
-                  onClick={() => setImagePreviewUrl(src)}
-                >
-                  <img src={src} alt={`Proof ${idx + 1}`} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
-                </button>
-              ))}
-            </div>
-          </div>
-          {proofImages.length > 8 && (
-            <div className="mt-4">
-              <button className="rounded-md border px-3 py-1 text-sm" onClick={() => setShowAllProofs((s) => !s)}>
-                {showAllProofs ? 'Show less' : `Show all (${proofImages.length})`}
-              </button>
+          <h2 className="mb-4 text-lg font-semibold">Proofs ({safeImages.length})</h2>
+          {safeImages.length > 0 ? (
+            <>
+              <div className="max-h-[420px] overflow-y-auto rounded-md">
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+                  {(showAllProofs ? safeImages : safeImages.slice(0, 8)).map((image, idx) => (
+                    <button
+                      key={`${image}-${idx}`}
+                      type="button"
+                      className="group aspect-square overflow-hidden rounded-md border"
+                      onClick={() => setImagePreviewUrl(image)}
+                    >
+                      <img src={image} alt={`Proof ${idx + 1}`} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {safeImages.length > 8 && (
+                <div className="mt-4">
+                  <Button size="sm" variant="bordered" onClick={() => setShowAllProofs((s) => !s)}>
+                    {showAllProofs ? 'Show less' : `Show all (${safeImages.length})`}
+                  </Button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              No proof images provided
             </div>
           )}
         </div>
@@ -120,23 +234,46 @@ const ReportDetail = () => {
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <div className="text-sm text-muted-foreground">User ID</div>
-              <div className="font-medium">{reportId}</div>
+              <div className="font-medium">{safeReportedEntity?.id}</div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">Username</div>
-              <div className="font-medium">@username</div>
+              <div className="font-medium">@{safeReportedEntity?.username}</div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Full Name</div>
+              <div className="font-medium">{safeReportedEntity?.firstName} {safeReportedEntity?.lastName}</div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Email</div>
+              <div className="font-medium">{safeReportedEntity?.email}</div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Phone</div>
+              <div className="font-medium">{safeReportedEntity?.phone || 'Not provided'}</div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Location</div>
+              <div className="font-medium">{safeReportedEntity?.location || 'Not provided'}</div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">Status</div>
-              <div className="font-medium">Pending</div>
+              <div className="font-medium">{getStatusLabel(safeStatus)}</div>
             </div>
             <div>
-              <div className="text-sm text-muted-foreground">Last Updated</div>
-              <div className="font-medium">-</div>
+              <div className="text-sm text-muted-foreground">Reported At</div>
+              <div className="font-medium">{formatDate(safeReportedAt)}</div>
             </div>
           </div>
         </div>
+
+        {/* Report Reason */}
+        <div className="rounded-lg border bg-card p-6">
+          <h2 className="mb-4 text-lg font-semibold">Report Reason</h2>
+          <p className="text-gray-700">{safeReason}</p>
+        </div>
       </div>
+
       {/* Image Preview Modal */}
       <Modal isOpen={!!imagePreviewUrl} onOpenChange={() => setImagePreviewUrl(null)} size="5xl">
         <ModalContent>

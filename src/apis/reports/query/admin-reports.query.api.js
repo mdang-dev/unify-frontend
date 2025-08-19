@@ -1,6 +1,6 @@
 import httpClient from '@/src/utils/http-client.util';
 
-const url = '/reports/admin/targets';
+const url = '/reports';
 
 export const adminReportsQueryApi = {
     /**
@@ -34,11 +34,28 @@ export const adminReportsQueryApi = {
             queryParams.append('size', params.size || 20);
             queryParams.append('sort', params.sort || 'latestReportedAt,desc');
 
-            const res = await httpClient(`${url}/users?${queryParams.toString()}`);
+            const res = await httpClient(`${url}/admin/targets/users?${queryParams.toString()}`);
             return res.data;
         } catch (error) {
             if (process.env.NODE_ENV === 'development') {
                 console.error('Error fetching reported users:', error);
+            }
+            throw error;
+        }
+    },
+
+    /**
+     * Admin endpoint to get report details by reported user ID
+     * @param {string} reportedId - The reported user ID
+     * @returns {Promise<ReportDetailDto>} Report detail data
+     */
+    getReportDetailByTarget: async (reportedId) => {
+        try {
+            const res = await httpClient(`${url}/target/${reportedId}`);
+            return res.data;
+        } catch (error) {
+            if (process.env.NODE_ENV === 'development') {
+                console.error('Error fetching report detail:', error);
             }
             throw error;
         }
