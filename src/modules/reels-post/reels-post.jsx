@@ -282,10 +282,10 @@ export default function ReelsPost() {
     updatePostState(postId, { isModalOpen: false });
   }, []);
 
-          const handleReportPost = useCallback(
-          async (postId, reason, urls = []) => {
-            createPostReport.mutate(
-              { endpoint: 'post', reportedId: postId, reason, urls },
+  const handleReportPost = useCallback(
+    async (postId, reason, urls = []) => {
+      createPostReport.mutate(
+        { endpoint: 'post', reportedId: postId, reason, urls },
         {
           onSuccess: () => {
             addToast({
@@ -577,7 +577,7 @@ export default function ReelsPost() {
               <ReportModal
                 isOpen={postStates[post.id]?.isModalOpen || false}
                 onClose={() => closeModal(post.id)}
-                                    onSubmit={(postId, reason, urls) => handleReportPost(postId, reason, urls)}
+                onSubmit={(postId, reason, urls) => handleReportPost(postId, reason, urls)}
                 postId={post.id}
               />
             </div>
@@ -629,7 +629,9 @@ export default function ReelsPost() {
                       />
                     ))
                   ) : (
-                    <p className="text-xl font-bold text-zinc-500 ">No comments yet</p>
+                    <div className="flex h-full items-center justify-center">
+                      <p className="text-xl font-bold text-zinc-400">No comments yet</p>
+                    </div>
                   )}
                 </div>
                 <CommentInput

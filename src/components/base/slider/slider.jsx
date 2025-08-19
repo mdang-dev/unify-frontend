@@ -192,32 +192,17 @@ const Slider = ({ srcs = [], onImageClick }) => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="relative h-full w-full overflow-hidden"
+          className="relative flex h-full w-full items-center justify-center bg-black"
         >
           {isVideo(srcs[currentIndex]) ? (
             <PostVideo src={srcs[currentIndex]?.url} />
           ) : (
-            <div className="relative h-full w-full">
-              <Image
-                src={
-                  srcs[currentIndex]?.url && typeof srcs[currentIndex].url === 'string'
-                    ? srcs[currentIndex].url
-                    : '/images/unify_icon_2.png'
-                }
-                alt={`Post media ${currentIndex + 1}`}
-                fill
-                className="cursor-pointer object-cover"
-                onClick={onImageClick}
-                onLoad={() => setLoading(false)}
-                onError={() => {
-                  setLoading(false);
-                  setError(true);
-                }}
-                unoptimized
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                priority={currentIndex === 0}
-              />
-            </div>
+            <img
+              src={srcs[currentIndex]?.url || '/images/unify_icon_2.png'}
+              alt={`Post media ${currentIndex + 1}`}
+              className="max-h-full max-w-full cursor-pointer object-contain"
+              onClick={onImageClick}
+            />
           )}
         </motion.div>
       </AnimatePresence>

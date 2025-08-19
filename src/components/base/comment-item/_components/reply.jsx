@@ -155,7 +155,7 @@ const ReplyComponent = ({
                 : 'Just now'}
             </span>
           </div>
-          <div className="mt-1 break-words text-xs text-gray-800 dark:text-gray-200">
+          <div className="mt-1 break-words text-xs font-semibold text-gray-800 dark:text-gray-200">
             <Content text={reply.content} className="leading-snug" />
           </div>
           <div className="mt-1 flex gap-2">
