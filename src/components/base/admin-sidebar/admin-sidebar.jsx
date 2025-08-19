@@ -83,7 +83,7 @@ const AdminSidebar = () => {
         {
           title: 'Reported Posts',
           icon: 'fa-solid fa-triangle-exclamation',
-          href: '/manage/posts/list',
+          href: '/manage/posts/reports',
         },
       ],
     },
