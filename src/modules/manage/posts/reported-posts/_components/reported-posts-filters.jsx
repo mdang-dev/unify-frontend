@@ -1,29 +1,8 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import { Button, Input, Select, SelectItem } from '@heroui/react';
 
-const ReportedPostsFilters = ({ filters, onFilterChange }) => {
-  const [localFilters, setLocalFilters] = useState(filters);
-
-  const handleFilterChange = (key, value) => {
-    const newFilters = { ...localFilters, [key]: value };
-    setLocalFilters(newFilters);
-  };
-
-  const handleApplyFilters = () => {
-    onFilterChange(localFilters);
-  };
-
-  const handleClearFilters = () => {
-    const clearedFilters = {
-      status: '',
-      reportedAtFrom: '',
-      reportedAtTo: '',
-    };
-    setLocalFilters(clearedFilters);
-    onFilterChange(clearedFilters);
-  };
-
+const ReportedPostsFilters = ({ localFilters, onFilterChange, onApplyFilters, onClearFilters, hasActiveFilters }) => {
   return (
     <div className="rounded-lg border bg-card p-6">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -34,7 +13,7 @@ const ReportedPostsFilters = ({ filters, onFilterChange }) => {
             selectedKeys={localFilters.status ? [localFilters.status.toString()] : []}
             onSelectionChange={(keys) => {
               const value = Array.from(keys)[0] || '';
-              handleFilterChange('status', value);
+              onFilterChange('status', value);
             }}
             className="w-full"
           >
@@ -51,8 +30,8 @@ const ReportedPostsFilters = ({ filters, onFilterChange }) => {
           <label className="text-sm font-medium text-muted-foreground">Reported From</label>
           <Input
             type="datetime-local"
-            value={localFilters.reportedAtFrom}
-            onChange={(e) => handleFilterChange('reportedAtFrom', e.target.value)}
+            value={localFilters.reportedAtFrom || ''}
+            onChange={(e) => onFilterChange('reportedAtFrom', e.target.value)}
             className="w-full"
           />
         </div>
@@ -61,8 +40,8 @@ const ReportedPostsFilters = ({ filters, onFilterChange }) => {
           <label className="text-sm font-medium text-muted-foreground">Reported To</label>
           <Input
             type="datetime-local"
-            value={localFilters.reportedAtTo}
-            onChange={(e) => handleFilterChange('reportedAtTo', e.target.value)}
+            value={localFilters.reportedAtTo || ''}
+            onChange={(e) => onFilterChange('reportedAtTo', e.target.value)}
             className="w-full"
           />
         </div>
@@ -70,14 +49,15 @@ const ReportedPostsFilters = ({ filters, onFilterChange }) => {
         <div className="flex items-end gap-2">
           <Button
             color="primary"
-            onClick={handleApplyFilters}
+            onClick={onApplyFilters}
             className="flex-1"
+            disabled={!hasActiveFilters}
           >
             Apply Filters
           </Button>
           <Button
             variant="bordered"
-            onClick={handleClearFilters}
+            onClick={onClearFilters}
             className="flex-1"
           >
             Clear

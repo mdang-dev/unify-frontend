@@ -1,50 +1,48 @@
 'use client';
 import React from 'react';
 import {
-  Table,
-  TableHeader,
-  TableColumn,
-  TableBody,
-  TableRow,
-  TableCell,
   Button,
+  Tooltip,
   Badge,
-  Dropdown,
-  DropdownTrigger,
-  DropdownMenu,
-  DropdownItem,
-  Pagination,
-  Chip,
 } from '@heroui/react';
-import { MoreVertical, Eye } from 'lucide-react';
+import {
+  Table as ShadcnTable,
+  TableBody as ShadcnTableBody,
+  TableCell as ShadcnTableCell,
+  TableHead,
+  TableHeader as ShadcnTableHeader,
+  TableRow as ShadcnTableRow,
+} from '@/src/components/ui/table';
+import { ChevronUpIcon, ChevronDownIcon, Eye } from 'lucide-react';
 
-const ReportedPostsTable = ({
-  reportedPosts,
-  onAction,
-  pagination,
-  totalPages,
-  totalElements,
-  onPageChange,
+const ReportedPostsTable = ({ 
+  reportedPosts, 
+  currentPage, 
+  itemsPerPage, 
+  sortField, 
+  sortDirection, 
+  onSort, 
+  onAction 
 }) => {
   const getStatusInfo = (status) => {
     switch (status) {
       case 0:
-        return { label: 'Pending', color: 'warning' };
+        return { label: 'Pending', color: 'default' };
       case 1:
         return { label: 'Approved', color: 'success' };
       case 2:
         return { label: 'Rejected', color: 'danger' };
       case 3:
-        return { label: 'Resolved', color: 'info' };
+        return { label: 'Resolved', color: 'primary' };
       case 4:
-        return { label: 'Canceled', color: 'warning' };
+        return { label: 'Canceled', color: 'default' };
       default:
         return { label: 'Unknown', color: 'default' };
     }
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return 'Not specified';
     try {
       return new Date(dateString).toLocaleString('en-US', {
         day: '2-digit',
@@ -58,120 +56,106 @@ const ReportedPostsTable = ({
     }
   };
 
+  const formatDateISO = (dateString) => {
+    if (!dateString) return 'Not specified';
+    return dateString;
+  };
+
   const truncateText = (text, maxLength = 50) => {
     if (!text) return 'No caption';
     return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
   };
 
-  const renderCell = (report, columnKey) => {
-    const statusInfo = getStatusInfo(report.sampleStatus);
-
-    switch (columnKey) {
-      case 'post':
-        return (
-          <div className="flex flex-col">
-            <div className="font-medium">{truncateText(report.displayLabel)}</div>
-            <div className="text-sm text-muted-foreground">ID: {report.reportedId}</div>
-          </div>
-        );
-      case 'reportCount':
-        return (
-          <div className="text-center">
-            <span className="text-lg font-semibold">{report.reportCount}</span>
-          </div>
-        );
-      case 'status':
-        return (
-          <Chip color={statusInfo.color} variant="flat" size="sm">
-            {statusInfo.label}
-          </Chip>
-        );
-      case 'latestReportedAt':
-        return (
-          <div className="text-sm">
-            {formatDate(report.latestReportedAt)}
-          </div>
-        );
-      case 'actions':
-        return (
-          <Dropdown>
-            <DropdownTrigger>
-              <Button isIconOnly size="sm" variant="light">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownTrigger>
-            <DropdownMenu
-              aria-label="Actions"
-              onAction={(key) => onAction(key, report)}
-            >
-              <DropdownItem
-                key="reports"
-                description="View detailed reports"
-                startContent={<Eye className="h-4 w-4" />}
-              >
-                View Reports
-              </DropdownItem>
-            </DropdownMenu>
-          </Dropdown>
-        );
-      default:
-        return null;
-    }
+  const SortableHeader = ({ field, children }) => {
+    const isActive = sortField === field;
+    const isAsc = isActive && sortDirection === 'asc';
+    
+    return (
+      <button
+        onClick={() => onSort(field, isActive ? (isAsc ? 'desc' : 'asc') : 'desc')}
+        className="flex items-center gap-1 hover:text-primary"
+      >
+        {children}
+        {isActive && (
+          isAsc ? <ChevronUpIcon className="h-4 w-4" /> : <ChevronDownIcon className="h-4 w-4" />
+        )}
+      </button>
+    );
   };
 
-  const columns = [
-    { name: 'POST', uid: 'post' },
-    { name: 'REPORT COUNT', uid: 'reportCount' },
-    { name: 'STATUS', uid: 'status' },
-    { name: 'LATEST REPORTED', uid: 'latestReportedAt' },
-    { name: 'ACTIONS', uid: 'actions' },
-  ];
-
   return (
-    <div>
-      <Table aria-label="Reported posts table">
-        <TableHeader columns={columns}>
-          {(column) => (
-            <TableColumn key={column.uid} align={column.uid === 'actions' ? 'center' : 'start'}>
-              {column.name}
-            </TableColumn>
-          )}
-        </TableHeader>
-        <TableBody
-          items={reportedPosts}
-          emptyContent={reportedPosts.length === 0 ? 'No reported posts found' : null}
-        >
-          {(report) => (
-            <TableRow key={report.reportedId}>
-              {(columnKey) => (
-                <TableCell>{renderCell(report, columnKey)}</TableCell>
-              )}
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-
-      {totalPages > 1 && (
-        <div className="flex justify-center py-4">
-          <Pagination
-            total={totalPages}
-            page={pagination.page + 1}
-            onChange={(page) => onPageChange(page - 1)}
-            showControls
-            showShadow
-            color="primary"
-          />
-        </div>
-      )}
-
-      {totalElements > 0 && (
-        <div className="px-6 py-2 text-sm text-muted-foreground">
-          Showing {pagination.page * pagination.size + 1} to{' '}
-          {Math.min((pagination.page + 1) * pagination.size, totalElements)} of{' '}
-          {totalElements} results
-        </div>
-      )}
-    </div>
+    <ShadcnTable>
+      <ShadcnTableHeader>
+        <ShadcnTableRow>
+          <TableHead className="w-[80px]">No.</TableHead>
+          <TableHead>Post</TableHead>
+          <TableHead>
+            <SortableHeader field="reportCount">Reports</SortableHeader>
+          </TableHead>
+          <TableHead>
+            <SortableHeader field="latestReportedAt">Latest Reported At</SortableHeader>
+          </TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead className="w-[120px]">Actions</TableHead>
+        </ShadcnTableRow>
+      </ShadcnTableHeader>
+      <ShadcnTableBody>
+        {reportedPosts.map((report, index) => {
+          const statusInfo = getStatusInfo(report.sampleStatus);
+          const displayLabel = report.displayLabel || report.reportedId;
+          
+          return (
+            <ShadcnTableRow key={report.reportedId + index}>
+              <ShadcnTableCell className="font-medium">
+                {(currentPage - 1) * itemsPerPage + index + 1}
+              </ShadcnTableCell>
+              <ShadcnTableCell>
+                <div className="flex flex-col">
+                  <span className="font-medium">{truncateText(displayLabel)}</span>
+                  {report.displayLabel && (
+                    <span className="text-sm text-muted-foreground">{report.reportedId}</span>
+                  )}
+                </div>
+              </ShadcnTableCell>
+              <ShadcnTableCell>
+                <div className="text-center">
+                  <span className="text-lg font-semibold">{report.reportCount}</span>
+                </div>
+              </ShadcnTableCell>
+              <ShadcnTableCell>
+                <Tooltip content={formatDateISO(report.latestReportedAt)} placement="top">
+                  <span className="text-sm text-muted-foreground cursor-help">
+                    {formatDate(report.latestReportedAt)}
+                  </span>
+                </Tooltip>
+              </ShadcnTableCell>
+              <ShadcnTableCell>
+                <Badge 
+                  color={statusInfo.color}
+                  variant="flat"
+                  size="sm"
+                >
+                  {statusInfo.label}
+                </Badge>
+              </ShadcnTableCell>
+              <ShadcnTableCell>
+                <Tooltip content="View Report Details" placement="top">
+                  <Button 
+                    isIconOnly 
+                    variant="light" 
+                    size="sm"
+                    onClick={() => onAction('reports', report)}
+                    aria-label="View Report Details"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                </Tooltip>
+              </ShadcnTableCell>
+            </ShadcnTableRow>
+          );
+        })}
+      </ShadcnTableBody>
+    </ShadcnTable>
   );
 };
 

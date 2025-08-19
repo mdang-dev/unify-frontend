@@ -13,8 +13,7 @@ import {
   TableHeader as ShadcnTableHeader,
   TableRow as ShadcnTableRow,
 } from '@/src/components/ui/table';
-import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from '@heroui/react';
-import { ChevronUpIcon, ChevronDownIcon, MoreVertical, Eye, FileText } from 'lucide-react';
+import { ChevronUpIcon, ChevronDownIcon, Eye } from 'lucide-react';
 
 const ReportedUsersTable = ({ 
   reportedUsers, 
@@ -138,34 +137,17 @@ const ReportedUsersTable = ({
                 </Badge>
               </ShadcnTableCell>
               <ShadcnTableCell>
-                <Dropdown>
-                  <DropdownTrigger>
-                    <Button 
-                      isIconOnly 
-                      variant="light" 
-                      size="sm"
-                      aria-label="Actions"
-                    >
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownTrigger>
-                  <DropdownMenu aria-label="Report actions">
-                    <DropdownItem 
-                      key="view"
-                      startContent={<Eye className="h-4 w-4" />}
-                      onClick={() => onAction('view', report)}
-                    >
-                      View User
-                    </DropdownItem>
-                    <DropdownItem 
-                      key="reports"
-                      startContent={<FileText className="h-4 w-4" />}
-                      onClick={() => onAction('reports', report)}
-                    >
-                      Open Reports
-                    </DropdownItem>
-                  </DropdownMenu>
-                </Dropdown>
+                <Tooltip content="View Report Details" placement="top">
+                  <Button 
+                    isIconOnly 
+                    variant="light" 
+                    size="sm"
+                    onClick={() => onAction('reports', report)}
+                    aria-label="View Report Details"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                </Tooltip>
               </ShadcnTableCell>
             </ShadcnTableRow>
           );

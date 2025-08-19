@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Button, Modal, ModalBody, ModalContent, ModalHeader, Spinner } from '@heroui/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import AdminReasonModal from '../../_components/admin-reason-modal';
@@ -11,6 +11,7 @@ import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
 
 const ReportDetail = () => {
   const params = useParams();
+  const router = useRouter();
   const reportedId = params.reportedId;
 
 
@@ -178,7 +179,18 @@ const ReportDetail = () => {
     <div className="h-screen w-full px-6 pb-10">
       <div className="mx-auto mb-6 flex max-w-7xl flex-col gap-6">
         <div className="flex items-start justify-between gap-4">
-          <h1 className="text-4xl font-bold">Report Detail</h1>
+          <div className="flex items-center gap-4">
+            <Button
+              variant="bordered"
+              size="sm"
+              onClick={() => router.push('/manage/users/reports')}
+              className="flex items-center gap-2"
+            >
+              <i className="fa-solid fa-arrow-left"></i>
+              Back to Reports
+            </Button>
+            <h1 className="text-4xl font-bold">Report Detail</h1>
+          </div>
           {safeStatus === 0 && (
             <div className="flex items-center gap-2">
               <Button 
