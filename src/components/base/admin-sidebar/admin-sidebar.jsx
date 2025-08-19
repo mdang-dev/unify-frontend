@@ -64,11 +64,6 @@ const AdminSidebar = () => {
           icon: 'fa-solid fa-user-xmark',
           href: '/manage/users/reports',
         },
-        {
-          title: 'Blocked Users',
-          icon: 'fa-solid fa-ban',
-          href: '/manage/users/list',
-        },
       ],
     },
     {
@@ -83,7 +78,7 @@ const AdminSidebar = () => {
         {
           title: 'Reported Posts',
           icon: 'fa-solid fa-triangle-exclamation',
-          href: '/manage/posts/list',
+          href: '/manage/posts/reports',
         },
       ],
     },

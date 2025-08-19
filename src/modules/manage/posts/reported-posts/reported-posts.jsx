@@ -7,17 +7,18 @@ import {
   SelectItem,
   Pagination,
   Tooltip,
+  Spinner,
 } from '@heroui/react';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
 import { adminReportsQueryApi } from '@/src/apis/reports/query/admin-reports.query.api';
-import { useReportedUsersStore } from '@/src/stores/reported-users.store';
-import ReportedUsersFilters from './_components/reported-users-filters';
-import ReportedUsersTable from './_components/reported-users-table';
+import { useReportedPostsStore } from '@/src/stores/reported-posts.store';
+import ReportedPostsFilters from './_components/reported-posts-filters';
+import ReportedPostsTable from './_components/reported-posts-table';
 import TableLoading from '../../_components/table-loading';
 import { toast } from 'sonner';
 
-const ReportedUsers = () => {
+const ReportedPosts = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -29,7 +30,7 @@ const ReportedUsers = () => {
     sortField,
     sortDirection,
     appliedFilters,
-    cachedReportedUsers,
+    cachedReportedPosts,
     cachedTotalPages,
     cachedTotalElements,
     setFilters,
@@ -39,7 +40,7 @@ const ReportedUsers = () => {
     setCachedData,
     clearCache,
     hasCachedData,
-  } = useReportedUsersStore();
+  } = useReportedPostsStore();
 
   // Local state for immediate UI updates
   const [localFilters, setLocalFilters] = useState(filters);
@@ -58,12 +59,10 @@ const ReportedUsers = () => {
     setLocalSortDirection(sortDirection);
   }, [filters, currentPage, itemsPerPage, sortField, sortDirection]);
 
-
-
   // API call with pagination, filters, and sorting
   const { data: reportResponse, isLoading: loading, error, refetch, isFetching } = useQuery({
-    queryKey: [QUERY_KEYS.REPORTED_USERS, appliedFilters, currentPage, itemsPerPage, sortField, sortDirection],
-    queryFn: () => adminReportsQueryApi.getReportedUsers({
+    queryKey: [QUERY_KEYS.REPORTED_POSTS, appliedFilters, currentPage, itemsPerPage, sortField, sortDirection],
+    queryFn: () => adminReportsQueryApi.getReportedPosts({
       ...appliedFilters,
       page: currentPage - 1, // Convert 1-based to 0-based
       size: itemsPerPage,
@@ -84,7 +83,7 @@ const ReportedUsers = () => {
   }, [reportResponse, appliedFilters, setCachedData]);
 
   // Extract data from response or cache
-  const reportedUsers = reportResponse?.content || cachedReportedUsers || [];
+  const reportedPosts = reportResponse?.content || cachedReportedPosts || [];
   const totalPages = reportResponse?.totalPages || cachedTotalPages || 0;
   const totalElements = reportResponse?.totalElements || cachedTotalElements || 0;
 
@@ -106,10 +105,7 @@ const ReportedUsers = () => {
     setFilters(emptyFilters);
     setAppliedFilters(null);
     setPagination(1, localItemsPerPage);
-    setSorting('latestReportedAt', 'desc');
     setLocalCurrentPage(1);
-    setLocalSortField('latestReportedAt');
-    setLocalSortDirection('desc');
     clearCache();
   };
 
@@ -147,37 +143,69 @@ const ReportedUsers = () => {
     }
   };
 
-  // Invalidate cache for current query
-  const handleInvalidateCache = () => {
-    queryClient.invalidateQueries({
-      queryKey: [QUERY_KEYS.REPORTED_USERS, appliedFilters, currentPage, itemsPerPage, sortField, sortDirection]
-    });
-  };
-
   // Check if at least one filter is applied
   const hasActiveFilters = useMemo(() => {
-    return Object.values(localFilters).some(value => value !== '' && value !== null && value !== undefined);
+    return Object.values(localFilters).some(value => 
+      value !== '' && value !== null && value !== undefined
+    );
   }, [localFilters]);
 
   const handleAction = (action, report) => {
-    console.log(`${action} action for report:`, report);
-    // Implement your action logic here
-    if (action === 'view') {
-      router.push(`/manage/users/detail/${report.reportedId}`);
-    } else if (action === 'reports') {
-      router.push(`/manage/users/reports/${report.reportedId}`);
+    switch (action) {
+      case 'reports':
+        router.push(`/manage/posts/reports/${report.reportedId}`);
+        break;
+      default:
+        console.log('Unknown action:', action);
     }
   };
+
+  if (loading && !hasCachedData()) {
+    return (
+      <div className="h-screen w-full px-6 pb-10">
+        <div className="mx-auto mb-6 flex max-w-7xl flex-col gap-6">
+          <div className="flex items-center justify-center h-64">
+            <Spinner size="lg" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-screen w-full px-6 pb-10">
+        <div className="mx-auto mb-6 flex max-w-7xl flex-col gap-6">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-red-600">Error Loading Data</h3>
+              <p className="text-sm text-muted-foreground">
+                {error.message || 'An error occurred while loading reported posts data'}
+              </p>
+              <Button
+                variant="bordered"
+                onClick={handleRefresh}
+                className="mt-4"
+              >
+                <i className="fa-solid fa-rotate mr-2"></i>
+                Retry
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen w-full px-6 pb-10">
       <div className="mx-auto mb-6 flex max-w-7xl flex-col gap-6">
-        {/* Header */}
+        {/* Header Section */}
         <div className="flex items-center justify-between">
           <div className="w-1/2">
-            <h1 className="text-4xl font-bold">Reported Users</h1>
+            <h1 className="text-4xl font-bold">Reported Posts</h1>
             <p className="text-gray-500">
-              Manage reported users with advanced filtering and sorting options.
+              Manage reported posts with advanced filtering and sorting options.
             </p>
           </div>
           {/* Filter Toggle and Refresh Buttons */}
@@ -225,7 +253,7 @@ const ReportedUsers = () => {
 
         {/* Filter Section */}
         {showFilters && (
-          <ReportedUsersFilters
+          <ReportedPostsFilters
             localFilters={localFilters}
             onFilterChange={handleFilterChange}
             onApplyFilters={handleApplyFilters}
@@ -239,7 +267,7 @@ const ReportedUsers = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <p className="text-sm text-muted-foreground">
-                Showing {reportedUsers.length} of {totalElements} reported users
+                Showing {reportedPosts.length} of {totalElements} reported posts
               </p>
               {/* Cache Status Indicator */}
               <div className="flex items-center gap-1">
@@ -256,7 +284,7 @@ const ReportedUsers = () => {
         <div className="rounded-lg border bg-card">
           {loading ? (
             <TableLoading
-              tableHeaders={['No.', 'User', 'Reports', 'Latest Reported At', 'Status', 'Actions']}
+              tableHeaders={['No.', 'Post', 'Reports', 'Latest Reported At', 'Status', 'Actions']}
             />
           ) : error ? (
             <div className="flex h-64 items-center justify-center">
@@ -264,7 +292,7 @@ const ReportedUsers = () => {
                 <i className="fa-solid fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
                 <h3 className="text-lg font-semibold text-red-600">Error Loading Data</h3>
                 <p className="text-sm text-muted-foreground">
-                  {error.message || 'An error occurred while loading reported users data'}
+                  {error.message || 'An error occurred while loading reported posts data'}
                 </p>
                 <Button
                   variant="bordered"
@@ -282,17 +310,17 @@ const ReportedUsers = () => {
                 <i className="fa-solid fa-filter text-4xl text-muted-foreground mb-4"></i>
                 <h3 className="text-lg font-semibold text-muted-foreground">No Data Displayed</h3>
                 <p className="text-sm text-muted-foreground">
-                  Apply filters to view reported users data
+                  Apply filters to view reported posts data
                 </p>
               </div>
             </div>
-          ) : reportedUsers.length === 0 ? (
+          ) : reportedPosts.length === 0 ? (
             <div className="flex h-64 items-center justify-center">
               <div className="text-center">
                 <i className="fa-solid fa-search text-4xl text-muted-foreground mb-4"></i>
-                <h3 className="text-lg font-semibold text-muted-foreground">No Reported Users Found</h3>
+                <h3 className="text-lg font-semibold text-muted-foreground">No Reported Posts Found</h3>
                 <p className="text-sm text-muted-foreground">
-                  No reported users match your filters.
+                  No reported posts match your filters.
                 </p>
                 <Button
                   variant="bordered"
@@ -305,8 +333,8 @@ const ReportedUsers = () => {
             </div>
           ) : (
             <>
-              <ReportedUsersTable
-                reportedUsers={reportedUsers}
+              <ReportedPostsTable
+                reportedPosts={reportedPosts}
                 currentPage={localCurrentPage}
                 itemsPerPage={localItemsPerPage}
                 sortField={localSortField}
@@ -319,7 +347,7 @@ const ReportedUsers = () => {
               {totalPages > 1 && (
                 <div className="flex items-center justify-between border-t px-4 py-3">
                   <div className="text-sm text-muted-foreground">
-                    Page {localCurrentPage} of {totalPages} (Total: {totalElements} reported users)
+                    Page {localCurrentPage} of {totalPages} (Total: {totalElements} reported posts)
                   </div>
                   <Pagination
                     total={totalPages}
@@ -339,4 +367,4 @@ const ReportedUsers = () => {
   );
 };
 
-export default ReportedUsers;
+export default ReportedPosts;

@@ -33,6 +33,8 @@ const ReportedUsersFilters = ({
             <SelectItem key="0">Pending</SelectItem>
             <SelectItem key="1">Approved</SelectItem>
             <SelectItem key="2">Rejected</SelectItem>
+            <SelectItem key="3">Resolved</SelectItem>
+            <SelectItem key="4">Canceled</SelectItem>
           </Select>
         </div>
 

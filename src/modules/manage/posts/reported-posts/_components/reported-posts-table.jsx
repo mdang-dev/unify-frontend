@@ -15,8 +15,8 @@ import {
 } from '@/src/components/ui/table';
 import { ChevronUpIcon, ChevronDownIcon, Eye } from 'lucide-react';
 
-const ReportedUsersTable = ({ 
-  reportedUsers, 
+const ReportedPostsTable = ({ 
+  reportedPosts, 
   currentPage, 
   itemsPerPage, 
   sortField, 
@@ -61,6 +61,11 @@ const ReportedUsersTable = ({
     return dateString;
   };
 
+  const truncateText = (text, maxLength = 50) => {
+    if (!text) return 'No caption';
+    return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
+  };
+
   const SortableHeader = ({ field, children }) => {
     const isActive = sortField === field;
     const isAsc = isActive && sortDirection === 'asc';
@@ -83,7 +88,7 @@ const ReportedUsersTable = ({
       <ShadcnTableHeader>
         <ShadcnTableRow>
           <TableHead className="w-[80px]">No.</TableHead>
-          <TableHead>User</TableHead>
+          <TableHead>Post</TableHead>
           <TableHead>
             <SortableHeader field="reportCount">Reports</SortableHeader>
           </TableHead>
@@ -95,9 +100,9 @@ const ReportedUsersTable = ({
         </ShadcnTableRow>
       </ShadcnTableHeader>
       <ShadcnTableBody>
-        {reportedUsers.map((report, index) => {
+        {reportedPosts.map((report, index) => {
           const statusInfo = getStatusInfo(report.sampleStatus);
-          const displayName = report.displayLabel || report.reportedId;
+          const displayLabel = report.displayLabel || report.reportedId;
           
           return (
             <ShadcnTableRow key={report.reportedId + index}>
@@ -106,19 +111,16 @@ const ReportedUsersTable = ({
               </ShadcnTableCell>
               <ShadcnTableCell>
                 <div className="flex flex-col">
-                  <span className="font-medium">{displayName}</span>
+                  <span className="font-medium">{truncateText(displayLabel)}</span>
                   {report.displayLabel && (
                     <span className="text-sm text-muted-foreground">{report.reportedId}</span>
                   )}
                 </div>
               </ShadcnTableCell>
               <ShadcnTableCell>
-                <Badge 
-                  variant="secondary" 
-                  className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                >
-                  {report.reportCount}
-                </Badge>
+                <div className="text-center">
+                  <span className="text-lg font-semibold">{report.reportCount}</span>
+                </div>
               </ShadcnTableCell>
               <ShadcnTableCell>
                 <Tooltip content={formatDateISO(report.latestReportedAt)} placement="top">
@@ -157,4 +159,4 @@ const ReportedUsersTable = ({
   );
 };
 
-export default ReportedUsersTable;
+export default ReportedPostsTable;
