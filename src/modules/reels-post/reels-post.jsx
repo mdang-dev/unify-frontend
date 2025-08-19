@@ -629,7 +629,7 @@ export default function ReelsPost() {
                       />
                     ))
                   ) : (
-                    <p className="text-xl font-bold text-zinc-500">No comments yet</p>
+                    <p className="text-xl font-bold text-zinc-500 ">No comments yet</p>
                   )}
                 </div>
                 <CommentInput
