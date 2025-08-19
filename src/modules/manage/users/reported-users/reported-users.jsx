@@ -165,7 +165,7 @@ const ReportedUsers = () => {
     if (action === 'view') {
       router.push(`/manage/users/detail/${report.reportedId}`);
     } else if (action === 'reports') {
-      toast.info(`View reports for user: ${report.reportedId}`);
+      router.push(`/manage/users/reports/${report.reportedId}`);
     }
   };
 

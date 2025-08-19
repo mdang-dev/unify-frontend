@@ -33,6 +33,10 @@ const ReportedUsersTable = ({
         return { label: 'Approved', color: 'success' };
       case 2:
         return { label: 'Rejected', color: 'danger' };
+      case 3:
+        return { label: 'Resolved', color: 'primary' };
+      case 4:
+        return { label: 'Canceled', color: 'default' };
       default:
         return { label: 'Unknown', color: 'default' };
     }
