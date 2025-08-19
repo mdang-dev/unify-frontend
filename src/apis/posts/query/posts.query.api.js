@@ -27,14 +27,20 @@ export const postsQueryApi = {
     const res = await httpClient(`${url}/hashtag/${hashtag}`);
     return res.data;
   },
-  getRecommendedPosts: async () => {
-    // Fetch recommended posts for the explore page
-    const res = await httpClient(`${url}/explorer`);
-    if (process.env.NODE_ENV === 'development') {
-      // Log response for debugging in development mode
-      console.log(res);
+  getRecommendedPosts: async (pageParam = 0, pageSize = 12) => {
+    try {
+      // Fetch recommended posts for the explore page with pagination
+      const res = await httpClient(`${url}/explorer`, {
+        params: {
+          page: pageParam,
+          size: pageSize,
+        },
+      });
+      return res.data;
+    } catch (error) {
+      console.error('Error fetching recommended posts:', error);
+      throw error;
     }
-    return res.data;
   },
   getPostsById: async (postId) => {
     const res = await httpClient(`${url}/post_detail/${postId}`);
