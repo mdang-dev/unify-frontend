@@ -46,7 +46,7 @@ const ReportDetail = () => {
       const action = variables.status === 1 ? 'approved' : 'rejected';
       toast.success(`Report ${action} successfully`);
       
-      // Invalidate and refetch the report detail
+      // For both approval and rejection, invalidate and refetch the report detail
       queryClient.invalidateQueries([QUERY_KEYS.REPORT_DETAIL, reportedId]);
       
       setIsButtonLoading(false);
@@ -56,6 +56,7 @@ const ReportDetail = () => {
       console.error('Error updating report:', error);
       const action = adminReasonAction === 'approve' ? 'approving' : 'rejecting';
       toast.error(`Error ${action} report: ${error.message || 'Unknown error'}`);
+      
       setIsButtonLoading(false);
     },
   });

@@ -33,6 +33,21 @@ const AdminReasonModal = ({ isOpen, onClose, onConfirm, action, isLoading = fals
             <ModalHeader>{action === 'approve' ? 'Approve Report' : 'Reject Report'}</ModalHeader>
             <ModalBody>
               <div className="space-y-4">
+                {action === 'reject' && (
+                  <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0">
+                        <i className="fa-solid fa-info-circle text-orange-500 text-lg"></i>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-medium text-orange-800">Report Rejection</h4>
+                        <p className="text-sm text-orange-700 mt-1">
+                          Rejecting this report will update its status to REJECTED. All reports for the same target will be marked as rejected for consistency.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <p className="text-sm text-gray-600">
                   Please provide a reason for {action === 'approve' ? 'approving' : 'rejecting'}{' '}
                   this report. This reason will be recorded and may be used for future reference.
