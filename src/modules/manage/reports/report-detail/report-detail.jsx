@@ -2,10 +2,11 @@
 import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Button, Modal, ModalBody, ModalContent, ModalHeader, Spinner } from '@heroui/react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import AdminReasonModal from '../../_components/admin-reason-modal';
-import { addToast } from '@heroui/toast';
+import { toast } from 'sonner';
 import { adminReportsQueryApi } from '@/src/apis/reports/query/admin-reports.query.api';
+import { reportsCommandApi } from '@/src/apis/reports/command/report.command.api';
 import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
 
 const ReportDetail = () => {
@@ -34,24 +35,50 @@ const ReportDetail = () => {
 
   console.log('reportDetail', reportDetail);
 
+  const queryClient = useQueryClient();
+
+  // Mutation for updating report status
+  const updateReportMutation = useMutation({
+    mutationFn: ({ reportId, status, adminReason }) => 
+      reportsCommandApi.updateReportWithAdminReason(reportId, status, adminReason),
+    onSuccess: (data, variables) => {
+      const action = variables.status === 1 ? 'approved' : 'rejected';
+      toast.success(`Report ${action} successfully`);
+      
+      // Invalidate and refetch the report detail
+      queryClient.invalidateQueries([QUERY_KEYS.REPORT_DETAIL, reportedId]);
+      
+      setIsButtonLoading(false);
+      setIsAdminReasonOpen(false);
+    },
+    onError: (error) => {
+      console.error('Error updating report:', error);
+      const action = adminReasonAction === 'approve' ? 'approving' : 'rejecting';
+      toast.error(`Error ${action} report: ${error.message || 'Unknown error'}`);
+      setIsButtonLoading(false);
+    },
+  });
+
   const openAdminReasonModal = (action) => {
     setAdminReasonAction(action);
     setIsAdminReasonOpen(true);
   };
 
   const handleAdminReasonConfirm = async (reason) => {
+    if (!reportDetail?.id) {
+      toast.error('Report ID not found');
+      return;
+    }
+
     setIsButtonLoading(true);
-    // UI-only flow for now
-    setTimeout(() => {
-      addToast({
-        title: 'Success',
-        description: `Report ${adminReasonAction === 'approve' ? 'approved' : 'rejected'} with note: ${reason}`,
-        timeout: 3000,
-        color: 'success',
-      });
-      setIsButtonLoading(false);
-      setIsAdminReasonOpen(false);
-    }, 600);
+    
+    const status = adminReasonAction === 'approve' ? 1 : 2; // 1 = APPROVED, 2 = REJECTED
+    
+    updateReportMutation.mutate({
+      reportId: reportDetail.id,
+      status,
+      adminReason: reason,
+    });
   };
 
   const getStatusLabel = (status) => {
@@ -62,6 +89,17 @@ const ReportDetail = () => {
       case 3: return 'Resolved';
       case 4: return 'Canceled';
       default: return 'Unknown';
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 0: return 'text-yellow-600 bg-yellow-100';
+      case 1: return 'text-green-600 bg-green-100';
+      case 2: return 'text-red-600 bg-red-100';
+      case 3: return 'text-blue-600 bg-blue-100';
+      case 4: return 'text-gray-600 bg-gray-100';
+      default: return 'text-gray-600 bg-gray-100';
     }
   };
 
@@ -141,25 +179,50 @@ const ReportDetail = () => {
       <div className="mx-auto mb-6 flex max-w-7xl flex-col gap-6">
         <div className="flex items-start justify-between gap-4">
           <h1 className="text-4xl font-bold">Report Detail</h1>
-          <div className="flex items-center gap-2">
-            <Button 
-              color="success" 
-              onClick={() => openAdminReasonModal('approve')}
-              disabled={safeStatus !== 0}
-            >
-              Approve
-            </Button>
-            <Button 
-              color="danger" 
-              variant="flat" 
-              onClick={() => openAdminReasonModal('reject')}
-              disabled={safeStatus !== 0}
-            >
-              Reject
-            </Button>
-          </div>
+          {safeStatus === 0 && (
+            <div className="flex items-center gap-2">
+              <Button 
+                color="success" 
+                onClick={() => openAdminReasonModal('approve')}
+                disabled={updateReportMutation.isPending}
+              >
+                Approve
+              </Button>
+              <Button 
+                color="danger" 
+                variant="flat" 
+                onClick={() => openAdminReasonModal('reject')}
+                disabled={updateReportMutation.isPending}
+              >
+                Reject
+              </Button>
+            </div>
+          )}
         </div>
         <p className="-mt-4 text-gray-500">Reported User ID: {reportedId}</p>
+
+        {/* Report Information */}
+        <div className="rounded-lg border bg-card p-6">
+          <h2 className="mb-4 text-lg font-semibold">Report Information</h2>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <div className="text-sm text-muted-foreground">Report Status</div>
+              <div className="font-medium">
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(safeStatus)}`}>
+                  {getStatusLabel(safeStatus)}
+                </span>
+              </div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Reported At</div>
+              <div className="font-medium">{formatDate(safeReportedAt)}</div>
+            </div>
+            <div className="md:col-span-2">
+              <div className="text-sm text-muted-foreground">Admin Reason</div>
+              <div className="font-medium text-gray-700">{safeReason}</div>
+            </div>
+          </div>
+        </div>
 
         {/* Reporters Section */}
         <div className="rounded-lg border bg-card p-6">
@@ -258,7 +321,11 @@ const ReportDetail = () => {
             </div>
             <div>
               <div className="text-sm text-muted-foreground">Status</div>
-              <div className="font-medium">{getStatusLabel(safeStatus)}</div>
+              <div className="font-medium">
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(safeStatus)}`}>
+                  {getStatusLabel(safeStatus)}
+                </span>
+              </div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">Reported At</div>
@@ -267,11 +334,6 @@ const ReportDetail = () => {
           </div>
         </div>
 
-        {/* Report Reason */}
-        <div className="rounded-lg border bg-card p-6">
-          <h2 className="mb-4 text-lg font-semibold">Report Reason</h2>
-          <p className="text-gray-700">{safeReason}</p>
-        </div>
       </div>
 
       {/* Image Preview Modal */}
@@ -298,7 +360,7 @@ const ReportDetail = () => {
         onClose={() => setIsAdminReasonOpen(false)}
         onConfirm={handleAdminReasonConfirm}
         action={adminReasonAction}
-        isLoading={isButtonLoading}
+        isLoading={updateReportMutation.isPending}
       />
     </div>
   );

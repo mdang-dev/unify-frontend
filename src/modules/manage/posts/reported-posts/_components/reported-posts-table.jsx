@@ -76,9 +76,9 @@ const ReportedPostsTable = ({
         );
       case 'reportCount':
         return (
-          <Badge content={report.reportCount} color="primary" variant="flat">
-            Reports
-          </Badge>
+          <div className="text-center">
+            <span className="text-lg font-semibold">{report.reportCount}</span>
+          </div>
         );
       case 'status':
         return (

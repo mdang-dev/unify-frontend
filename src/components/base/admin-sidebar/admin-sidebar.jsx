@@ -64,11 +64,6 @@ const AdminSidebar = () => {
           icon: 'fa-solid fa-user-xmark',
           href: '/manage/users/reports',
         },
-        {
-          title: 'Blocked Users',
-          icon: 'fa-solid fa-ban',
-          href: '/manage/users/list',
-        },
       ],
     },
     {

@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Spinner } from '@heroui/react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminReportsQueryApi } from '@/src/apis/reports/query/admin-reports.query.api';
 import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
 import ReportedPostsFilters from './_components/reported-posts-filters';
@@ -10,9 +10,10 @@ import ReportedPostsTable from './_components/reported-posts-table';
 
 const ReportedPosts = () => {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
-    status: '',
+    status: '0', // Default to pending reports
     reportedAtFrom: '',
     reportedAtTo: '',
   });
