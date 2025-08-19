@@ -6,7 +6,6 @@ const TabNavigation = ({ activeTab, onTabChange }) => {
     { id: 'postIsPrivate', icon: 'fa-lock', label: 'PRIVATE' },
     { id: 'reel', icon: 'fa-film', label: 'REEL' },
     { id: 'saved', icon: 'fa-bookmark', label: 'SAVED' },
-    { id: 'tagged', icon: 'fa-tag', label: 'TAGGED' },
   ];
 
   return (
