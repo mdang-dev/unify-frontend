@@ -122,7 +122,9 @@ export default function CommentButton({ children, className = '', postId }) {
                     />
                   ))
                 ) : (
-                  <p className="text-xl font-bold text-zinc-500">No comments yet</p>
+                  <div className="flex h-full items-center justify-center">
+                    <p className="text-xl font-bold text-zinc-400">No comments yet</p>
+                  </div>
                 )}
               </ModalBody>
               <ModalFooter>

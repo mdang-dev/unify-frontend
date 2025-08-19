@@ -245,7 +245,7 @@ const CommentItemComponent = ({
           </div>
         </div>
         {isShown && allReplies.length > 0 && (
-          <div className="mt-2 flex w-full flex-col items-end   pl-8">
+          <div className="mt-2 flex w-full flex-col items-end pl-8">
             {allReplies.map((reply) => (
               <Reply
                 key={reply.id}

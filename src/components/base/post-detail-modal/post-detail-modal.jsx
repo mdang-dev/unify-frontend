@@ -463,7 +463,7 @@ const PostDetailModal = ({ post, postId, onClose, onArchive, onDelete, scrollToC
         onClick={(e) => e.stopPropagation()}
       >
         {/* Media Section */}
-        <div className="relative h-full w-1/2 bg-black">
+        <div className="relative flex h-full w-1/2 items-center justify-center bg-black">
           <Slider srcs={postData.media || []} onImageClick={() => {}} />
         </div>
         {/* Content Section */}
