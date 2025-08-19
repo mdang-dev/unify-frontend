@@ -106,8 +106,8 @@ const CommentItemComponent = ({
   });
 
   // --- Handlers ---
-  const handleReportComment = (reason) => {
-    reportCommentMutation.mutate({ commentId: comment.id, reason });
+  const handleReportComment = (commentId, reason) => {
+    reportCommentMutation.mutate({ commentId, reason });
   };
 
   const openReportModal = () => {

@@ -44,7 +44,8 @@ const CommentReportModal = ({ isOpen, onClose, onSubmit, commentId }) => {
   };
 
   // Handle custom reason from OtherReasonModal
-  const handleOtherSubmit = (commentId, customReason) => {
+  const handleOtherSubmit = (postId, customReason, uploadedUrls) => {
+    // For comments, we ignore uploadedUrls since comment reports don't support image uploads
     onSubmit(commentId, customReason);
     setIsOtherModalOpen(false);
     handleClose();
