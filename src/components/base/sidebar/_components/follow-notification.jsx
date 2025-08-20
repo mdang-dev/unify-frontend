@@ -12,14 +12,14 @@ const FollowNotification = React.memo(({ isSeen, sender, timestamp, onClick }) =
   const { user } = useAuthStore();
 
   // Debug logging (development only)
-  if (process.env.NODE_ENV === 'development') {
-    console.log('FollowNotification render:', { 
-      user: user?.id, 
-      sender: sender?.id, 
-      senderName: sender?.fullName,
-      isSeen 
-    });
-  }
+  // if (process.env.NODE_ENV === 'development') {
+  //   console.log('FollowNotification render:', { 
+  //     user: user?.id, 
+  //     sender: sender?.id, 
+  //     senderName: sender?.fullName,
+  //     isSeen 
+  //   });
+  // }
 
   if (!sender || !sender.fullName) return null;
 
@@ -34,8 +34,10 @@ const FollowNotification = React.memo(({ isSeen, sender, timestamp, onClick }) =
 
   return (
     <div
-      className={`max-h-[88px] cursor-pointer items-center rounded-xl p-2 px-4 ${
-        isSeen ? '' : 'bg-gray-200 dark:bg-neutral-800'
+      className={`max-h-[88px] cursor-pointer items-center rounded-xl p-2 px-4 transition-colors duration-200 ${
+        isSeen 
+          ? 'hover:bg-gray-100 dark:hover:bg-neutral-800' 
+          : 'bg-gray-200 dark:bg-neutral-800 hover:bg-gray-300 dark:hover:bg-neutral-700'
       }`}
     >
       <div className="flex items-center gap-4"

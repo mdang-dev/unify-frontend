@@ -3,7 +3,6 @@ import httpClient from '@/src/utils/http-client.util';
 const url = '/api/notifications';
 
 export const notificationsCommandApi = {
-  // ✅ UPDATED: Fetch notifications with pagination
   fetch: async (userId, page = 0, size = 20) => {
     const res = await httpClient.get(`${url}/${userId}`, { 
       params: { page, size } 
@@ -11,7 +10,6 @@ export const notificationsCommandApi = {
     return res.data;
   },
 
-  // ✅ NEW: Get unread count
   getUnreadCount: async (userId) => {
     const res = await httpClient.get(`${url}/${userId}/unread-count`);
     return res.data.unreadCount;
