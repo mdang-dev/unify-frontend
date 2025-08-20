@@ -235,7 +235,14 @@
         "Error": "Lỗi",
         "ClearAll": "Xóa tất cả",
         "RemoveFile": "Xóa tệp",
-        "UnknownFile": "Tệp không xác định"
+        "UnknownFile": "Tệp không xác định",
+        "MessageSent": "Đã gửi tin nhắn",
+        "MessageSentSuccessfully": "Tin nhắn đã được gửi thành công!",
+        "FailedToSendMessage": "Không thể gửi tin nhắn. Vui lòng thử lại.",
+        "LoadingMessages": "Đang tải tin nhắn...",
+        "ErrorLoadingMessages": "Lỗi tải tin nhắn. Vui lòng thử lại.",
+        "Retry": "Thử lại",
+        "SendingMessage": "Đang gửi tin nhắn..."
     },
     "Streams": {
         "Title": "Phát trực tiếp",

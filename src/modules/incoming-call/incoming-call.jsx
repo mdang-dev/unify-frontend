@@ -1,13 +1,16 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { useWebSocket } from '@/src/hooks/use-websocket';
 import { useAuthStore } from '@/src/stores/auth.store';
+import { useSocket } from '@/src/hooks/use-socket';
+import { useRef } from 'react';
+import { useState } from 'react';
+import { useEffect } from 'react';
 
 const IncomingCall = () => {
+
   const [callData, setCallData] = useState(null);
   const user = useAuthStore((s) => s.user);
-  const { client, connected } = useWebSocket(user?.id ?? '');
+  const { client, connected } = useSocket();
   const audioRef = useRef(null);
 
   useEffect(() => {
@@ -35,7 +38,7 @@ const IncomingCall = () => {
           } catch (parseError) {
             if (process.env.NODE_ENV === 'development') {
               console.error('Error parsing incoming call message:', parseError);
-            }
+            }z
           }
         });
 
@@ -158,7 +161,7 @@ const IncomingCall = () => {
         <div className="relative">
           <div className="absolute inset-0 animate-ping rounded-full border-4 border-[#2b65ae] opacity-40" />
           <img
-                          src={callData.callerAvatar || '/images/unify_icon_2.png'}
+                          src={callData.avatar || '/images/unify_icon_2.png'}
             alt="Caller Avatar"
             className="relative z-10 h-16 w-16 rounded-full border-4 border-[#2b65ae] object-cover"
           />

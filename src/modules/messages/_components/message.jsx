@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { postsQueryApi } from '@/src/apis/posts/query/posts.query.api';
 import EnhancedMedia from './enhanced-media';
+import Link from 'next/link';
 
 
 const PostDetailModal = dynamic(() => import('@/src/components/base/post-detail-modal'), { ssr: false });
@@ -23,6 +24,16 @@ const Message = ({ messages, messagesEndRef, avatar, onRetryMessage }) => {
   const [loadingPost, setLoadingPost] = useState(false);
   const [previewMap, setPreviewMap] = useState({});
   const [loadingPreviewIds, setLoadingPreviewIds] = useState([]);
+
+  // Debug logging for optimistic messages
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      const optimisticMessages = messages.filter(msg => msg.isOptimistic);
+      if (optimisticMessages.length > 0) {
+    
+      }
+    }
+  }, [messages]);
 
   const getFileIcon = (fileExtension) => {
     if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension))
@@ -235,19 +246,19 @@ const Message = ({ messages, messagesEndRef, avatar, onRetryMessage }) => {
         return (
           <div
             key={`${message.id || message.timestamp || 'no-id'}-${index}`}
-            className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} ${
-              message.isOptimistic ? 'opacity-70 transition-opacity duration-300' : 'opacity-100 transition-opacity duration-300'
-            } ${message.isFailed ? 'opacity-50' : ''}`}
+            className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
           >
             {isFirstOfGroup && !isCurrentUser && (
               <div className="mr-3">
-                <img
-                  src={avatar}
-                  alt="Avatar"
-                  className="h-10 w-10 rounded-full border-2 border-neutral-700"
-                  width={35}
-                  height={35}
-                />
+                <Link href={`/profile/${messages[0]?.sender || 'unknown'}`} className="hover:opacity-80 transition-opacity">
+                  <img
+                    src={avatar}
+                    alt="Avatar"
+                    className="h-10 w-10 rounded-full border-2 border-neutral-700 cursor-pointer"
+                    width={35}
+                    height={35}
+                  />
+                </Link>
               </div>
             )}
 
@@ -256,126 +267,189 @@ const Message = ({ messages, messagesEndRef, avatar, onRetryMessage }) => {
                 isCurrentUser ? 'items-end' : 'items-start'
               } ${!isCurrentUser && !isFirstOfGroup ? 'pl-[50px]' : ''}`}
             >
-              {message.fileUrls?.length > 0 && (
-                <div className="mb-3 mt-2 flex flex-wrap gap-2 flex-col items-end">
-                  {message.fileUrls.map((fileUrl, fileIndex) => {
-                    // Check if this is a new enhanced format with metadata
-                    if (typeof fileUrl === 'object' && fileUrl.url) {
-                      // Enhanced format with metadata
-                    return (
-                      <div key={fileIndex} className="flex flex-col items-start">
-                          <EnhancedMedia
-                            fileUrl={fileUrl.url}
-                            fileName={fileUrl.name || 'File'}
-                            fileType={fileUrl.type || 'application/octet-stream'}
-                            thumbnailUrl={fileUrl.thumbnailUrl}
-                            base64Data={fileUrl.base64Data}
-                            variants={fileUrl.variants || {}}
-                              onLoad={() => handleMediaLoad(messagesEndRef)}
-                            onError={() => console.warn('Media load failed:', fileUrl.url)}
-                            maxWidth="500px"
-                            maxHeight="400px"
-                            lazyLoad={true}
-                          />
-                          {fileUrl.compressionRatio && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              Compressed: {fileUrl.compressionRatio}% smaller
+              {message.isOptimistic && message.isUploading ? (
+                // ✅ Skeleton loading for entire uploading message
+                <div className="space-y-3">
+                  {/* File skeleton */}
+                  {message.fileUrls?.length > 0 && (
+                    <div className="flex flex-col items-start gap-2">
+                      {Array.from({ length: Math.min(message.fileUrls.length, 3) }).map((_, index) => (
+                        <div key={index} className="flex flex-col items-start">
+                          <div className="w-32 h-24 bg-gray-200 dark:bg-neutral-700 rounded-lg animate-pulse"></div>
+                          <div className="mt-2 h-3 w-20 bg-gray-200 dark:bg-neutral-700 rounded animate-pulse"></div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Text skeleton */}
+                  {message.content && (
+                    <div className="rounded-2xl p-3 pb-1 shadow-md bg-blue-600/50">
+                      <div className="space-y-2">
+                        <div className="h-4 bg-blue-500/30 rounded animate-pulse w-3/4"></div>
+                        <div className="h-4 bg-blue-500/30 rounded animate-pulse w-1/2"></div>
+                      </div>
+                      <div className="pb-1 text-white text-xs flex items-center gap-2 mt-2">
+                        <div className="h-3 w-16 bg-blue-500/30 rounded animate-pulse"></div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                          <span className="text-blue-400 italic">Sending...</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  {message.fileUrls?.length > 0 && (
+                    <div className="mb-3 mt-2 flex flex-wrap gap-2 flex-col items-end transition-all duration-300 ease-in-out">
+                      {message.fileUrls.map((fileUrl, fileIndex) => {
+                        // Check if this is a new enhanced format with metadata
+                        if (typeof fileUrl === 'object' && fileUrl.url) {
+                          // Enhanced format with metadata
+                          return (
+                            <div key={fileIndex} className="flex flex-col items-start">
+                              <EnhancedMedia
+                                fileUrl={fileUrl.url}
+                                fileName={fileUrl.name || 'File'}
+                                fileType={fileUrl.type || 'application/octet-stream'}
+                                thumbnailUrl={fileUrl.thumbnailUrl}
+                                base64Data={fileUrl.base64Data}
+                                variants={fileUrl.variants || {}}
+                                onLoad={() => handleMediaLoad(messagesEndRef)}
+                                onError={() => {/* Error handled silently */}}
+                                maxWidth="500px"
+                                maxHeight="400px"
+                                lazyLoad={true}
+                              />
+                              {fileUrl.compressionRatio && (
+                                <div className="text-xs text-gray-500 mt-1">
+                                  Compressed: {fileUrl.compressionRatio}% smaller
+                                </div>
+                              )}
+                              {message.isOptimistic && (
+                                <div className="text-xs text-green-400 italic mt-1 font-medium">
+                                  {message.isUploading ? (
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                                      <span className="text-blue-400">Uploading...</span>
+                                    </div>
+                                  ) : (
+                                    "✅ File attached"
+                                  )}
+                                </div>
+                              )}
                             </div>
+                          );
+                        }
+                        
+                        // Legacy format - direct URL string
+                        if (typeof fileUrl === 'string') {
+                          // ✅ FIXED: Handle uploading status strings smoothly
+                          if (fileUrl.startsWith('Uploading ')) {
+                            return (
+                              <div key={fileIndex} className="flex flex-col items-start">
+                                <div className="flex items-center gap-2 p-3 bg-gray-100 dark:bg-neutral-700 rounded-lg border-2 border-dashed border-gray-300 dark:border-neutral-600">
+                                  <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                                  <span className="text-sm text-gray-600 dark:text-gray-300">{fileUrl}</span>
+                                </div>
+                                {message.isOptimistic && (
+                                  <div className="text-xs text-green-400 italic mt-1 font-medium">
+                                    {message.isUploading ? (
+                                      <span className="text-blue-400">⏳ Uploading...</span>
+                                    ) : (
+                                      "✅ File attached"
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+                          
+                          const fileName = fileUrl.split('/').pop().split('?')[0];
+                          const fileExtension = fileName.split('.').pop().toLowerCase();
+                          
+                          return (
+                            <div key={fileIndex} className="flex flex-col items-start">
+                              <EnhancedMedia
+                                fileUrl={fileUrl}
+                                fileName={fileName}
+                                fileType={fileExtension}
+                                onLoad={() => handleMediaLoad(messagesEndRef)}
+                                onError={() => {/* Error handled silently */}}
+                                maxWidth="500px"
+                                maxHeight="400px"
+                                lazyLoad={true}
+                              />
+                              {message.isOptimistic && (
+                                <div className="text-xs text-green-400 italic mt-1 font-medium">
+                                  {message.isUploading ? (
+                                    <span className="text-blue-400">⏳ Uploading...</span>
+                                  ) : (
+                                    "✅ File attached"
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        }
+                        
+                        // Fallback for unknown format
+                        return null;
+                      })}
+                    </div>
+                  )}
+                  
+                  {message.content && (
+                    <div
+                      className={`rounded-2xl p-3 pb-1 shadow-md transition-all duration-300 ease-in-out ${
+                        isCurrentUser
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-zinc-700 text-white dark:bg-zinc-800'
+                      } opacity-100`}
+                    >
+                      {renderContent(message.content)}
+                      <div className="pb-1 text-[#d4d7de] dark:text-white text-xs flex items-center gap-2">
+                        {formatMessageTime(message.timestamp)}
+                        {message.isOptimistic ? (
+                          <div className="flex items-center gap-1">
+                            {message.isUploading ? (
+                              <div className="flex items-center gap-1">
+                                <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                                <span className="text-xs text-blue-400 italic">Sending...</span>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                                <span className="text-xs text-green-400 italic">Sent</span>
+                              </>
+                            )}
+                          </div>
+                        ) : isCurrentUser && (
+                          <div className="flex items-center gap-1">
+                            <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                            <span className="text-xs text-green-400 italic">Delivered</span>
+                          </div>
                         )}
                       </div>
-                    );
-                    }
-                    
-                    // Legacy format - direct URL string
-                    if (typeof fileUrl === 'string') {
-                      const fileName = fileUrl.split('/').pop().split('?')[0];
-                      const fileExtension = fileName.split('.').pop().toLowerCase();
-                      
-                      return (
-                        <div key={fileIndex} className="flex flex-col items-start">
-                          <EnhancedMedia
-                            fileUrl={fileUrl}
-                            fileName={fileName}
-                            fileType={fileExtension}
-                            onLoad={() => handleMediaLoad(messagesEndRef)}
-                            onError={() => console.warn('Media load failed:', fileUrl)}
-                            maxWidth="500px"
-                            maxHeight="400px"
-                            lazyLoad={true}
-                          />
-                        </div>
-                      );
-                    }
-                    
-                    // Fallback for unknown format
-                    console.warn('Unknown fileUrl format:', fileUrl);
-                    return null;
-                  })}
-                </div>
-              )}
-
-              {message.content && (
-                <div
-                  className={`rounded-2xl p-3 pb-1 shadow-md ${
-                    isCurrentUser
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-zinc-700 text-white dark:bg-zinc-800'
-                  } ${message.isOptimistic ? 'animate-pulse' : ''} ${
-                    message.isFailed ? 'bg-red-500' : ''
-                  }`}
-                >
-                  {renderContent(message.content)}
-                  <div className="pb-1 text-[#d4d7de] dark:text-white text-xs">
-                      {formatMessageTime(message.timestamp)}
                     </div>
-                </div>
-              )}
+                  )}
 
-              {/* ✅ TIME & STATUS: Show time for last message of group and status for last message of current user */}
-              <div className={`mt-1 flex items-center gap-2 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
-                {isLastOfGroup && (
-                  <div className="flex items-center gap-2">
-                    
-                    {/* ✅ MESSAGE STATUS: Show status alongside time for current user's last message */}
-                    {shouldShowStatus && (
-                      <div className="flex items-center gap-1">
-                        {/* ✅ SIMPLIFIED: Only 2 states - Sending and Sent */}
-                        {(message.messageState === 'sending' || 
-                          message.messageState === 'uploading' || 
-                          message.messageState === 'uploaded' || 
-                          message.isOptimistic || 
-                          (!message.backendConfirmed && !message.isFailed)) && (
-                          <div className="flex items-center gap-1 text-xs text-gray-400">
-                            <span>Sending</span>
-                          </div>
-                        )}
-                        
-                        {((message.messageState === 'sent' || 
-                          message.messageState === 'delivered' || 
-                          message.messageState === 'read') && 
-                          message.backendConfirmed && !message.isFailed) && (
+                  {/* Simplified time display */}
+                  <div className={`mt-1 flex items-center gap-2 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
+                    {isLastOfGroup && (
+                      <div className="flex items-center gap-2">
+                        {/* Simple sent status for current user's messages */}
+                        {shouldShowStatus && isCurrentUser && (
                           <div className="flex items-center gap-1 text-xs text-gray-400">
                             <span>Sent</span>
-                          </div>
-                        )}
-                        
-                        {(message.messageState === 'failed' || message.isFailed) && (
-                          <div className="flex items-center gap-2 text-xs text-red-400">
-                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                            <span>Failed</span>
-                            <button
-                              onClick={() => onRetryMessage?.(message.id)}
-                              className="text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded ml-1"
-                            >
-                              Retry
-                            </button>
                           </div>
                         )}
                       </div>
                     )}
                   </div>
-                )}
-              </div>
+                </>
+              )}
             </div>
           </div>
         );

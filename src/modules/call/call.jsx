@@ -7,7 +7,7 @@ import { useAuthStore } from '@/src/stores/auth.store';
 import { callQueryApi } from '@/src/apis/call/query/call.query.api';
 import { callCommandApi } from '@/src/apis/call/command/call.command.api';
 import { useRef } from 'react';
-import { useWebSocket } from '@/src/hooks/use-websocket';
+import { useSocket } from '@/src/hooks/use-socket';
 import { addToast } from '@heroui/react';
 import { useEffect } from 'react';
 import MyVideoConference from './_components/my-video-conference';
@@ -20,7 +20,8 @@ export default function Call() {
   const room = qs?.get('room');
   const serverUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
   const code = `${room}-${user?.id}`;
-  const { client, connected } = useWebSocket(user?.id ?? '');
+  // Use simplified call socket hook
+  const { client, connected } = useSocket(user?.id ?? '');
   const hasLeftRef = useRef(false);
   const timeoutRef = useRef(null);
   const [connecting, setConnecting] = useState(true);

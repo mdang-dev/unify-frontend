@@ -11,12 +11,15 @@ import {
 } from 'react-icons/fa';
 import { useTranslations } from 'next-intl';
 import Message from './_components/message';
+import MessageSkeleton from './_components/message-skeleton';
+import ChatListSkeleton from './_components/chat-list-skeleton';
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useDebounce } from '@/src/hooks/use-debounce';
 import Picker from 'emoji-picker-react';
 import { Smile, Send, Plus } from 'lucide-react';
 import { useChat } from '@/src/hooks/use-chat';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import AvatarDefault from '@/public/images/unify_icon_2.png';
 import { useAuthStore } from '@/src/stores/auth.store';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -51,7 +54,17 @@ import { toast } from 'sonner';
   });
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const { chatMessages, sendMessage, chatList, isLoadingChatList, chatListError } = useChat(
+  const { 
+    chatMessages, 
+    sendMessage, 
+    chatList, 
+    isLoadingChatList, 
+    chatListError,
+    isLoadingMessages,
+    messagesError,
+    sendError,
+    refreshMessages
+  } = useChat(
     user,
     chatPartner
   );
@@ -63,18 +76,7 @@ import { toast } from 'sonner';
     // React Query cache is automatically updated by useChat hook
   };
 
-  // ✅ OPTIMISTIC: Handle message retry
-  const handleRetryMessage = useCallback(
-    (messageId) => {
-      // Find the failed message and retry sending
-      const failedMessage = chatMessages.find((msg) => msg.id === messageId && msg.isFailed);
-      if (failedMessage) {
-        // Retry sending the message
-        sendMessage(failedMessage.content, [], failedMessage.receiver);
-      }
-    },
-    [chatMessages, sendMessage]
-  );
+  // Retry functionality removed for simplified chat
   const [newMessage, setNewMessage] = useState('');
   const [showPicker, setShowPicker] = useState(false);
   const pickerRef = useRef(null);
@@ -130,8 +132,6 @@ import { toast } from 'sonner';
         );
       });
     } catch (error) {
-      // Only log critical errors
-      console.error('Critical error filtering chat list:', error);
       return [];
     }
   }, [chatList, debouncedSearchQuery]);
@@ -166,7 +166,19 @@ import { toast } from 'sonner';
     }
   }, [chatMessages]);
 
-  // ✅ PERFORMANCE: Memoized send message handler
+  // Show error toast when message sending fails
+  useEffect(() => {
+    if (sendError) {
+      addToast({
+        title: t('Error'),
+        description: t('FailedToSendMessage'),
+        timeout: 3000,
+        color: 'danger',
+      });
+    }
+  }, [sendError, t]);
+
+  // ✅ PERFORMANCE: Optimized send message handler for maximum speed
   const handleSendMessage = useCallback(() => {
     if (!chatPartner) {
       addToast({
@@ -187,11 +199,17 @@ import { toast } from 'sonner';
       return;
     }
     if (newMessage || files.length > 0) {
-      sendMessage(newMessage, files, chatPartner);
+      // Clear input immediately for instant feedback
       setNewMessage('');
       setFiles([]);
+      
+      // Send message instantly with no delays
+      sendMessage(newMessage, files, chatPartner);
+      
+      // ✅ REMOVED: Toast notification for successful message sending
+      // Users will see the message appear instantly instead
     }
-  }, [chatPartner, newMessage, files, sendMessage]);
+  }, [chatPartner, newMessage, files, sendMessage, t]);
 
   // Keyboard shortcuts for better UX
   useEffect(() => {
@@ -206,12 +224,7 @@ import { toast } from 'sonner';
       if (event.key === 'Escape') {
         if (files.length > 0) {
           setFiles([]);
-          addToast({
-            title: t('FilesCleared'),
-            description: t('AllFilesCleared'),
-            timeout: 2000,
-            color: 'info',
-          });
+          // ✅ REMOVED: Toast notification for files cleared via keyboard
         }
         if (showPicker) {
           setShowPicker(false);
@@ -285,21 +298,11 @@ import { toast } from 'sonner';
       // Add valid files to state
       if (validFiles.length > 0) {
         setFiles((prevFiles) => [...prevFiles, ...validFiles]);
-        addToast({
-          title: t('FilesAdded'),
-          description: t('AddedFiles', { count: validFiles.length }),
-          timeout: 2000,
-          color: 'success',
-        });
+        // ✅ REMOVED: Toast notification for files added
+        // Users will see files appear in the UI instead
       }
     } catch (error) {
-      console.error('Error processing files:', error);
-      addToast({
-        title: t('Error'),
-        description: t('ErrorProcessingFiles'),
-        timeout: 3000,
-        color: 'danger',
-      });
+      // Handle error silently
     } finally {
       setIsUploading(false);
     }
@@ -313,13 +316,12 @@ import { toast } from 'sonner';
       const img = new Image();
       
       return new Promise((resolve) => {
-        const timeout = setTimeout(() => {
-          console.warn('Image preview generation timeout for:', file.name);
-          resolve(URL.createObjectURL(file));
-        }, 5000); // 5 second timeout
+        // Timeout for preview generation
+        setTimeout(() => {
+          // Handle timeout silently
+        }, 5000);
         
         img.onload = () => {
-          clearTimeout(timeout);
           try {
             // Calculate optimal thumbnail dimensions
             const maxSize = 150;
@@ -341,21 +343,20 @@ import { toast } from 'sonner';
             const preview = canvas.toDataURL(file.type, 0.8);
             resolve(preview);
           } catch (error) {
-            console.warn('Canvas error for preview:', file.name, error);
+            // Handle canvas error silently
             resolve(URL.createObjectURL(file));
           }
         };
         
         img.onerror = () => {
-          clearTimeout(timeout);
-          console.warn('Failed to load image for preview:', file.name);
+          // Handle image load error silently
           resolve(URL.createObjectURL(file));
         };
         
         img.src = URL.createObjectURL(file);
       });
     } catch (error) {
-      console.warn('Failed to create preview for:', file.name, error);
+      // Handle preview creation error silently
       return URL.createObjectURL(file);
     }
   };
@@ -366,12 +367,8 @@ import { toast } from 'sonner';
 
   const handleClearAllFiles = () => {
     setFiles([]);
-    addToast({
-      title: t('FilesCleared'),
-      description: t('AllFilesCleared'),
-      timeout: 2000,
-      color: 'info',
-    });
+    // ✅ REMOVED: Toast notification for files cleared
+    // Users will see files disappear from the UI instead
   };
 
   const handlePreview = (fileObj) => {
@@ -385,13 +382,10 @@ import { toast } from 'sonner';
   // ✅ PERFORMANCE: Memoized chat selection handler
   const handleChatSelect = useCallback((chat) => {
     if (process.env.NODE_ENV === 'development') {
-      console.log('Chat selected:', chat);
+      
     }
 
     if (!chat?.userId || typeof chat.userId !== 'string') {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Invalid chat selected:', chat);
-      }
       return;
     }
 
@@ -403,10 +397,13 @@ import { toast } from 'sonner';
     });
     setChatPartner(chat.userId);
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Chat partner set to:', chat.userId);
+    // Force refetch messages for the new chat partner
+    if (user?.id && chat.userId) {
+      queryClient.invalidateQueries([QUERY_KEYS.CHAT_MESSAGES, user.id, chat.userId]);
     }
-  }, []);
+
+
+  }, [user?.id, queryClient]);
 
   const handleCall = () => {
     if (!user || !opChat) return;
@@ -472,6 +469,8 @@ import { toast } from 'sonner';
               <div className="flex h-full items-center justify-center">
                 <p className="text-lg text-gray-500 dark:text-neutral-400">{t('LoadingUser')}</p>
               </div>
+            ) : isLoadingChatList ? (
+              <ChatListSkeleton />
             ) : !chatList ? (
               <div className="flex h-full items-center justify-center">
                 <p className="text-lg text-gray-500 dark:text-neutral-400">
@@ -490,11 +489,13 @@ import { toast } from 'sonner';
                   onClick={() => handleChatSelect(chat)}
                 >
                   <div className="flex items-center">
-                    <img
-                      src={chat?.avatar?.url || AvatarDefault?.src}
-                      alt="Avatar"
-                      className="h-12 w-12 rounded-full border-2 border-gray-500 dark:border-neutral-500"
-                    />
+                    <Link href={`/profile/${chat?.username}`} className="hover:opacity-80 transition-opacity">
+                      <img
+                        src={chat?.avatar?.url || AvatarDefault?.src}
+                        alt="Avatar"
+                        className="h-12 w-12 rounded-full border-2 border-gray-500 dark:border-neutral-500 cursor-pointer"
+                      />
+                    </Link>
                     <div className="ml-4">
                       <h4 className="w-23 truncate text-sm font-medium">
                         {chat?.fullname || chat?.fullName || opChat?.fullname || t('UnknownUser')}
@@ -538,11 +539,13 @@ import { toast } from 'sonner';
             <>
               <div className="flex w-full p-3">
                 <div className="flex grow">
-                  <img
-                    src={opChat?.avatar || AvatarDefault.src}
-                    alt="Avatar user"
-                    className="h-12 w-12 rounded-full border-2 border-gray-500 dark:border-neutral-700"
-                  />
+                  <Link href={`/profile/${opChat?.username}`} className="hover:opacity-80 transition-opacity">
+                    <img
+                      src={opChat?.avatar || AvatarDefault.src}
+                      alt="Avatar user"
+                      className="h-12 w-12 rounded-full border-2 border-gray-500 dark:border-neutral-700 cursor-pointer"
+                    />
+                  </Link>
                   <div className="ml-5">
                     <h4 className="w-60 truncate text-sm font-medium">
                       {opChat?.fullname || t('Fullname')}
@@ -555,8 +558,7 @@ import { toast } from 'sonner';
                 <div className="flex w-1/3 items-center justify-end text-2xl">
                   {isUploading && (
                     <div className="mr-2 flex items-center text-sm text-blue-500">
-                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"></div>
-                      {t('Processing')}
+                      <span>⏳ Processing files...</span>
                     </div>
                   )}
                   <button
@@ -584,15 +586,46 @@ import { toast } from 'sonner';
               <hr className="dark:border-neutral-700" />
 
               <div className="h-[80%] overflow-y-scroll scrollbar-hide">
-                {/* <h2 className="text-center m-3 dark:text-neutral-400">
-                  23:48, 20/01/2025
-                </h2> */}
-                <Message
-                  messages={chatMessages}
-                  messagesEndRef={messagesEndRef}
-                  avatar={opChat.avatar || AvatarDefault.src}
-                  onRetryMessage={handleRetryMessage}
-                />
+                {!chatPartner ? (
+                  <div className="flex h-full items-center justify-center">
+                    <div className="text-center">
+                      <p className="text-gray-500 dark:text-neutral-400 mb-2">Select a chat to start messaging</p>
+                      <p className="text-sm text-gray-400">Choose someone from the chat list</p>
+                    </div>
+                  </div>
+                ) : isLoadingMessages ? (
+                  <MessageSkeleton />
+                ) : messagesError ? (
+                  <div className="flex h-full items-center justify-center">
+                    <div className="text-center">
+                      <p className="text-red-500 dark:text-red-400 mb-2">
+                        {messagesError?.message || t('ErrorLoadingMessages') || 'Error loading messages'}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                        {messagesError?.response?.data?.message || 'Please check your connection and try again'}
+                      </p>
+                      <button 
+                        onClick={() => refreshMessages()}
+                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                      >
+                        {t('Retry') || 'Retry'}
+                      </button>
+                    </div>
+                  </div>
+                ) : chatMessages?.length === 0 ? (
+                  <div className="flex h-full items-center justify-center">
+                    <div className="text-center">
+                      <p className="text-gray-500 dark:text-neutral-400 mb-2">No messages yet</p>
+                      <p className="text-sm text-gray-400">Start a conversation!</p>
+                    </div>
+                  </div>
+                ) : (
+                  <Message
+                    messages={chatMessages}
+                    messagesEndRef={messagesEndRef}
+                    avatar={opChat.avatar || AvatarDefault.src}
+                  />
+                )}
               </div>
 
               <div className={`relative w-full`}>
@@ -610,11 +643,13 @@ import { toast } from 'sonner';
 
                 <div className="flex w-full items-center justify-center rounded-3xl border border-zinc-300 p-3 text-black dark:border-neutral-700 dark:text-white">
                   {user?.avatar?.url && (
-                    <img
-                      src={user?.avatar.url}
-                      alt="Avatar"
-                      className="h-10 w-10 rounded-full border-2 border-gray-500 dark:border-neutral-700"
-                    />
+                    <Link href={`/profile/${user?.username}`} className="hover:opacity-80 transition-opacity">
+                      <img
+                        src={user?.avatar.url}
+                        alt="Avatar"
+                        className="h-10 w-10 rounded-full border-2 border-gray-500 dark:border-neutral-700 cursor-pointer"
+                      />
+                    </Link>
                   )}
 
                   <button
@@ -666,7 +701,7 @@ import { toast } from 'sonner';
                   {(newMessage.trim() || files.length > 0) && (
                     <button
                       onClick={handleSendMessage}
-                      className="ml-2 text-black hover:text-zinc-500 dark:text-zinc-100 dark:hover:text-zinc-500"
+                      className="ml-2 text-black hover:text-zinc-500 dark:text-zinc-100 dark:hover:text-zinc-500 transition-all duration-200 hover:scale-105 active:scale-95"
                     >
                       <Send size={30} />
                     </button>

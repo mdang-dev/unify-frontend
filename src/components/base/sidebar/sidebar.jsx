@@ -152,8 +152,12 @@ const Sidebar = () => {
             </li>
             <li className="flex h-16 items-center justify-center">
               {user && (
-                <Link title={t('YourProfile')} href={`/profile/${user.username}`} className="">
-                  <div className="h-8 w-8 overflow-hidden rounded-full border-2 border-black dark:border-gray-300">
+                <Link 
+                  title={t('YourProfile')} 
+                  href={`/profile/${user.username}`} 
+                  className="transition-transform duration-200 hover:scale-110"
+                >
+                  <div className="h-8 w-8 overflow-hidden rounded-full border-2 border-black dark:border-gray-300 cursor-pointer">
                     <Image
                       src={user.avatar?.url || avatar}
                       alt="Avatar"
