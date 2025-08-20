@@ -20,8 +20,10 @@ const LikeNotification = React.memo(function LikeNotification({ isSeen, sender, 
   return (
     <div
       onClick={onClick}
-      className={`max-h-[88px] cursor-pointer items-center rounded-xl p-2 px-4 ${
-        isSeen ? '' : 'bg-gray-200 dark:bg-neutral-800'
+      className={`max-h-[88px] cursor-pointer items-center rounded-xl p-2 px-4 transition-colors duration-200 ${
+        isSeen 
+          ? 'hover:bg-gray-100 dark:hover:bg-neutral-800' 
+          : 'bg-gray-200 dark:bg-neutral-800 hover:bg-gray-300 dark:hover:bg-neutral-700'
       }`}
     >
       <div className="flex items-center gap-4">
