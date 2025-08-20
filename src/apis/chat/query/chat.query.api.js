@@ -4,58 +4,6 @@ import { getVietnamTimeISO } from '@/src/utils/timezone.util';
 const url = '/messages';
 
 export const chatQueryApi = {
-  // ✅ NEW: Check message status with backend
-  checkMessageStatus: async (messageId, clientTempId) => {
-    try {
-      const params = new URLSearchParams();
-      if (messageId) params.append('messageId', messageId);
-      if (clientTempId) params.append('clientTempId', clientTempId);
-      
-      const res = await httpClient.get(`${url}/status?${params.toString()}`);
-      
-      if (!res?.data) {
-        return { status: 'unknown', exists: false };
-      }
-      
-      return {
-        messageId: res.data.messageId,
-        status: res.data.status, // 'pending', 'sent', 'delivered', 'read', 'failed'
-        timestamp: res.data.timestamp,
-        exists: true,
-        serverConfirmed: true
-      };
-    } catch (error) {
-      console.warn('Failed to check message status:', error);
-      return { status: 'unknown', exists: false, error: error.message };
-    }
-  },
-
-  // ✅ NEW: Batch check multiple message statuses
-  batchCheckMessageStatus: async (messageIds) => {
-    try {
-      const res = await httpClient.post(`${url}/batch-status`, {
-        messageIds: messageIds
-      });
-      
-      if (!res?.data || !Array.isArray(res.data)) {
-        return {};
-      }
-      
-      // Return as map for easy lookup
-      return res.data.reduce((acc, status) => {
-        acc[status.messageId || status.clientTempId] = {
-          status: status.status,
-          timestamp: status.timestamp,
-          serverConfirmed: true
-        };
-        return acc;
-      }, {});
-    } catch (error) {
-      console.warn('Failed to batch check message status:', error);
-      return {};
-    }
-  },
-
   getChatList: async (userId) => {
     try {
       if (!userId) {
@@ -106,19 +54,45 @@ export const chatQueryApi = {
       return [];
     }
   },
+
   getMessages: async (userId, partnerId) => {
-    const res = await httpClient.get(`${url}/${userId}/${partnerId}`);
-    
-    // ✅ DEFAULT STATE: Ensure messages from DB have proper default state
-    const messages = res?.data || [];
-    return messages
-      .map(msg => ({
-        ...msg,
-        // Set default state for messages from database (they're already sent)
-        messageState: msg.messageState || 'sent',
-        backendConfirmed: msg.backendConfirmed !== undefined ? msg.backendConfirmed : true,
-        isOptimistic: msg.isOptimistic || false,
-      }))
-      .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    try {
+      if (!userId || !partnerId) {
+        console.warn('getMessages: Missing userId or partnerId:', { userId, partnerId });
+        return [];
+      }
+
+      console.log('Fetching messages for:', { userId, partnerId, url: `${url}/${userId}/${partnerId}` });
+      
+      const res = await httpClient.get(`${url}/${userId}/${partnerId}`);
+      
+      console.log('Messages response:', res);
+      
+      const messages = res?.data || [];
+      return messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      console.error('Error details:', {
+        userId,
+        partnerId,
+        url: `${url}/${userId}/${partnerId}`,
+        error: error.message,
+        response: error.response?.data
+      });
+      throw error;
+    }
+  },
+
+  sendMessage: async (messageData) => {
+    try {
+      console.log('Sending message to backend:', messageData);
+      const res = await httpClient.post(`${url}/send`, messageData);
+      console.log('Backend response:', res);
+      return res;
+    } catch (error) {
+      console.error('Error sending message to backend:', error);
+      console.error('Message data that failed:', messageData);
+      throw error;
+    }
   },
 };

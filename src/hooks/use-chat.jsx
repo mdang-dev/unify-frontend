@@ -1,27 +1,20 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Client } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { uploadFiles } from '../utils/upload-files.util';
 import { QUERY_KEYS } from '../constants/query-keys.constant';
 import { chatQueryApi } from '../apis/chat/query/chat.query.api';
-import { getCookie } from '../utils/cookies.util';
-import { COOKIE_KEYS } from '../constants/cookie-keys.constant';
 import { getVietnamTimeISO } from '../utils/timezone.util';
-import { getCsrfTokenSafe } from '../utils/csrf.util';
-import { 
-  createTemporaryTimestamp, 
-  areTimestampsClose, 
-  createServerBoundMessage,
-  mergeWithServerMessage 
-} from '../utils/message-timestamp.util';
+import { useSocket } from './use-socket';
+import { COOKIE_KEYS } from '../constants/cookie-keys.constant';
+import { getCookie } from '../utils/cookies.util';
+import { flushSync } from 'react-dom';
 
 // Ensure messages are always in a stable order: timestamp asc, then id, then optimistic last
 const sortMessages = (arr) => {
   if (!Array.isArray(arr) || arr.length === 0) return [];
   
   // Early return for single item
-  if (arr.length === 1) return [];
+  if (arr.length === 1) return arr;
   
   return [...arr].sort((a, b) => {
     // Compare timestamps first (most important)
@@ -43,736 +36,700 @@ const sortMessages = (arr) => {
 };
 
 export const useChat = (user, chatPartner) => {
-  // ✅ FIX: Sử dụng Map để isolate messages theo conversation
+  // Use existing socket hook
+  const { connected: isConnected, client: socketClient } = useSocket();
+  
+  // Message state
   const [conversationMessages, setConversationMessages] = useState(new Map());
+  const [optimisticMessages, setOptimisticMessages] = useState(new Map());
   
-  // ✅ FIX: Message queue cho từng conversation
-  const messageQueueRef = useRef(new Map());
-  
-  // ✅ FIX: Track conversation hiện tại bằng ref để tránh stale closure
-  const currentChatPartnerRef = useRef(null);
-  
-  const [isConnected, setIsConnected] = useState(false);
-  const stompClientRef = useRef(null);
+  // Refs
   const messagesEndRef = useRef(null);
-  const reconnectTimeoutRef = useRef(null);
   const queryClient = useQueryClient();
-  const sendingMessagesRef = useRef(new Set()); // Track messages currently being sent
+  const subscriptionsRef = useRef(new Map());
+  
+  // Normalize chatPartner to get the ID
+  const chatPartnerId = typeof chatPartner === 'string' ? chatPartner : chatPartner?.id;
+  
+  // Debug logging for chat partner
 
-  // ✅ FIX: Expose current conversation messages
-  const chatMessages = conversationMessages.get(chatPartner) || [];
 
-  // ✅ FIX: Track conversation hiện tại
-  useEffect(() => {
-    currentChatPartnerRef.current = chatPartner;
+  // Get current conversation messages (optimistic + server)
+  const chatMessages = useMemo(() => {
+    const serverMessages = conversationMessages.get(chatPartnerId) || [];
+    const optimistic = optimisticMessages.get(chatPartnerId) || [];
     
-    // ✅ FIX: Initialize conversation nếu chưa có
-    if (chatPartner && !conversationMessages.has(chatPartner)) {
-      setConversationMessages(prev => new Map(prev).set(chatPartner, []));
+    // ✅ OPTIMIZED: Early return if no messages
+    if (serverMessages.length === 0 && optimistic.length === 0) {
+      return [];
     }
     
-    // ✅ FIX: Load queued messages khi switch conversation
-    if (chatPartner) {
-      loadQueuedMessages(chatPartner);
+    // ✅ OPTIMIZED: Only sort if we have multiple messages
+    if (serverMessages.length + optimistic.length <= 1) {
+      return [...serverMessages, ...optimistic];
     }
-  }, [chatPartner, conversationMessages]);
-
-  // ✅ FIX: Load queued messages khi switch conversation
-  const loadQueuedMessages = useCallback((conversationId) => {
-    const queuedMessages = messageQueueRef.current.get(conversationId) || [];
     
-    if (queuedMessages.length > 0) {
-      console.log(`📱 Loading ${queuedMessages.length} queued messages for: ${conversationId}`);
+    return sortMessages([...serverMessages, ...optimistic]);
+  }, [conversationMessages, optimisticMessages, chatPartnerId]);
+
+  // Helper function to check if timestamps are close (for optimistic message matching)
+  const areTimestampsClose = useCallback((timestamp1, timestamp2, threshold = 5000) => {
+    const t1 = new Date(timestamp1).getTime();
+    const t2 = new Date(timestamp2).getTime();
+    return Math.abs(t1 - t2) < threshold;
+  }, []);
+
+  // Helper function to remove optimistic message
+  const removeOptimisticMessage = useCallback((receiver, content, timestamp) => {
+    setOptimisticMessages(prev => {
+      const newMap = new Map(prev);
+      const existing = newMap.get(receiver) || [];
       
-      // Process queued messages
-      queuedMessages.forEach(message => {
-        processMessageForCurrentConversation(message);
+      // ✅ OPTIMIZED: Faster filtering with early return
+      if (existing.length === 0) return prev;
+      
+      // ✅ OPTIMIZED: More efficient filtering
+      const filtered = existing.filter(msg => {
+        if (!msg.isOptimistic) return true;
+        
+        // ✅ OPTIMIZED: Faster timestamp comparison
+        const timeDiff = Math.abs(new Date(msg.timestamp).getTime() - new Date(timestamp).getTime());
+        return !(msg.content === content && timeDiff < 3000); // Reduced to 3 seconds for faster matching
       });
       
-      // Clear queue
-      messageQueueRef.current.delete(conversationId);
-    }
-  }, []);
-
-  // ✅ FIX: Helper function để xác định conversation của message
-  const getMessageConversation = useCallback((message, userId) => {
-    if (message.sender === userId) return message.receiver;
-    if (message.receiver === userId) return message.sender;
-    return null;
-  }, []);
-
-  // ✅ FIX: Queue message cho conversation khác
-  const queueMessageForConversation = useCallback((message, conversationId) => {
-    if (!conversationId) return;
-    
-    const queue = messageQueueRef.current.get(conversationId) || [];
-    queue.push(message);
-    messageQueueRef.current.set(conversationId, queue);
-    
-    console.log(`📬 Queued message for conversation: ${conversationId}`);
-  }, []);
-
-  // ✅ FIX: Xử lý message cho conversation hiện tại
-  const processMessageForCurrentConversation = useCallback((message) => {
-    const currentChatPartner = currentChatPartnerRef.current;
-    if (!currentChatPartner) return;
-
-    setConversationMessages(prev => {
-      const currentMessages = prev.get(currentChatPartner) || [];
-      const updatedMessages = addOrUpdateMessage(currentMessages, message);
+      // ✅ OPTIMIZED: Only update if there are changes
+      if (filtered.length === existing.length) return prev;
       
-      // ✅ FIX: Sync to cache
-      queryClient.setQueryData([QUERY_KEYS.MESSAGES, user?.id, currentChatPartner], updatedMessages);
-      
-      return new Map(prev).set(currentChatPartner, updatedMessages);
+      newMap.set(receiver, filtered);
+      return newMap;
     });
-  }, [user?.id, queryClient]);
-
-  // ✅ FIX: Helper function để thêm hoặc cập nhật message
-  const addOrUpdateMessage = useCallback((currentMessages, newMessage) => {
-    // Check if message already exists (by ID or clientTempId)
-    const existingIndex = currentMessages.findIndex(
-      (msg) =>
-        (msg.id && msg.id === newMessage.id) ||
-        (msg.clientTempId && msg.clientTempId === newMessage.clientTempId) ||
-        (msg.content === newMessage.content &&
-          msg.sender === newMessage.sender &&
-          msg.receiver === newMessage.receiver &&
-          areTimestampsClose(msg.timestamp, newMessage.timestamp))
-    );
-
-    if (existingIndex !== -1) {
-      // Update existing message with server data
-      const updated = [...currentMessages];
-      updated[existingIndex] = mergeWithServerMessage(updated[existingIndex], newMessage);
-      console.log('🔄 Updated existing message:', newMessage.content);
-      return sortMessages(updated);
-    } else {
-      // Add new message
-      const newMsg = {
-        ...newMessage,
-        messageState: 'sent',
-        backendConfirmed: true,
-        isOptimistic: false,
-        isFailed: false,
-      };
-      console.log('➕ Added new message:', newMessage.content);
-      return sortMessages([...currentMessages, newMsg]);
-    }
   }, []);
 
-  // ✅ PERSISTENCE: Save/load message states to/from localStorage
-  const getMessageStatesKey = () => `message_states_${user?.id}_${chatPartner}`;
-  
-  const saveMessageStates = useCallback((messages) => {
-    if (!user?.id || !chatPartner) return;
-    
-    try {
-      const statesData = messages
-        .filter(msg => msg.messageState || msg.backendConfirmed !== undefined || msg.isOptimistic)
-        .map(msg => ({
-          id: msg.id,
-          clientTempId: msg.clientTempId,
-          messageState: msg.messageState,
-          backendConfirmed: msg.backendConfirmed,
-          isOptimistic: msg.isOptimistic,
-          uploadProgress: msg.uploadProgress,
-          persistentMessage: msg.persistentMessage,
-          serverTimestamp: msg.serverTimestamp,
-          timestamp: msg.timestamp, // Keep timestamp for identification
-        }));
-      
-      localStorage.setItem(getMessageStatesKey(), JSON.stringify(statesData));
-    } catch (error) {
-      console.warn('Failed to save message states:', error);
-    }
-  }, [user?.id, chatPartner]);
-  
-  const loadMessageStates = useCallback(() => {
-    if (!user?.id || !chatPartner) return new Map();
-    
-    try {
-      const saved = localStorage.getItem(getMessageStatesKey());
-      if (!saved) return new Map();
-      
-      const statesData = JSON.parse(saved);
-      const stateMap = new Map();
-      
-      statesData.forEach(state => {
-        if (state.id) stateMap.set(state.id, state);
-        if (state.clientTempId) stateMap.set(state.clientTempId, state);
-      });
-      
-      return stateMap;
-    } catch (error) {
-      console.warn('Failed to load message states:', error);
-      return new Map();
-    }
-  }, [user?.id, chatPartner]);
-
-  // Auto-scroll
+  // Subscribe to WebSocket messages when connected
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMessages]);
+    if (!isConnected || !user?.id || !socketClient) return;
 
-  // ✅ PERFORMANCE: Optimized chat list query with better caching
+    // Subscribe to personal messages
+    // Backend sends messages to both sender and receiver via:
+    // - /user/{senderId}/queue/messages (for sender confirmation)
+    // - /user/{receiverId}/queue/messages (for receiver notification)
+    const messageSubscription = socketClient.subscribe(`/user/${user.id}/queue/messages`, (message) => {
+      try {
+        const receivedMessage = JSON.parse(message.body);
+        
+        // Determine if this is an incoming or outgoing message
+        const isIncomingMessage = receivedMessage.sender !== user.id;
+        const isOutgoingMessage = receivedMessage.sender === user.id;
+        
+        if (isIncomingMessage) {
+          // This is a message from someone else to the current user
+          
+          // ✅ OPTIMIZED: Use flushSync for immediate updates
+          flushSync(() => {
+            // Add to conversation messages (grouped by sender)
+            setConversationMessages(prev => {
+              const newMap = new Map(prev);
+              const existing = newMap.get(receivedMessage.sender) || [];
+              const updated = [...existing, receivedMessage];
+              newMap.set(receivedMessage.sender, sortMessages(updated));
+              return newMap;
+            });
+            
+            // Update chat list to show latest message
+            queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user.id], (old) => {
+              if (!old) return old;
+              
+              // ✅ OPTIMIZED: Update and reorder chat list
+              const updatedChats = old.map(chat => {
+                if (chat.userId === receivedMessage.sender) {
+                  return {
+                    ...chat,
+                    lastMessage: receivedMessage.content || 'File sent',
+                    lastUpdated: receivedMessage.timestamp,
+                  };
+                }
+                return chat;
+              });
+              
+              // ✅ OPTIMIZED: Sort to move current chat partner to top
+              return updatedChats.sort((a, b) => {
+                // Current chat partner goes to top
+                if (a.userId === receivedMessage.sender) return -1;
+                if (b.userId === receivedMessage.sender) return 1;
+                
+                // Sort others by last updated time (newest first)
+                const timeA = new Date(a.lastUpdated || 0).getTime();
+                const timeB = new Date(b.lastUpdated || 0).getTime();
+                return timeB - timeA;
+              });
+            });
+          });
+          
+          // ✅ OPTIMIZED: Immediate scroll without setTimeout
+          if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: 'instant' });
+          }
+          
+        } else if (isOutgoingMessage) {
+          // This is a message sent by the current user to someone else
+          
+          // ✅ OPTIMIZED: Remove optimistic message immediately
+          removeOptimisticMessage(receivedMessage.receiver, receivedMessage.content, receivedMessage.timestamp);
+          
+          // ✅ OPTIMIZED: Use flushSync for immediate updates
+          flushSync(() => {
+            // Add to conversation messages (grouped by receiver)
+            setConversationMessages(prev => {
+              const newMap = new Map(prev);
+              const existing = newMap.get(receivedMessage.receiver) || [];
+              const updated = [...existing, receivedMessage];
+              newMap.set(receivedMessage.receiver, sortMessages(updated));
+              return newMap;
+            });
+            
+            // Update chat list to show latest message
+            queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user.id], (old) => {
+              if (!old) return old;
+              
+              // ✅ OPTIMIZED: Update and reorder chat list
+              const updatedChats = old.map(chat => {
+                if (chat.userId === receivedMessage.receiver) {
+                  return {
+                    ...chat,
+                    lastMessage: receivedMessage.content || 'File sent',
+                    lastUpdated: receivedMessage.timestamp,
+                  };
+                }
+                return chat;
+              });
+              
+              // ✅ OPTIMIZED: Sort to move current chat partner to top
+              return updatedChats.sort((a, b) => {
+                // Current chat partner goes to top
+                if (a.userId === receivedMessage.receiver) return -1;
+                if (b.userId === receivedMessage.receiver) return 1;
+                
+                // Sort others by last updated time (newest first)
+                const timeA = new Date(a.lastUpdated || 0).getTime();
+                const timeB = new Date(b.lastUpdated || 0).getTime();
+                return timeB - timeA;
+              });
+            });
+          });
+        }
+              } catch (error) {
+          // Handle error silently
+        }
+    });
+
+    // Subscribe to chat updates
+    const chatUpdateSubscription = socketClient.subscribe(`/user/${user.id}/queue/chat-updates`, (message) => {
+      try {
+        const chatUpdate = JSON.parse(message.body);
+        
+        queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user.id], (old) => {
+          if (!old) return old;
+          
+          return old.map(chat => {
+            if (chat.userId === chatUpdate.userId) {
+              return { ...chat, ...chatUpdate };
+            }
+            return chat;
+          });
+        });
+              } catch (error) {
+          // Handle error silently
+        }
+    });
+
+    // Subscribe to message send confirmations
+    const messageSendSubscription = socketClient.subscribe(`/user/${user.id}/queue/chat.send`, (message) => {
+      try {
+        const sendConfirmation = JSON.parse(message.body);
+
+        
+        // Remove optimistic message when send is confirmed
+        if (sendConfirmation.success && sendConfirmation.id) {
+          removeOptimisticMessage(sendConfirmation.receiver, sendConfirmation.content, sendConfirmation.timestamp);
+          
+          // Add the confirmed message to conversation
+          const confirmedMessage = {
+            id: sendConfirmation.id,
+            content: sendConfirmation.content,
+            sender: sendConfirmation.sender,
+            receiver: sendConfirmation.receiver,
+            timestamp: sendConfirmation.timestamp,
+            fileUrls: sendConfirmation.fileUrls || [],
+            isOptimistic: false,
+          };
+          
+          setConversationMessages(prev => {
+            const newMap = new Map(prev);
+            const existing = newMap.get(sendConfirmation.receiver) || [];
+            const updated = [...existing, confirmedMessage];
+            newMap.set(sendConfirmation.receiver, sortMessages(updated));
+            return newMap;
+          });
+          
+          // ✅ OPTIMIZED: Update and reorder chat list
+          queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user.id], (old) => {
+            if (!old) return old;
+            
+            const updatedChats = old.map(chat => {
+              if (chat.userId === sendConfirmation.receiver) {
+                return {
+                  ...chat,
+                  lastMessage: sendConfirmation.content || 'File sent',
+                  lastUpdated: sendConfirmation.timestamp,
+                };
+              }
+              return chat;
+            });
+            
+            // Sort to move current chat partner to top
+            return updatedChats.sort((a, b) => {
+              if (a.userId === sendConfirmation.receiver) return -1;
+              if (b.userId === sendConfirmation.receiver) return 1;
+              
+              const timeA = new Date(a.lastUpdated || 0).getTime();
+              const timeB = new Date(b.lastUpdated || 0).getTime();
+              return timeB - timeA;
+            });
+          });
+        } else if (sendConfirmation.error) {
+          // Remove optimistic message on error
+          removeOptimisticMessage(sendConfirmation.receiver, sendConfirmation.content, sendConfirmation.timestamp);
+        }
+      } catch (error) {
+        // Handle error silently
+      }
+    });
+
+    // Subscribe to broadcast message send confirmations
+    const broadcastSendSubscription = socketClient.subscribe(`/topic/chat.send`, (message) => {
+      try {
+        const sendConfirmation = JSON.parse(message.body);
+
+        
+        // Only process if this confirmation is for the current user
+        if (sendConfirmation.sender === user.id) {
+          // Remove optimistic message when send is confirmed
+          if (sendConfirmation.success && sendConfirmation.id) {
+            removeOptimisticMessage(sendConfirmation.receiver, sendConfirmation.content, sendConfirmation.timestamp);
+            
+            // Add the confirmed message to conversation
+            const confirmedMessage = {
+              id: sendConfirmation.id,
+              content: sendConfirmation.content,
+              sender: sendConfirmation.sender,
+              receiver: sendConfirmation.receiver,
+              timestamp: sendConfirmation.timestamp,
+              fileUrls: sendConfirmation.fileUrls || [],
+              isOptimistic: false,
+            };
+            
+            setConversationMessages(prev => {
+              const newMap = new Map(prev);
+              const existing = newMap.get(sendConfirmation.receiver) || [];
+              const updated = [...existing, confirmedMessage];
+              newMap.set(sendConfirmation.receiver, sortMessages(updated));
+              return newMap;
+            });
+            
+            // ✅ OPTIMIZED: Update and reorder chat list
+            queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user.id], (old) => {
+              if (!old) return old;
+              
+              const updatedChats = old.map(chat => {
+                if (chat.userId === sendConfirmation.receiver) {
+                  return {
+                    ...chat,
+                    lastMessage: sendConfirmation.content || 'File sent',
+                    lastUpdated: sendConfirmation.timestamp,
+                  };
+                }
+                return chat;
+              });
+              
+              // Sort to move current chat partner to top
+              return updatedChats.sort((a, b) => {
+                if (a.userId === sendConfirmation.receiver) return -1;
+                if (b.userId === sendConfirmation.receiver) return 1;
+                
+                const timeA = new Date(a.lastUpdated || 0).getTime();
+                const timeB = new Date(b.lastUpdated || 0).getTime();
+                return timeB - timeA;
+              });
+            });
+          } else if (sendConfirmation.error) {
+            // Remove optimistic message on error
+            removeOptimisticMessage(sendConfirmation.receiver, sendConfirmation.content, sendConfirmation.timestamp);
+          }
+        }
+      } catch (error) {
+        // Handle error silently
+      }
+    });
+
+    // Store subscription references for cleanup
+    subscriptionsRef.current.set('messages', messageSubscription);
+    subscriptionsRef.current.set('chat-updates', chatUpdateSubscription);
+    subscriptionsRef.current.set('chat-send', messageSendSubscription);
+    subscriptionsRef.current.set('broadcast-send', broadcastSendSubscription);
+
+    // Cleanup subscriptions
+    return () => {
+      if (messageSubscription) {
+        messageSubscription.unsubscribe();
+        subscriptionsRef.current.delete('messages');
+      }
+      if (chatUpdateSubscription) {
+        chatUpdateSubscription.unsubscribe();
+        subscriptionsRef.current.delete('chat-updates');
+      }
+      if (messageSendSubscription) {
+        messageSendSubscription.unsubscribe();
+        subscriptionsRef.current.delete('chat-send');
+      }
+      if (broadcastSendSubscription) {
+        broadcastSendSubscription.unsubscribe();
+        subscriptionsRef.current.delete('broadcast-send');
+      }
+    };
+  }, [isConnected, user?.id, socketClient, queryClient, removeOptimisticMessage]);
+
+  // Chat messages query (HTTP fallback)
   const {
-    data: chatList,
+    data: serverMessages = [],
+    isLoading: isLoadingMessages,
+    error: messagesError,
+    refetch: refetchMessages,
+  } = useQuery({
+    queryKey: [QUERY_KEYS.MESSAGES, user?.id, chatPartnerId],
+    queryFn: async () => {
+      try {
+        if (!user?.id || !chatPartnerId) {
+          throw new Error('Missing user ID or chat partner ID');
+        }
+        
+        const messages = await chatQueryApi.getMessages(user.id, chatPartnerId);
+        return messages || [];
+      } catch (error) {
+        throw error;
+      }
+    },
+    enabled: !!user?.id && !!chatPartnerId,
+    staleTime: isConnected ? 30000 : 5000,
+    refetchInterval: isConnected ? false : 5000,
+    retry: 3,
+    retryDelay: 1000,
+  });
+
+  // Chat list query - FIXED: Proper query key and enabled condition
+  const {
+    data: chatList = [],
     isLoading: isLoadingChatList,
     error: chatListError,
+    refetch: refetchChatList,
   } = useQuery({
     queryKey: [QUERY_KEYS.CHAT_LIST, user?.id],
     queryFn: () => chatQueryApi.getChatList(user?.id),
     enabled: !!user?.id,
-    keepPreviousData: true,
-    staleTime: 30000, // 30 seconds - chat list doesn't change as frequently
-    cacheTime: 10 * 60 * 1000, // 10 minutes - keep chat list in cache longer
-    refetchOnWindowFocus: false, // Don't refetch when window gains focus
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
-    onSuccess: (data) => {
-      const safeData = Array.isArray(data) ? data : [];
-      
-      // Only sort if we have multiple items
-      if (safeData.length > 1) {
-      const sortedData = [...safeData].sort((a, b) => {
-        const timeA = new Date(a.lastUpdated || 0).getTime();
-        const timeB = new Date(b.lastUpdated || 0).getTime();
-        return timeB - timeA;
-      });
-      queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user?.id], sortedData);
-      } else {
-        queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user?.id], safeData);
-      }
-    },
-    onError: (error) => {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Chat list fetch error:', error.message);
-      }
-    },
+    staleTime: isConnected ? 60000 : 10000,
+    refetchInterval: isConnected ? false : 10000,
   });
 
-  // ✅ SIMPLIFIED: Basic query configuration without aggressive refetching
-  const { data: messages } = useQuery({
-    queryKey: [QUERY_KEYS.MESSAGES, user?.id, chatPartner],
-    queryFn: () => chatQueryApi.getMessages(user?.id, chatPartner),
-    enabled: !!user?.id && !!chatPartner,
-    staleTime: 30 * 1000, // 30 seconds - reasonable freshness
-    cacheTime: 5 * 60 * 1000, // 5 minutes cache
-    refetchOnWindowFocus: false, // Disable to prevent conflicts
-    refetchOnMount: 'always', // Always fetch fresh data on mount
-    refetchInterval: false, // No automatic refetching
-    retry: 1, // Only retry once on failure
-    keepPreviousData: true,
-  });
-
-  // ✅ PERSISTENCE: Merge cached states with fresh data to maintain message states  
+  // Update conversation messages when server data changes
   useEffect(() => {
-    if (messages) {
-      // Load saved states from localStorage and current memory
-      const savedStateMap = loadMessageStates();
-      
-      // Also get current in-memory states (for recent changes)
-      const memoryStateMap = new Map();
-      chatMessages.forEach(msg => {
-        if (msg.messageState || msg.backendConfirmed !== undefined || msg.isOptimistic) {
-          const state = {
-            messageState: msg.messageState,
-            backendConfirmed: msg.backendConfirmed,
-            isOptimistic: msg.isOptimistic,
-            uploadProgress: msg.uploadProgress,
-            persistentMessage: msg.persistentMessage,
-            serverTimestamp: msg.serverTimestamp
-          };
-          
-          if (msg.id) memoryStateMap.set(msg.id, state);
-          if (msg.clientTempId) memoryStateMap.set(msg.clientTempId, state);
-        }
-      });
-      
-      // Merge fresh messages with preserved states (memory takes priority over localStorage)
-      const mergedMessages = messages.map(freshMsg => {
-        const memoryState = memoryStateMap.get(freshMsg.id) || memoryStateMap.get(freshMsg.clientTempId);
-        const savedState = savedStateMap.get(freshMsg.id) || savedStateMap.get(freshMsg.clientTempId);
-        const finalState = memoryState || savedState;
-        
-        if (finalState) {
-          return {
-            ...freshMsg,
-            ...finalState, // Preserve the state information
-            // But keep fresh data for content, fileUrls, etc.
-            content: freshMsg.content,
-            fileUrls: freshMsg.fileUrls,
-            timestamp: freshMsg.timestamp,
-          };
-        }
-        
-        // ✅ DEFAULT STATE: Messages from DB should default to "sent" 
-        return {
-          ...freshMsg,
-          messageState: 'sent', // Default state for existing messages from database
-          backendConfirmed: true, // Already confirmed since they're in DB
-          isOptimistic: false, // Not optimistic updates
-        };
-      });
-      
-      // ✅ FIX: Update conversation messages thay vì global chatMessages
+    if (serverMessages.length > 0 && chatPartnerId) {
       setConversationMessages(prev => {
-        const updated = new Map(prev);
-        updated.set(chatPartner, sortMessages(mergedMessages));
-        return updated;
+        const newMap = new Map(prev);
+        newMap.set(chatPartnerId, sortMessages(serverMessages));
+        return newMap;
       });
     }
-  }, [messages, chatPartner, queryClient, user?.id, loadMessageStates]);
+  }, [serverMessages, chatPartnerId]);
 
-  // ✅ PERSISTENCE: Auto-save message states when they change
-  useEffect(() => {
-    if (chatMessages.length > 0) {
-      saveMessageStates(chatMessages);
-    }
-  }, [chatMessages, saveMessageStates]);
+  // Send message mutation - NO PENDING STATES
+  const sendMessageMutation = useMutation({
+    mutationFn: async ({ content, files, receiver }) => {
+      // ✅ FIXED: Files are already uploaded in sendMessage function
+      // Just send the message with content and receiver
+      return chatQueryApi.sendMessage({
+        content: content?.trim() || '',
+        fileUrls: [], // Files already uploaded via WebSocket
+        receiverId: receiver,
+      });
+    },
+    onMutate: async ({ content, files, receiver }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries([QUERY_KEYS.MESSAGES, user?.id, receiver]);
 
-  // WebSocket
-  const connectWebSocket = useCallback(async () => {
-    if (!user?.id) return;
-
-    // Fetch CSRF token for WebSocket connection with caching and timeout
-    const jwt = getCookie(COOKIE_KEYS.AUTH_TOKEN);
-    const csrfToken = await getCsrfTokenSafe(process.env.NEXT_PUBLIC_API_URL, jwt, {
-      ttlMs: 10 * 60 * 1000,
-    });
-
-    const socket = new SockJS(`${process.env.NEXT_PUBLIC_API_URL}/ws`);
-    const authToken = getCookie(COOKIE_KEYS.AUTH_TOKEN);
-    const client = new Client({
-      webSocketFactory: () => socket,
-      connectHeaders: {
-        token: authToken ? `Bearer ${authToken}` : undefined,
-        ...(csrfToken && { 'X-CSRF-TOKEN': csrfToken }),
-      },
-      heartbeatIncoming: 8000,
-      heartbeatOutgoing: 8000,
-      reconnectDelay: 1000,
-      maxWebSocketFrameSize: 32 * 1024,
-      onConnect: () => {
-        setIsConnected(true);
-        // Remove unnecessary success logs
-        console.log('✅ WebSocket connected for user:', user?.id);
-        
-        // ✅ SIMPLIFIED: Subscribe to channels without complex sync
-        client.subscribe(`/user/${user?.id}/queue/messages`, handleIncomingMessage);
-        client.subscribe(`/user/${user?.id}/queue/chat-list-update`, handleChatListUpdate);
-        client.subscribe(`/user/${user?.id}/queue/errors`, (error) => {
-          // Only log critical WebSocket errors
-          console.error('WebSocket error:', error);
+      // Note: Optimistic message is already added in sendMessage function
+      // This is just for HTTP fallback when WebSocket fails
+      return { receiver };
+    },
+    onError: (err, variables, context) => {
+      // Remove optimistic message on error
+      if (context?.receiver) {
+        setOptimisticMessages(prev => {
+          const newMap = new Map(prev);
+          const existing = newMap.get(variables.receiver) || [];
+          // Remove the most recent optimistic message for this receiver
+          const filtered = existing.filter((msg, index) => 
+            !msg.isOptimistic || index !== existing.length - 1
+          );
+          newMap.set(variables.receiver, filtered);
+          return newMap;
         });
-        
-      },
-      onStompError: (error) => {
-        // Only log critical STOMP errors
-        console.error('STOMP error:', error);
-        setIsConnected(false);
-      },
-      onWebSocketClose: () => {
-        // Remove unnecessary warning logs
-        setIsConnected(false);
-        reconnectTimeoutRef.current = setTimeout(connectWebSocket, 5000);
-      },
-      onWebSocketError: (error) => {
-        // Only log critical WebSocket errors
-        console.error('WebSocket error:', error);
-        setIsConnected(false);
-      },
-    });
-
-    client.activate();
-    stompClientRef.current = client;
-  }, [user?.id]);
-
-  // ✅ REMOVED: Complex sync mechanisms that cause race conditions
-  // Keeping only the basic WebSocket reconnection without aggressive syncing
-
-  useEffect(() => {
-    connectWebSocket();
-    return () => {
-      clearTimeout(reconnectTimeoutRef.current);
-      stompClientRef.current?.deactivate();
-    };
-  }, [connectWebSocket]);
-
-  // ✅ FIX: WebSocket message handler với conversation isolation
-  const handleIncomingMessage = useCallback(
-    (message) => {
-      try {
-        const newMessage = JSON.parse(message.body);
-        
-        // Basic validation
-        if (!newMessage?.sender || !newMessage?.receiver) {
-          console.warn('Invalid message structure:', newMessage);
-          return;
-        }
-
-        // ✅ FIX: Xác định conversation của message
-        const messageConversation = getMessageConversation(newMessage, user?.id);
-        const currentChatPartner = currentChatPartnerRef.current;
-        
-        console.log(`📨 Received message: ${newMessage.sender} -> ${newMessage.receiver}`);
-        console.log(`📱 Current conversation: ${currentChatPartner}, Message conversation: ${messageConversation}`);
-        
-        if (messageConversation === currentChatPartner) {
-          // ✅ FIX: Message cho conversation hiện tại - xử lý ngay
-          console.log('✅ Processing message for current conversation');
-          processMessageForCurrentConversation(newMessage);
-        } else {
-          // ✅ FIX: Message cho conversation khác - đưa vào queue
-          console.log('📬 Queuing message for other conversation');
-          queueMessageForConversation(newMessage, messageConversation);
-          
-          // ✅ FIX: Chỉ cập nhật chat list, không cập nhật messages
-          queryClient.invalidateQueries([QUERY_KEYS.CHAT_LIST, user?.id]);
-        }
-
-        // ✅ FIX: Update chat list
-        const otherUserId =
-          newMessage.sender === user?.id ? newMessage.receiver : newMessage.sender;
-        const oldList = queryClient.getQueryData([QUERY_KEYS.CHAT_LIST, user?.id]) || [];
-
-        const existingChatIndex = oldList.findIndex((chat) => chat.userId === otherUserId);
-        if (existingChatIndex >= 0) {
-          const updated = [...oldList];
-          updated[existingChatIndex] = {
-            ...updated[existingChatIndex],
-            lastMessage: newMessage.content || (newMessage.fileUrls?.length ? 'Đã gửi file' : ''),
-            lastUpdated: newMessage.timestamp,
-            hasNewMessage: newMessage.sender !== user?.id,
-          };
-          queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user?.id], updated);
-        }
-        
-      } catch (error) {
-        console.error('❌ Error handling incoming message:', error);
       }
     },
-    [user?.id, queryClient, getMessageConversation, processMessageForCurrentConversation, queueMessageForConversation]
-  );
+    onSuccess: (data, variables) => {
+      // Remove optimistic message on success
+      setOptimisticMessages(prev => {
+        const newMap = new Map(prev);
+        const existing = newMap.get(variables.receiver) || [];
+        const filtered = existing.filter(msg => !msg.isOptimistic);
+        newMap.set(variables.receiver, filtered);
+        return newMap;
+      });
+    },
+  });
 
-  // ✅ REAL-TIME: Handle chat list updates from WebSocket
-  const handleChatListUpdate = useCallback(
-    (message) => {
+  // Send message function - INSTANT, NO PENDING STATES
+  const sendMessage = useCallback(async (content, files, receiver) => {
+    if (!user?.id || !receiver) {
+      return;
+    }
+
+    // ✅ FIXED: Create single optimistic message ID to prevent flickering
+    const optimisticMessageId = `temp-${Date.now()}`;
+    
+    // ✅ FIXED: Upload files first if they exist
+    let uploadedFileUrls = [];
+    if (files && files.length > 0) {
       try {
-        const updateData = JSON.parse(message.body);
 
-        // ✅ FIX: Handle notification instead of full chat list
-        if (updateData.type === 'chat-list-update') {
-          queryClient.invalidateQueries([QUERY_KEYS.CHAT_LIST, user?.id]);
-          return;
-        }
+        
+        // Show optimistic message immediately with "Uploading..." status
+        const optimisticMessage = {
+          id: optimisticMessageId,
+          content: content?.trim() || '',
+          sender: user.id,
+          receiver: receiver,
+          timestamp: getVietnamTimeISO(),
+          fileUrls: files.map(file => {
+            const fileName = file.file?.name || file.name || 'file';
+            return `Uploading ${fileName}...`;
+          }),
+          isOptimistic: true,
+          isUploading: true,
+        };
 
-        if (Array.isArray(updateData)) {
-          const currentList = queryClient.getQueryData([QUERY_KEYS.CHAT_LIST, user?.id]) || [];
+        // Add optimistic message immediately
+        flushSync(() => {
+          setOptimisticMessages(prev => {
+            const newMap = new Map(prev);
+            const existing = newMap.get(receiver) || [];
+            newMap.set(receiver, [...existing, optimisticMessage]);
+            return newMap;
+          });
+        });
 
-          const currentChatMap = new Map();
-          currentList.forEach((chat) => {
-            currentChatMap.set(chat.userId, {
-              lastMessage: chat.lastMessage,
-              lastUpdated: chat.lastUpdated,
-              hasNewMessage: chat.hasNewMessage,
+        // Update chat list immediately for instant UI
+        flushSync(() => {
+          queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user?.id], (old) => {
+            if (!old) return old;
+            
+            // ✅ OPTIMIZED: Move current chat partner to top immediately
+            const updatedChats = old.map(chat => {
+              if (chat.userId === receiver) {
+                return {
+                  ...chat,
+                  lastMessage: content?.trim() || 'File sent',
+                  lastUpdated: getVietnamTimeISO(),
+                };
+              }
+              return chat;
+            });
+            
+            // ✅ OPTIMIZED: Sort to move current chat partner to top
+            return updatedChats.sort((a, b) => {
+              // Current chat partner goes to top
+              if (a.userId === receiver) return -1;
+              if (b.userId === receiver) return 1;
+              
+              // Sort others by last updated time (newest first)
+              const timeA = new Date(a.lastUpdated || 0).getTime();
+              const timeB = new Date(b.lastUpdated || 0).getTime();
+              return timeB - timeA;
             });
           });
+        });
 
-          const mergedList = updateData.map((backendChat) => {
-            const currentChat = currentChatMap.get(backendChat.userId);
+        // Upload files
+        const uploadResults = await uploadFiles(files);
+        uploadedFileUrls = uploadResults
+          .filter(result => result.url && !result.error)
+          .map(result => result.url);
+        
 
-            if (currentChat) {
-              const optimisticTime = new Date(currentChat.lastUpdated).getTime();
-              const now = new Date().getTime();
-              const isRecentOptimistic = currentChat.hasNewMessage && now - optimisticTime < 5000;
+        // ✅ FIXED: Update the existing optimistic message in place
+        flushSync(() => {
+          setOptimisticMessages(prev => {
+            const newMap = new Map(prev);
+            const existing = newMap.get(receiver) || [];
+            const updated = existing.map(msg => 
+              msg.id === optimisticMessageId ? {
+                ...msg,
+                fileUrls: uploadedFileUrls,
+                isUploading: false,
+              } : msg
+            );
+            newMap.set(receiver, updated);
+            return newMap;
+          });
+        });
 
-              if (isRecentOptimistic) {
-                return {
-                  ...backendChat,
-                  lastMessage: currentChat.lastMessage,
-                  lastUpdated: currentChat.lastUpdated,
-                  hasNewMessage: currentChat.hasNewMessage,
-                };
-              } else {
-                const backendTime = new Date(backendChat.lastMessageTime || 0).getTime();
-                const currentTime = new Date(currentChat.lastUpdated || 0).getTime();
+              } catch (error) {
+          // Remove optimistic message on upload failure
+          flushSync(() => {
+          setOptimisticMessages(prev => {
+            const newMap = new Map(prev);
+            const existing = newMap.get(receiver) || [];
+            const filtered = existing.filter(msg => msg.id !== optimisticMessageId);
+            newMap.set(receiver, filtered);
+            return newMap;
+          });
+        });
+        // Continue with message sending even if file upload fails
+      }
+    } else {
+      // Text-only message - create optimistic message immediately
+      const optimisticMessage = {
+        id: optimisticMessageId,
+        content: content?.trim() || '',
+        sender: user.id,
+        receiver: receiver,
+        timestamp: getVietnamTimeISO(),
+        fileUrls: [],
+        isOptimistic: true,
+      };
 
-                return {
-                  ...backendChat,
-                  lastMessage: backendChat.lastMessage || currentChat.lastMessage,
-                  lastUpdated:
-                    backendTime > currentTime
-                      ? new Date(backendChat.lastMessageTime).toISOString()
-                      : currentChat.lastUpdated,
-                  hasNewMessage: false,
-                };
-              }
-            } else {
+      // Add optimistic message immediately
+      flushSync(() => {
+        setOptimisticMessages(prev => {
+          const newMap = new Map(prev);
+          const existing = newMap.get(receiver) || [];
+          newMap.set(receiver, [...existing, optimisticMessage]);
+          return newMap;
+        });
+      });
+
+      // Update chat list immediately for instant UI
+      flushSync(() => {
+        queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user?.id], (old) => {
+          if (!old) return old;
+          
+          // ✅ OPTIMIZED: Move current chat partner to top immediately
+          const updatedChats = old.map(chat => {
+            if (chat.userId === receiver) {
               return {
-                ...backendChat,
-                lastUpdated: backendChat.lastMessageTime
-                  ? new Date(backendChat.lastMessageTime).toISOString()
-                  : new Date().toISOString(),
+                ...chat,
+                lastMessage: content?.trim() || '',
+                lastUpdated: getVietnamTimeISO(),
               };
             }
-          });
-
-          queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user?.id], mergedList);
-        }
-      } catch (error) {
-        // Silent error handling
-      }
-    },
-    [queryClient, user?.id]
-  );
-
-  // ✅ REMOVED: Complex backend verification that caused race conditions
-  // Messages now rely on immediate WebSocket/HTTP response for confirmation
-
-  // ✅ REMOVED: Separate HTTP send function - now integrated into main sendMessage
-
-  const sendMessage = async (content, files, receiverId) => {
-    const target = receiverId || chatPartner;
-    
-    if (!user?.id || !target || typeof target !== 'string' || target.trim() === '') {
-      console.warn('Invalid send parameters');
-      return;
-    }
-    
-    // ✅ BULLETPROOF: Generate unique identifiers
-    const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const clientTempId = messageId;
-    const currentTime = createTemporaryTimestamp(); // For optimistic UI only, server will override
-    
-    // ✅ BULLETPROOF: Prevent duplicate sends with stronger key (use messageId instead of timestamp)
-    const sendKey = `${user.id}-${target}-${content}-${messageId}`;
-    if (sendingMessagesRef.current.has(sendKey)) {
-      console.warn('⚠️ Duplicate send attempt blocked');
-      return;
-    }
-    sendingMessagesRef.current.add(sendKey);
-    
-    // ✅ SIMPLIFIED: Create optimistic message (timestamp for UI display only, server will set final timestamp)
-    const optimisticMessage = {
-      id: messageId,
-      clientTempId,
-      sender: user.id,
-      receiver: target,
-      content: content || '',
-      timestamp: currentTime, // Temporary timestamp for optimistic UI
-      fileUrls: [],
-      messageState: 'sending',
-      isOptimistic: true,
-      backendConfirmed: false,
-      isFailed: false,
-      error: undefined
-    };
-    
-    try {
-      // ✅ FIX: Add optimistic message to current conversation
-      setConversationMessages(prev => {
-        const currentMessages = prev.get(target) || [];
-        const updated = sortMessages([...currentMessages, optimisticMessage]);
-        
-        // Immediately sync to cache
-        queryClient.setQueryData([QUERY_KEYS.MESSAGES, user?.id, target], updated);
-        
-        return new Map(prev).set(target, updated);
-      });
-      
-      // ✅ BULLETPROOF: Handle file uploads first
-      let uploadedFileUrls = [];
-      if (files && files.length > 0) {
-        try {
-          // Update status to uploading
-          setConversationMessages(prev => {
-            const currentMessages = prev.get(target) || [];
-            const updated = currentMessages.map(msg => 
-              msg.id === messageId 
-                ? { ...msg, messageState: 'uploading' }
-                : msg
-            );
-            return new Map(prev).set(target, updated);
+            return chat;
           });
           
-          uploadedFileUrls = await uploadFiles(files);
-          console.log('✅ Files uploaded successfully:', uploadedFileUrls.length);
-        } catch (uploadError) {
-          console.error('❌ File upload failed:', uploadError);
-          throw new Error('File upload failed');
-        }
-      }
-      
-      // ✅ BULLETPROOF: Single send attempt (no dual WebSocket/HTTP)
-      // ✅ SERVER TIMESTAMP: Create server-bound message (timestamp will be generated by server)
-      const messagePayload = createServerBoundMessage({
-        id: messageId,
-        clientTempId,
-        sender: user.id,
-        receiver: target,
-        content: content || '',
-        fileUrls: uploadedFileUrls
-      });
-      
-      // ✅ SIMPLIFIED: Choose one delivery method
-      let success = false;
-      let backendResponse = null;
-      
-      // Try WebSocket first if connected
-      if (isConnected && stompClientRef.current?.connected) {
-        try {
-          console.log('📤 Sending via WebSocket...');
-          stompClientRef.current.publish({
-            destination: '/app/chat.sendMessage',
-            body: JSON.stringify(messagePayload),
-            headers: {
-              'content-type': 'application/json',
-              'message-id': messageId
-            }
+          // ✅ OPTIMIZED: Sort to move current chat partner to top
+          return updatedChats.sort((a, b) => {
+            // Current chat partner goes to top
+            if (a.userId === receiver) return -1;
+            if (b.userId === receiver) return 1;
+            
+            // Sort others by last updated time (newest first)
+            const timeA = new Date(a.lastUpdated || 0).getTime();
+            const timeB = new Date(b.lastUpdated || 0).getTime();
+            return timeB - timeA;
           });
-          
-          // ✅ BULLETPROOF: Wait for backend confirmation
-          backendResponse = await waitForBackendConfirmation(messageId, 10000); // 10 second timeout
-          success = true;
-          console.log('✅ WebSocket send confirmed');
-        } catch (wsError) {
-          console.warn('⚠️ WebSocket send failed, trying HTTP:', wsError.message);
-        }
-      }
-      
-      // Fallback to HTTP if WebSocket failed or not connected
-      if (!success) {
-        try {
-          console.log('📤 Sending via HTTP...');
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/messages/send`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${getCookie(COOKIE_KEYS.AUTH_TOKEN)}`,
-            },
-            body: JSON.stringify(messagePayload),
-          });
-          
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-          }
-          
-          backendResponse = await response.json();
-          success = true;
-          console.log('✅ HTTP send successful');
-        } catch (httpError) {
-          console.error('❌ HTTP send failed:', httpError);
-          throw new Error('All delivery methods failed');
-        }
-      }
-      
-      // ✅ BULLETPROOF: Update message to sent state
-      if (success) {
-        setConversationMessages(prev => {
-          const currentMessages = prev.get(target) || [];
-          const updated = currentMessages.map(msg => 
-            msg.id === messageId 
-              ? mergeWithServerMessage(msg, backendResponse)
-              : msg
-          );
-          
-          // Immediately sync to cache
-          queryClient.setQueryData([QUERY_KEYS.MESSAGES, user?.id, target], updated);
-          return new Map(prev).set(target, updated);
         });
-        
-        console.log('✅ Message successfully sent and confirmed');
-      }
-      
-    } catch (error) {
-      console.error('❌ Send message failed:', error);
-      
-      // ✅ BULLETPROOF: Mark as failed
-      setConversationMessages(prev => {
-        const currentMessages = prev.get(target) || [];
-        const updated = currentMessages.map(msg => 
-          msg.id === messageId 
-            ? {
-                ...msg,
-                messageState: 'failed',
-                isOptimistic: false,
-                isFailed: true,
-                error: error.message || 'Send failed'
-              }
-            : msg
-        );
-        
-        // Sync failed state to cache
-        queryClient.setQueryData([QUERY_KEYS.MESSAGES, user?.id, target], updated);
-        return new Map(prev).set(target, updated);
       });
-    } finally {
-      // ✅ CLEANUP: Always remove from sending set
-      sendingMessagesRef.current.delete(sendKey);
     }
-  };
 
-  // ✅ NEW: Wait for backend confirmation
-  const waitForBackendConfirmation = useCallback(async (messageId, timeout = 10000) => {
-    return new Promise((resolve, reject) => {
-      const startTime = Date.now();
-      
-      const checkConfirmation = async () => {
-        if (Date.now() - startTime > timeout) {
-          reject(new Error('Confirmation timeout'));
-          return;
-        }
+    // Try WebSocket first if connected
+    if (isConnected && socketClient) {
+      try {
+        // ✅ DEBUG: Log the files structure to identify the issue
+
         
-        try {
-          // Check if message exists in backend
-          const messages = await chatQueryApi.getMessages(user?.id, chatPartner);
-          const confirmedMessage = messages.find(msg => 
-            msg.id === messageId || msg.clientTempId === messageId
-          );
-          
-          if (confirmedMessage) {
-            resolve(confirmedMessage);
-          } else {
-            // Check again in 1 second
-            setTimeout(checkConfirmation, 1000);
-          }
-        } catch (error) {
-          reject(error);
-        }
-      };
-      
-      // Start checking after 2 seconds
-      setTimeout(checkConfirmation, 2000);
-    });
-  }, [user?.id, chatPartner]);
+        const message = {
+          content: content?.trim() || '',
+          fileUrls: uploadedFileUrls, // Use uploaded URLs
+          receiver: receiver,
+          sender: user.id,
+          timestamp: getVietnamTimeISO(),
+        };
 
-  // ✅ SIMPLIFIED: Basic retry function for user-initiated retries only  
-  const retryMessage = useCallback(async (message) => {
-    if (!message || !chatPartner || !user?.id) return;
-    
-    console.log('🔄 User initiated retry for message:', message.content);
-    
-    // Remove the failed message and resend
-    setConversationMessages(prev => {
-      const currentMessages = prev.get(chatPartner) || [];
-      const filtered = currentMessages.filter(msg => msg.id !== message.id);
-      return new Map(prev).set(chatPartner, filtered);
-    });
-    
-    // Resend the message
-    await sendMessage(message.content, [], message.receiver || chatPartner);
-  }, [chatPartner, user?.id, sendMessage]);
+        // ✅ DEBUG: Log the final message structure
+        
+
+        socketClient.publish({
+          destination: '/app/chat.send',
+          body: JSON.stringify(message),
+          headers: {
+            'Authorization': `Bearer ${getCookie(COOKIE_KEYS.AUTH_TOKEN) || user?.token || ''}`,
+          },
+        });
+
+        
+        return; // Message sent via WebSocket
+              } catch (error) {
+          // Handle WebSocket error silently
+        }
+    }
+
+    // Fallback to HTTP - NO PENDING STATES
+    sendMessageMutation.mutate({ content, files, receiver });
+  }, [user?.id, user?.token, isConnected, socketClient, sendMessageMutation, queryClient]);
+
+  // Manual refresh functions
+  const refreshMessages = useCallback(() => {
+    if (chatPartnerId) {
+      refetchMessages();
+    }
+  }, [refetchMessages, chatPartnerId]);
+
+  const refreshChatList = useCallback(() => {
+    refetchChatList();
+  }, [refetchChatList]);
+
+  // Scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (messagesEndRef.current && chatMessages.length > 0) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages]);
 
   return {
+    // Data
     chatMessages,
-    sendMessage,
     chatList,
     isLoadingChatList,
     chatListError,
-    messagesEndRef,
+    isLoadingMessages,
+    messagesError,
     isConnected,
-    retryMessage, // ✅ Only expose user-initiated retry
+    
+    // Functions
+    sendMessage,
+    refreshMessages,
+    refreshChatList,
+    messagesEndRef,
+    
+    // Mutation state - NO PENDING STATES
+    isSending: false, // Always false for instant sending
+    sendError: sendMessageMutation.error,
   };
 };

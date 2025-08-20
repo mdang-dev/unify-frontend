@@ -26,4 +26,9 @@ export const notificationsCommandApi = {
     const res = await httpClient.patch(`${url}/mark-all-as-read`, { userId });
     return res.data;
   },
+
+  deleteNotification: async (notificationId) => {
+    const res = await httpClient.delete(`${url}/${notificationId}`);
+    return res.data;
+  },
 };

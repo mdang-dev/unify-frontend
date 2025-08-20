@@ -173,7 +173,7 @@ const EnhancedMedia = ({
     if (isLoading) {
       const timeout = setTimeout(() => {
         setIsLoading(false);
-        console.warn('Media loading timeout for:', fileName);
+
       }, 10000); // 10 giây timeout
 
       return () => clearTimeout(timeout);
