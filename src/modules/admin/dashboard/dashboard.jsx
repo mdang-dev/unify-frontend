@@ -479,7 +479,7 @@ const AdminDashboard = () => {
 
         {/* Additional Analytics or Summary Card */}
         <Card className="shadow-lg">
-          <CardHeader className="pb-4">
+          <CardHeader className="pb-4 inline-block">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Reports Summary</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">Overview of all pending reports</p>
           </CardHeader>
@@ -539,7 +539,7 @@ const AdminDashboard = () => {
 
       {/* Quick Actions */}
       <Card className="shadow-lg">
-        <CardHeader>
+        <CardHeader className='inline-block'>
           <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Quick Actions</h3>
           <p className="text-sm text-gray-600 dark:text-gray-400">Common admin tasks and shortcuts</p>
         </CardHeader>
