@@ -51,6 +51,17 @@ const AdminSidebar = () => {
   // Menu items configuration
   const menuItems = [
     {
+      title: 'DASHBOARD',
+      icon: 'fa-solid fa-chart-line',
+      items: [
+        {
+          title: 'Overview',
+          icon: 'fa-solid fa-tachometer-alt',
+          href: '/dashboard',
+        },
+      ],
+    },
+    {
       title: 'USERS',
       icon: 'fa-solid fa-users',
       items: [

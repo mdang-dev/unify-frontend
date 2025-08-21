@@ -3,7 +3,7 @@ import { create } from 'zustand';
 export const useReportedUsersStore = create((set, get) => ({
     // Filter state
     filters: {
-        status: '',
+        status: '0', // Default to pending status
         reportedAtFrom: null,
         reportedAtTo: null,
     },
@@ -15,7 +15,7 @@ export const useReportedUsersStore = create((set, get) => ({
     sortDirection: 'desc',
 
     // Applied filters (null when no filters are applied)
-    appliedFilters: null,
+    appliedFilters: { status: 0 }, // Default to pending status filter
 
     // Cached data
     cachedReportedUsers: [],
@@ -59,7 +59,7 @@ export const useReportedUsersStore = create((set, get) => ({
 
     clearCache: () => set({
         filters: {
-            status: '',
+            status: '0', // Reset to pending status
             reportedAtFrom: null,
             reportedAtTo: null,
         },
@@ -67,7 +67,7 @@ export const useReportedUsersStore = create((set, get) => ({
         itemsPerPage: 20,
         sortField: 'latestReportedAt',
         sortDirection: 'desc',
-        appliedFilters: null,
+        appliedFilters: { status: 0 }, // Reset to pending status filter
         cachedReportedUsers: [],
         cachedTotalPages: 0,
         cachedTotalElements: 0,

@@ -4,7 +4,7 @@ export const usePostManagementStore = create((set, get) => ({
     // Filter state
     filters: {
         captions: '',
-        status: '',
+        status: '1', // Default to visible posts
         audience: '',
         isCommentVisible: '',
         isLikeVisible: '',
@@ -18,7 +18,7 @@ export const usePostManagementStore = create((set, get) => ({
     itemsPerPage: 10,
 
     // Applied filters (null when no filters are applied)
-    appliedFilters: null,
+    appliedFilters: { status: 1 }, // Default to visible posts filter
 
     // Cached data
     cachedPosts: [],
@@ -68,7 +68,7 @@ export const usePostManagementStore = create((set, get) => ({
     clearCache: () => set({
         filters: {
             captions: '',
-            status: '',
+            status: '1', // Reset to visible posts
             audience: '',
             isCommentVisible: '',
             isLikeVisible: '',
@@ -78,7 +78,7 @@ export const usePostManagementStore = create((set, get) => ({
         },
         currentPage: 1,
         itemsPerPage: 10,
-        appliedFilters: null,
+        appliedFilters: { status: 1 }, // Reset to visible posts filter
         cachedPosts: [],
         cachedHasNextPage: false,
         cachedCurrentPage: 0,
