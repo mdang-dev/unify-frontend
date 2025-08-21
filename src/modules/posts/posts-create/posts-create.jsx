@@ -270,8 +270,7 @@ const PostsCreate = () => {
 
     setPromptLoading(true);
     try {
-      const response = await fetch(`https://n8nunify.id.vn/webhook/generate-post`, {
-        // const response = await fetch(`https://unify-mobile.app.n8n.cloud/webhook-test/generate-post`, {
+      const response = await fetch(`https://unify-social-media.app.n8n.cloud/webhook/generate-post`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
