@@ -7,15 +7,21 @@ export const useToggleLike = (userId, postId) => {
 
   const likeMutation = useMutation({
     mutationFn: () => likedPostsCommandApi.likePost(userId, postId),
-    onSuccess: () => {
-      queryClient.invalidateQueries([QUERY_KEYS.POST_LIKE_STATUS, userId, postId]);
+    onError: (error) => {
+      // If the API call fails, invalidate queries to revert optimistic updates
+      queryClient.invalidateQueries([QUERY_KEYS.LIKE_STATUS, userId, postId]);
+      queryClient.invalidateQueries([QUERY_KEYS.LIKE_COUNT, postId]);
+      console.error('Like post failed:', error);
     },
   });
 
   const unlikeMutation = useMutation({
     mutationFn: () => likedPostsCommandApi.unlikePost(userId, postId),
-    onSuccess: () => {
-      queryClient.invalidateQueries([QUERY_KEYS.POST_LIKE_STATUS, userId, postId]);
+    onError: (error) => {
+      // If the API call fails, invalidate queries to revert optimistic updates
+      queryClient.invalidateQueries([QUERY_KEYS.LIKE_STATUS, userId, postId]);
+      queryClient.invalidateQueries([QUERY_KEYS.LIKE_COUNT, postId]);
+      console.error('Unlike post failed:', error);
     },
   });
 

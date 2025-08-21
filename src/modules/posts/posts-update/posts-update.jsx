@@ -347,7 +347,8 @@ const PostsUpdate = () => {
       // Invalidate relevant queries to refresh the UI
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.POSTS_BY_USER, post?.user?.id] });
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.POST, postId] });
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.POSTS] });
+      // Don't invalidate QUERY_KEYS.POSTS as it affects the home page post list
+      // queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.POSTS] });
       toast.success('Post updated', {
         description: 'Your post was updated successfully.',
         duration: 3000,
