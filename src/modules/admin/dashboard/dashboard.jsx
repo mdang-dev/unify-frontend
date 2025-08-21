@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { Card, CardBody, CardHeader, Button, Select, SelectItem, Chip } from '@heroui/react';
 import { useRouter } from 'next/navigation';
 import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Bar, BarChart } from 'recharts';
+import { useQuery } from '@tanstack/react-query';
+import { dashboardQueryApi } from '@/src/apis/dashboard';
 import { 
   Users, 
   FileText, 
@@ -24,11 +26,12 @@ const AdminDashboard = () => {
   const [chartPeriod, setChartPeriod] = useState('12months');
   const [chartType, setChartType] = useState('area');
 
-  // Mock data for dashboard statistics
-  const totalUsers = 12547;
-  const totalPosts = 38291;
-  const totalPendingReports = 23;
-  const activeUsers = 8923;
+  // Fetch dashboard statistics from API
+  const { data: stats, isLoading: statsLoading, error: statsError } = useQuery({
+    queryKey: ['dashboard-stats'],
+    queryFn: dashboardQueryApi.getStats,
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
 
   // Mock data for different chart periods
   const chartData = {
@@ -130,6 +133,30 @@ const AdminDashboard = () => {
   const currentData = chartData[chartPeriod];
   const dataKey = chartPeriod === '12months' ? 'month' : 'day';
 
+  // Handle loading and error states
+  if (statsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (statsError) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <p className="text-red-600 dark:text-red-400 mb-2">Failed to load dashboard data</p>
+          <p className="text-gray-600 dark:text-gray-400 text-sm">{statsError.message}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 p-6">
       {/* Header */}
@@ -167,8 +194,8 @@ const AdminDashboard = () => {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Users</p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white">{totalUsers.toLocaleString()}</p>
-              <p className="text-xs text-green-600 dark:text-green-400">+12.5% from last month</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.totalUsers?.toLocaleString() || 0}</p>
+              <p className="text-xs text-green-600 dark:text-green-400">+{stats?.userGrowthPercent?.toFixed(1) || 0}% from last month</p>
             </div>
           </CardBody>
         </Card>
@@ -180,8 +207,8 @@ const AdminDashboard = () => {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Posts</p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white">{totalPosts.toLocaleString()}</p>
-              <p className="text-xs text-green-600 dark:text-green-400">+8.2% from last month</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.totalPosts?.toLocaleString() || 0}</p>
+              <p className="text-xs text-green-600 dark:text-green-400">+{stats?.postGrowthPercent?.toFixed(1) || 0}% from last month</p>
             </div>
           </CardBody>
         </Card>
@@ -193,8 +220,8 @@ const AdminDashboard = () => {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Pending Reports</p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white">{totalPendingReports}</p>
-              <p className="text-xs text-orange-600 dark:text-orange-400">5 new today</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.totalPendingReports || 0}</p>
+              <p className="text-xs text-orange-600 dark:text-orange-400">{stats?.newReportsToday || 0} new today</p>
             </div>
           </CardBody>
         </Card>
@@ -206,8 +233,8 @@ const AdminDashboard = () => {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Users</p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white">{activeUsers.toLocaleString()}</p>
-              <p className="text-xs text-green-600 dark:text-green-400">+15.3% from last month</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.activeUsers?.toLocaleString() || 0}</p>
+              <p className="text-xs text-green-600 dark:text-green-400">+{stats?.activeUserGrowthPercent?.toFixed(1) || 0}% from last month</p>
             </div>
           </CardBody>
         </Card>
@@ -528,7 +555,7 @@ const AdminDashboard = () => {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{totalPendingReports}</p>
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats?.totalPendingReports || 0}</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">total</p>
                 </div>
               </div>
