@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Card, CardBody, CardHeader, Button, Select, SelectItem, Chip } from '@heroui/react';
+import { Card, CardBody, CardHeader, Button, Select, SelectItem } from '@heroui/react';
 import { useRouter } from 'next/navigation';
 import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Bar, BarChart } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
@@ -18,7 +18,8 @@ import {
   Download,
   RefreshCw,
   Activity,
-  BarChart3
+  BarChart3,
+  MessageSquare
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -40,52 +41,42 @@ const AdminDashboard = () => {
     refetchInterval: 30000, // Refetch every 30 seconds
   });
 
+  // Fetch reported posts from API
+  const { data: reportedPostsData, isLoading: reportedPostsLoading, error: reportedPostsError } = useQuery({
+    queryKey: ['dashboard-reported-posts'],
+    queryFn: dashboardQueryApi.getReportedPosts,
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
+
+  // Fetch reported users from API
+  const { data: reportedUsersData, isLoading: reportedUsersLoading, error: reportedUsersError } = useQuery({
+    queryKey: ['dashboard-reported-users'],
+    queryFn: dashboardQueryApi.getReportedUsers,
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
+
+  // Fetch reported comments from API
+  const { data: reportedCommentsData, isLoading: reportedCommentsLoading, error: reportedCommentsError } = useQuery({
+    queryKey: ['dashboard-reported-comments'],
+    queryFn: dashboardQueryApi.getReportedComments,
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
+
+  // Fetch reports summary from API
+  const { data: reportsSummaryData, isLoading: reportsSummaryLoading, error: reportsSummaryError } = useQuery({
+    queryKey: ['dashboard-reports-summary'],
+    queryFn: dashboardQueryApi.getReportsSummary,
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
+
   // Get chart data from API response
   const currentData = analyticsData?.data || [];
   const dataKey = chartPeriod === '12months' ? 'month' : 'day';
 
-  // Mock data for pending reports
-  const mockPendingReports = [
-    {
-      reportedId: '1',
-      latestReportedAt: '2024-01-15T10:30:00Z',
-      reportCount: 3,
-      type: 'post',
-      severity: 'high'
-    },
-    {
-      reportedId: '2',
-      latestReportedAt: '2024-01-14T15:45:00Z',
-      reportCount: 5,
-      type: 'post',
-      severity: 'medium'
-    },
-    {
-      reportedId: '3',
-      latestReportedAt: '2024-01-14T09:20:00Z',
-      reportCount: 2,
-      type: 'user',
-      severity: 'low'
-    },
-    {
-      reportedId: '4',
-      latestReportedAt: '2024-01-13T16:10:00Z',
-      reportCount: 7,
-      type: 'post',
-      severity: 'high'
-    },
-    {
-      reportedId: '5',
-      latestReportedAt: '2024-01-13T11:35:00Z',
-      reportCount: 1,
-      type: 'user',
-      severity: 'medium'
-    }
-  ];
-
-  // Separate data for reported posts and users
-  const reportedPosts = mockPendingReports.filter(report => report.type === 'post');
-  const reportedUsers = mockPendingReports.filter(report => report.type === 'user');
+  // Get reports data from API responses
+  const reportedPosts = reportedPostsData?.data || [];
+  const reportedUsers = reportedUsersData?.data || [];
+  const reportedComments = reportedCommentsData?.data || [];
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -95,23 +86,12 @@ const AdminDashboard = () => {
     });
   };
 
-  const getSeverityColor = (severity) => {
-    switch (severity) {
-      case 'high': return 'danger';
-      case 'medium': return 'warning';
-      case 'low': return 'success';
-      default: return 'default';
-    }
-  };
 
-  const getSeverityText = (severity) => {
-    return severity.charAt(0).toUpperCase() + severity.slice(1);
-  };
 
 
 
   // Handle loading and error states
-  if (statsLoading || analyticsLoading) {
+  if (statsLoading || analyticsLoading || reportedPostsLoading || reportedUsersLoading || reportedCommentsLoading || reportsSummaryLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -122,14 +102,14 @@ const AdminDashboard = () => {
     );
   }
 
-  if (statsError || analyticsError) {
+  if (statsError || analyticsError || reportedPostsError || reportedUsersError || reportedCommentsError || reportsSummaryError) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <p className="text-red-600 dark:text-red-400 mb-2">Failed to load dashboard data</p>
           <p className="text-gray-600 dark:text-gray-400 text-sm">
-            {statsError?.message || analyticsError?.message}
+            {statsError?.message || analyticsError?.message || reportedPostsError?.message || reportedUsersError?.message || reportedCommentsError?.message || reportsSummaryError?.message}
           </p>
         </div>
       </div>
@@ -398,25 +378,22 @@ const AdminDashboard = () => {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Chip
-                      size="sm"
-                      color={getSeverityColor(report.severity)}
-                      variant="flat"
-                    >
-                      {getSeverityText(report.severity)}
-                    </Chip>
-                    <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-                      {report.reportCount} reports
-                    </span>
-                    <Button
-                      size="sm"
-                      variant="light"
-                      onPress={() => router.push(`/manage/posts/reports/${report.reportedId}`)}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </div>
+                                     <div className="flex items-center gap-3">
+                     <div className="text-right">
+                       <p className="text-xs text-gray-500 dark:text-gray-400">{report.postTitle}</p>
+                       <p className="text-xs text-gray-400 dark:text-gray-500">by {report.authorName}</p>
+                     </div>
+                     <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                       {report.reportCount} reports
+                     </span>
+                     <Button
+                       size="sm"
+                       variant="light"
+                       onPress={() => router.push(`/manage/posts/reports/${report.reportedId}`)}
+                     >
+                       <Eye className="h-4 w-4" />
+                     </Button>
+                   </div>
                 </div>
               ))}
               {reportedPosts.length === 0 && (
@@ -468,25 +445,22 @@ const AdminDashboard = () => {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Chip
-                      size="sm"
-                      color={getSeverityColor(report.severity)}
-                      variant="flat"
-                    >
-                      {getSeverityText(report.severity)}
-                    </Chip>
-                    <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-                      {report.reportCount} reports
-                    </span>
-                    <Button
-                      size="sm"
-                      variant="light"
-                      onPress={() => router.push(`/manage/users/reports/${report.reportedId}`)}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </div>
+                                     <div className="flex items-center gap-3">
+                     <div className="text-right">
+                       <p className="text-xs text-gray-500 dark:text-gray-400">{report.userName}</p>
+                       <p className="text-xs text-gray-400 dark:text-gray-500">{report.userEmail}</p>
+                     </div>
+                     <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                       {report.reportCount} reports
+                     </span>
+                     <Button
+                       size="sm"
+                       variant="light"
+                       onPress={() => router.push(`/manage/users/reports/${report.reportedId}`)}
+                     >
+                       <Eye className="h-4 w-4" />
+                     </Button>
+                   </div>
                 </div>
               ))}
               {reportedUsers.length === 0 && (
@@ -517,10 +491,10 @@ const AdminDashboard = () => {
                     <p className="text-xs text-gray-500 dark:text-gray-400">Requiring attention</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{reportedPosts.length}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">posts</p>
-                </div>
+                                 <div className="text-right">
+                   <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{reportsSummaryData?.reportsByType?.posts?.count || 0}</p>
+                   <p className="text-xs text-gray-500 dark:text-gray-400">posts</p>
+                 </div>
               </div>
 
               <div className="flex items-center justify-between p-4 bg-red-50 dark:bg-red-900/10 rounded-lg">
@@ -533,9 +507,25 @@ const AdminDashboard = () => {
                     <p className="text-xs text-gray-500 dark:text-gray-400">Requiring attention</p>
                   </div>
                 </div>
+                                 <div className="text-right">
+                   <p className="text-2xl font-bold text-red-600 dark:text-red-400">{reportsSummaryData?.reportsByType?.users?.count || 0}</p>
+                   <p className="text-xs text-gray-500 dark:text-gray-400">users</p>
+                 </div>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-yellow-50 dark:bg-yellow-900/10 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-full bg-yellow-100 p-2 dark:bg-yellow-900/20">
+                    <MessageSquare className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Reported Comments</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Requiring attention</p>
+                  </div>
+                </div>
                 <div className="text-right">
-                  <p className="text-2xl font-bold text-red-600 dark:text-red-400">{reportedUsers.length}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">users</p>
+                  <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{reportsSummaryData?.reportsByType?.comments?.count || 0}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">comments</p>
                 </div>
               </div>
 
@@ -550,7 +540,9 @@ const AdminDashboard = () => {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats?.totalPendingReports || 0}</p>
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                    {reportsSummaryData?.totalPendingReports || 0}
+                  </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">total</p>
                 </div>
               </div>
@@ -559,57 +551,124 @@ const AdminDashboard = () => {
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <Card className="shadow-lg">
-        <CardHeader className='inline-block'>
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Quick Actions</h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Common admin tasks and shortcuts</p>
-        </CardHeader>
-        <CardBody>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <Button
-              variant="bordered"
-              className="h-24 flex-col gap-3 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors"
-              onPress={() => router.push('/manage/users/list')}
-            >
-              <div className="rounded-full bg-blue-100 p-3 dark:bg-blue-900/20">
-                <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-              </div>
-              <span className="text-sm font-medium">Manage Users</span>
-            </Button>
-            <Button
-              variant="bordered"
-              className="h-24 flex-col gap-3 hover:bg-green-50 dark:hover:bg-green-900/10 transition-colors"
-              onPress={() => router.push('/manage/posts/list')}
-            >
-              <div className="rounded-full bg-green-100 p-3 dark:bg-green-900/20">
-                <FileText className="h-6 w-6 text-green-600 dark:text-green-400" />
-              </div>
-              <span className="text-sm font-medium">Manage Posts</span>
-            </Button>
-            <Button
-              variant="bordered"
-              className="h-24 flex-col gap-3 hover:bg-orange-50 dark:hover:bg-orange-900/10 transition-colors"
-              onPress={() => router.push('/manage/posts/reports')}
-            >
-              <div className="rounded-full bg-orange-100 p-3 dark:bg-orange-900/20">
-                <AlertTriangle className="h-6 w-6 text-orange-600 dark:text-orange-400" />
-              </div>
-              <span className="text-sm font-medium">Review Reports</span>
-            </Button>
-            <Button
-              variant="bordered"
-              className="h-24 flex-col gap-3 hover:bg-purple-50 dark:hover:bg-purple-900/10 transition-colors"
-              onPress={() => router.push('/statistics/users')}
-            >
-              <div className="rounded-full bg-purple-100 p-3 dark:bg-purple-900/20">
-                <TrendingUp className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-              </div>
-              <span className="text-sm font-medium">View Statistics</span>
-            </Button>
-          </div>
-        </CardBody>
-      </Card>
+             {/* Reported Comments Section */}
+       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+         {/* Reported Comments Table */}
+         <Card className="shadow-lg">
+           <CardHeader className="flex items-center justify-between pb-4">
+             <div>
+               <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Reported Comments</h3>
+               <p className="text-sm text-gray-600 dark:text-gray-400">Latest comment reports requiring attention</p>
+             </div>
+             <Button
+               size="sm"
+               color="primary"
+               variant="flat"
+               onPress={() => router.push('/manage/comments/reports')}
+             >
+               View All
+             </Button>
+           </CardHeader>
+           <CardBody>
+             <div className="space-y-4">
+               {reportedComments.map((report, index) => (
+                 <div
+                   key={index}
+                   className="flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-700 p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                 >
+                   <div className="flex items-center gap-4">
+                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900/20">
+                       <MessageSquare className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                     </div>
+                     <div>
+                       <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                         Comment Report
+                       </p>
+                       <p className="text-xs text-gray-500 dark:text-gray-400">
+                         {formatDate(report.latestReportedAt)}
+                       </p>
+                     </div>
+                   </div>
+                   <div className="flex items-center gap-3">
+                     <div className="text-right">
+                       <p className="text-xs text-gray-500 dark:text-gray-400">{report.commentContent}</p>
+                       <p className="text-xs text-gray-400 dark:text-gray-500">by {report.authorName}</p>
+                     </div>
+                     <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                       {report.reportCount} reports
+                     </span>
+                     <Button
+                       size="sm"
+                       variant="light"
+                       onPress={() => router.push(`/manage/comments/reports/${report.reportedId}`)}
+                     >
+                       <Eye className="h-4 w-4" />
+                     </Button>
+                   </div>
+                 </div>
+               ))}
+               {reportedComments.length === 0 && (
+                 <div className="text-center py-12">
+                   <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                   <p className="text-sm text-gray-500 dark:text-gray-400">No reported comments</p>
+                 </div>
+               )}
+             </div>
+           </CardBody>
+         </Card>
+
+                   {/* Quick Actions */}
+          <Card className="shadow-lg">
+            <CardHeader className='inline-block'>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Quick Actions</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Common admin tasks and shortcuts</p>
+            </CardHeader>
+                         <CardBody className="p-4">
+               <div className="grid grid-cols-2 gap-4 h-full">
+                 <Button
+                   variant="bordered"
+                   className="h-32 flex-col gap-3 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors rounded-lg"
+                   onPress={() => router.push('/manage/users/list')}
+                 >
+                   <div className="rounded-full bg-blue-100 p-3 dark:bg-blue-900/20">
+                     <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                   </div>
+                   <span className="text-sm font-medium">Manage Users</span>
+                 </Button>
+                 <Button
+                   variant="bordered"
+                   className="h-32 flex-col gap-3 hover:bg-green-50 dark:hover:bg-green-900/10 transition-colors rounded-lg"
+                   onPress={() => router.push('/manage/posts/list')}
+                 >
+                   <div className="rounded-full bg-green-100 p-3 dark:bg-green-900/20">
+                     <FileText className="h-6 w-6 text-green-600 dark:text-green-400" />
+                   </div>
+                   <span className="text-sm font-medium">Manage Posts</span>
+                 </Button>
+                 <Button
+                   variant="bordered"
+                   className="h-32 flex-col gap-3 hover:bg-orange-50 dark:hover:bg-orange-900/10 transition-colors rounded-lg"
+                   onPress={() => router.push('/manage/posts/reports')}
+                 >
+                   <div className="rounded-full bg-orange-100 p-3 dark:bg-orange-900/20">
+                     <AlertTriangle className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+                   </div>
+                   <span className="text-sm font-medium">Review Reports</span>
+                 </Button>
+                 <Button
+                   variant="bordered"
+                   className="h-32 flex-col gap-3 hover:bg-purple-50 dark:hover:bg-purple-900/10 transition-colors rounded-lg"
+                   onPress={() => router.push('/statistics/users')}
+                 >
+                   <div className="rounded-full bg-purple-100 p-3 dark:bg-purple-900/20">
+                     <TrendingUp className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                   </div>
+                   <span className="text-sm font-medium">View Statistics</span>
+                 </Button>
+               </div>
+             </CardBody>
+          </Card>
+       </div>
     </div>
   );
 };
