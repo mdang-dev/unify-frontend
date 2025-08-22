@@ -88,32 +88,64 @@ const PostsUpdate = () => {
     },
   });
 
-  const { data: exitingPosts } = useQuery({
+  const { data: exitingPosts, error: postError } = useQuery({
     queryKey: [QUERY_KEYS.POST, postId],
     queryFn: () => postsQueryApi.getPostsById(postId),
     enabled: !!postId,
+    retry: 3,
+    retryDelay: 1000,
   });
 
   useEffect(() => {
     if (exitingPosts) {
       setPost(exitingPosts);
-      setPreviews(exitingPosts?.media);
-      setCaption(exitingPosts?.captions);
-      setAudience(exitingPosts?.audience);
-      setIsCommentVisible(exitingPosts?.isCommentVisible);
-      setIsLikeVisible(exitingPosts?.isLikeVisible);
+      // Set previews with proper structure for MediaPreview component
+      const mediaPreviews = (exitingPosts?.media || []).map((m) => ({
+        url: m.url,
+        type: m.mediaType === 'VIDEO' ? 'video/mp4' : 'image/jpeg',
+        mediaType: m.mediaType,
+      }));
+      setPreviews(mediaPreviews);
+      setCaption(exitingPosts?.captions || '');
+      setAudience(exitingPosts?.audience || 'PUBLIC');
+      setIsCommentVisible(exitingPosts?.isCommentVisible || false);
+      setIsLikeVisible(exitingPosts?.isLikeVisible || false);
 
-      const eFiles = exitingPosts?.media.map((m) => ({
+      const eFiles = (exitingPosts?.media || []).map((m) => ({
         id: m.id,
         url: m.url,
         fileType: m.fileType,
         size: m.size,
         mediaType: m.mediaType,
+        type: m.mediaType === 'VIDEO' ? 'video/mp4' : 'image/jpeg', // Add type for MediaPreview
       }));
       setExistingFiles([...eFiles]);
       setLoading(false);
     }
   }, [exitingPosts]);
+
+  // Set loading to false if no post data is available after a reasonable time
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!exitingPosts && loading) {
+        setLoading(false);
+      }
+    }, 5000); // 5 seconds timeout
+
+    return () => clearTimeout(timer);
+  }, [exitingPosts, loading]);
+
+  // Handle post loading error
+  useEffect(() => {
+    if (postError) {
+      console.error('Error loading post:', postError);
+      toast.error('Failed to load post', {
+        description: 'Unable to load the post data. Please try refreshing the page.',
+        duration: 5000,
+      });
+      setLoading(false);
+    }
+  }, [postError]);
 
   useEffect(() => {
     handleCommentVisibility(isCommentVisible);
@@ -144,6 +176,8 @@ const PostsUpdate = () => {
 
   const handleFileChange = (e) => {
     const selectedFiles = Array.from(e.target.files);
+    const maxFiles = 12;
+    const maxFileSize = 10 * 1024 * 1024; // 10MB
 
     const allowedTypes = [
       'image/png',
@@ -153,12 +187,38 @@ const PostsUpdate = () => {
       'video/mp4',
       'video/webm',
     ];
-    const validFiles = selectedFiles.filter((file) => allowedTypes.includes(file.type));
 
-    if (validFiles.length === 0) {
-      toast.error('Only images (png, jpeg, jpg, gif) and videos (mp4, webm) are allowed.');
+    // Check file count
+    if (files.length + selectedFiles.length > maxFiles) {
+      toast.warning('Too many files', {
+        description: `You can only upload up to ${maxFiles} files.`,
+        duration: 3000,
+      });
       return;
     }
+
+    // Validate files
+    const validFiles = selectedFiles.filter((file) => {
+      if (!allowedTypes.includes(file.type)) {
+        toast.warning('Invalid file type', {
+          description: `${file.name} is not a supported file type.`,
+          duration: 3000,
+        });
+        return false;
+      }
+
+      if (file.size > maxFileSize) {
+        toast.warning('File too large', {
+          description: `${file.name} exceeds the 10MB size limit.`,
+          duration: 3000,
+        });
+        return false;
+      }
+
+      return true;
+    });
+
+    if (validFiles.length === 0) return;
 
     setFiles((prevFiles) => [...prevFiles, ...validFiles]);
     const newPreviews = validFiles.map((file) => ({
@@ -176,30 +236,44 @@ const PostsUpdate = () => {
   }, [previews]);
 
   const handleUpload = async () => {
-    if (files.length === 0 && existingFiles.length === 0) {
-      toast.warning('No files uploaded', {
-        description: 'Please upload at least one media file (image/video).',
+    if (files.length === 0) {
+      toast.warning('No files selected', {
+        description: 'Please select at least one media file to upload.',
         duration: 3000,
       });
-      return;
+      return null;
     }
 
-    const formData = new FormData();
-    files.forEach((file) => formData.append('files', file));
+    try {
+      const formData = new FormData();
+      files.forEach((file) => formData.append('files', file));
 
-    const res = await fetch('/api/upload', {
-      method: 'POST',
-      body: formData,
-    });
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
 
-    const data = await res.json();
-    return data;
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Upload failed with status: ${res.status}`);
+      }
+
+      const data = await res.json();
+      return data;
+    } catch (error) {
+      toast.error('Upload failed', {
+        description: 'Failed to upload media files. Please try again.',
+        duration: 3000,
+      });
+      return null;
+    }
   };
 
   const refreshPost = () => {
     setFiles([]);
     setPreviews([]);
     setCaption('');
+    setPrompt('');
     setIsCommentVisible(false);
     setIsLikeVisible(false);
     setAudience('PUBLIC');
@@ -210,6 +284,7 @@ const PostsUpdate = () => {
   };
 
   const handleSave = async () => {
+    if (loading) return; // Prevent multiple submissions
     setLoading(true);
     try {
       // Validate at least one media remains/added
@@ -246,7 +321,16 @@ const PostsUpdate = () => {
         }));
       }
 
-      const finalMedia = [...existingFiles, ...newMedia];
+      // Ensure existing files have the correct structure
+      const existingMediaWithStructure = existingFiles.map((file) => ({
+        id: file.id,
+        url: file.url,
+        fileType: file.fileType,
+        size: file.size,
+        mediaType: file.mediaType,
+      }));
+
+      const finalMedia = [...existingMediaWithStructure, ...newMedia];
 
       const newPost = {
         ...post,
@@ -260,7 +344,11 @@ const PostsUpdate = () => {
       const updatedPost = await updatePostMutation.mutateAsync(newPost);
       if (!updatedPost) return;
 
+      // Invalidate relevant queries to refresh the UI
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.POSTS_BY_USER, post?.user?.id] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.POST, postId] });
+      // Don't invalidate QUERY_KEYS.POSTS as it affects the home page post list
+      // queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.POSTS] });
       toast.success('Post updated', {
         description: 'Your post was updated successfully.',
         duration: 3000,
@@ -271,8 +359,9 @@ const PostsUpdate = () => {
         router.push(`/profile/${user.username}`);
       }
     } catch (error) {
-      toast.error('Encountered an error', {
-        description: 'Error: ' + (error?.message || error),
+      console.error('Error updating post:', error);
+      toast.error('Failed to update post', {
+        description: error?.message || 'An unexpected error occurred. Please try again.',
         duration: 3000,
       });
     } finally {
@@ -286,12 +375,13 @@ const PostsUpdate = () => {
       if (index === -1) return prevPreviews;
 
       // Determine if this preview belongs to existing media or newly added files
-      if (index < existingFiles.length) {
+      const currentExistingFilesLength = existingFiles.length;
+      if (index < currentExistingFilesLength) {
         // Remove from existing files by url
         setExistingFiles((prev) => prev.filter((item) => item.url !== value.url));
       } else {
         // Map preview index to files index
-        const fileIndex = index - existingFiles.length;
+        const fileIndex = index - currentExistingFilesLength;
         setFiles((prev) => prev.filter((_, i) => i !== fileIndex));
       }
 
@@ -564,19 +654,20 @@ const PostsUpdate = () => {
                   previews.length > 0 ? 'grid-cols-2 sm:grid-cols-3' : 'h-[calc(100%-4rem)]'
                 )}
               >
-                {previews.map((file) => (
-                  <MediaPreview key={file.url} file={file} onRemove={removeFile} />
+                {previews.map((file, index) => (
+                  <MediaPreview key={`${file.url}-${index}`} file={file} onRemove={removeFile} />
                 ))}
 
                 {previews.length < 12 && (
                   <div
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={loading ? undefined : () => fileInputRef.current?.click()}
                     className={cn(
-                      'flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed transition-colors',
+                      'flex flex-col items-center justify-center rounded-xl border-2 border-dashed transition-colors',
                       'border-gray-300 dark:border-neutral-600',
                       'hover:border-gray-400 dark:hover:border-neutral-500',
                       'hover:bg-gray-50 dark:hover:bg-neutral-700/50',
-                      previews.length === 0 ? 'h-full' : 'aspect-square'
+                      previews.length === 0 ? 'h-full' : 'aspect-square',
+                      loading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
                     )}
                   >
                     <PhotoIcon className="mb-3 h-12 w-12 text-gray-400 dark:text-gray-500" />
@@ -597,6 +688,7 @@ const PostsUpdate = () => {
                 accept="image/png, image/jpeg, image/gif, video/mp4, video/webm"
                 className="hidden"
                 onChange={handleFileChange}
+                disabled={loading}
               />
             </div>
 
@@ -623,7 +715,7 @@ const PostsUpdate = () => {
                       placeholder="Ask AI for help with your post..."
                       minRows={1}
                       className="flex-1"
-                      disabled={promptLoading}
+                      disabled={promptLoading || loading}
                       classNames={{
                         input: "bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm text-xs",
                         inputWrapper: "border border-transparent bg-gradient-to-r from-purple-200/50 to-blue-200/50 dark:from-purple-700/30 dark:to-blue-700/30 backdrop-blur-sm hover:from-purple-300/50 hover:to-blue-300/50 dark:hover:from-purple-600/30 dark:hover:to-blue-600/30 transition-all duration-300"
@@ -631,7 +723,7 @@ const PostsUpdate = () => {
                     />
                     <button
                       onClick={handlePromptSubmit}
-                      disabled={promptLoading || !prompt.trim()}
+                      disabled={promptLoading || loading || !prompt.trim()}
                       className={cn(
                         'flex h-6 w-6 items-center justify-center rounded-md',
                         'bg-gradient-to-r from-purple-500 to-blue-500 text-white',
@@ -658,7 +750,7 @@ const PostsUpdate = () => {
                     <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => handleExamplePrompt("A cat playing on the grass")}
-                        disabled={promptLoading}
+                        disabled={promptLoading || loading}
                         className={cn(
                           'px-3 py-1 text-xs font-medium rounded-full transition-all duration-200',
                           'bg-purple-100 text-purple-700 hover:bg-purple-200',
@@ -671,7 +763,7 @@ const PostsUpdate = () => {
                       </button>
                       <button
                         onClick={() => handleExamplePrompt("A beautiful sunset over the ocean")}
-                        disabled={promptLoading}
+                        disabled={promptLoading || loading}
                         className={cn(
                           'px-3 py-1 text-xs font-medium rounded-full transition-all duration-200',
                           'bg-blue-100 text-blue-700 hover:bg-blue-200',
@@ -693,7 +785,8 @@ const PostsUpdate = () => {
                     value={caption}
                     onChange={(e) => setCaption(e.target.value)}
                     placeholder="Write your caption here..."
-                    className="w-full bg-white text-gray-900 dark:bg-neutral-800 dark:text-gray-100 placeholder:text-neutral-500 dark:placeholder:text-neutral-400"
+                    disabled={loading}
+                    className="w-full bg-white text-gray-900 dark:bg-neutral-800 dark:text-gray-100 placeholder:text-neutral-500 dark:placeholder:text-neutral-400 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
 
@@ -701,8 +794,8 @@ const PostsUpdate = () => {
                   <label className="mb-2 block text-sm font-medium text-gray-900 dark:text-gray-100">
                     Audience
                   </label>
-                  <ShSelect value={audience} onValueChange={setAudience}>
-                    <ShSelectTrigger className="w-full bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100">
+                  <ShSelect value={audience} onValueChange={setAudience} disabled={loading}>
+                    <ShSelectTrigger className="w-full bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
                       <ShSelectValue placeholder="Select audience" />
                     </ShSelectTrigger>
                     <ShSelectContent className="bg-white dark:bg-neutral-800">
@@ -717,13 +810,13 @@ const PostsUpdate = () => {
                     Advanced Settings
                   </h3>
                   <PostSwitch
-                    onToggle={setIsLikeVisible}
+                    onToggle={loading ? undefined : setIsLikeVisible}
                     title="Hide like and comment counts"
                     subtitle="Keep the focus on your content by hiding engagement metrics"
                     isOn={isLikeVisible}
                   />
                   <PostSwitch
-                    onToggle={setIsCommentVisible}
+                    onToggle={loading ? undefined : setIsCommentVisible}
                     title="Turn off commenting"
                     subtitle="Disable comments to control interactions on your post"
                     isOn={isCommentVisible}

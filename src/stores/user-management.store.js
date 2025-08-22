@@ -5,7 +5,7 @@ export const useUserManagementStore = create((set, get) => ({
     filters: {
         birthDay: '',
         email: '',
-        status: '',
+        status: '1', // Default to active users
         username: '',
         firstName: '',
         lastName: '',
@@ -16,7 +16,7 @@ export const useUserManagementStore = create((set, get) => ({
     itemsPerPage: 10,
 
     // Applied filters (null when no filters are applied)
-    appliedFilters: null,
+    appliedFilters: { status: 1 }, // Default to active users filter
 
     // Cached data
     cachedUsers: [],
@@ -47,14 +47,14 @@ export const useUserManagementStore = create((set, get) => ({
         filters: {
             birthDay: '',
             email: '',
-            status: '',
+            status: '1', // Reset to active users
             username: '',
             firstName: '',
             lastName: '',
         },
         currentPage: 1,
         itemsPerPage: 10,
-        appliedFilters: null,
+        appliedFilters: { status: 1 }, // Reset to active users filter
         cachedUsers: [],
         cachedTotalPages: 0,
         cachedTotalElements: 0,

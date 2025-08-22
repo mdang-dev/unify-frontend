@@ -125,12 +125,6 @@ const PostItem = ({ post }) => {
             >
               <i className="fa-solid fa-flag text-sm"></i>
             </button>
-            <button
-              className="rounded-full p-2 text-zinc-400 transition-colors hover:text-neutral-900 dark:text-zinc-200 dark:hover:text-neutral-500"
-              title="Not interested"
-            >
-              <i className="fa-solid fa-eye-slash text-sm"></i>
-            </button>
           </div>
         </div>
 

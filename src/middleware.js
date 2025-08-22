@@ -5,7 +5,7 @@ import { getUser } from './utils/auth.util';
 import createMiddleware from 'next-intl/middleware';
 import { routing } from './i18n/routing';
 
-const protectedRoutes = new Set(['/statistics', '/manage']);
+const protectedRoutes = new Set(['/statistics', '/manage', '/dashboard']);
 const publicRoutes = new Set([
   '/login',
   '/register',
@@ -59,7 +59,7 @@ export default async function middleware(req) {
     // If the user is an admin (roleId === 1) and accesses non-admin route, redirect to admin dashboard
     if (roleId === 1 && !isProtected && !isShared) {
       const redirectUrl = req.nextUrl.clone();
-      redirectUrl.pathname = '/manage/users/list';
+      redirectUrl.pathname = '/dashboard';
       return NextResponse.redirect(redirectUrl);
     }
   }
