@@ -17,7 +17,7 @@ export default function ModeSwitch({ text = 'Dark Mode', className = '' }) {
   if (!mounted) return null;
 
   return (
-    <div className={`flex items-center justify-between ${className}`}>
+    <div className={`flex items-center justify-between gap-2 ${className}`}>
       <p>{text}</p>
       <Switch
         className=""

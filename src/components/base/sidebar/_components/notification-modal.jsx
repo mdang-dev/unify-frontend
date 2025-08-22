@@ -185,14 +185,29 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
                 <button
                   onClick={handleRequestDesktopNotifications}
                   className="text-xs text-neutral-800 hover:text-zinc-400 dark:text-white dark:hover:text-zinc-400"
-                  title="Enable desktop notifications"
+                  title="Enable push notifications for desktop and mobile browsers"
                 >
                   <i className="fa-solid fa-desktop mr-1"></i>
-                  Enable Desktop
+                  Enable Push
                 </button>
+              )}
+              {!isSupported && (
+                <span
+                  className="text-xs text-gray-500 dark:text-gray-400"
+                  title="Push notifications are not supported in this browser"
+                >
+                  <i className="fa-solid fa-info-circle mr-1"></i>
+                  Not Supported
+                </span>
               )}
             </div>
           </div>
+          {!isSupported && (
+            <div className="mb-3 rounded-md bg-yellow-50 p-3 text-sm text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200">
+              <i className="fa-solid fa-exclamation-triangle mr-2"></i>
+              Push notifications are not supported in this browser. Consider using Chrome, Firefox, Safari, or Edge for the best experience.
+            </div>
+          )}
         </div>
 
         <div className="no-scrollbar h-[calc(100%-120px)] max-h-full space-y-1 overflow-y-auto px-5 pb-5 pt-3">
@@ -234,3 +249,4 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
 };
 
 export default NotificationModal;
+
