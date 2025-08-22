@@ -265,79 +265,79 @@ const AdminDashboard = () => {
                 </div>
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={350}>
-                {chartType === 'area' ? (
-                  <AreaChart data={currentData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis 
-                      dataKey={dataKey} 
-                      tick={{ fontSize: 12, fill: '#6b7280' }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis 
-                      tick={{ fontSize: 12, fill: '#6b7280' }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <Tooltip 
-                      contentStyle={{
-                        backgroundColor: 'var(--nextui-colors-background)',
-                        border: '1px solid var(--nextui-colors-border)',
-                        borderRadius: '12px',
-                        boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-                      }}
-                    />
-                    <Legend />
-                    <Area 
-                      type="monotone" 
-                      dataKey="newUsers" 
-                      stackId="1"
-                      stroke="#3b82f6" 
-                      fill="#3b82f6" 
-                      fillOpacity={0.6}
-                      name="New Users"
-                      strokeWidth={2}
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="activeUsers" 
-                      stackId="2"
-                      stroke="#10b981" 
-                      fill="#10b981" 
-                      fillOpacity={0.6}
-                      name="Active Users"
-                      strokeWidth={2}
-                    />
-                  </AreaChart>
-                ) : (
-                  <BarChart data={currentData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis 
-                      dataKey={dataKey} 
-                      tick={{ fontSize: 12, fill: '#6b7280' }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis 
-                      tick={{ fontSize: 12, fill: '#6b7280' }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <Tooltip 
-                      contentStyle={{
-                        backgroundColor: 'var(--nextui-colors-background)',
-                        border: '1px solid var(--nextui-colors-border)',
-                        borderRadius: '12px',
-                        boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-                      }}
-                    />
-                    <Legend />
-                    <Bar dataKey="newUsers" fill="#3b82f6" name="New Users" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="activeUsers" fill="#10b981" name="Active Users" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                )}
-              </ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={350}>
+              {chartType === 'area' ? (
+                <AreaChart data={currentData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis 
+                    dataKey={dataKey} 
+                    tick={{ fontSize: 12, fill: '#6b7280' }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 12, fill: '#6b7280' }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'var(--nextui-colors-background)',
+                      border: '1px solid var(--nextui-colors-border)',
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                    }}
+                  />
+                  <Legend />
+                  <Area 
+                    type="monotone" 
+                    dataKey="newUsers" 
+                    stackId="1"
+                    stroke="#3b82f6" 
+                    fill="#3b82f6" 
+                    fillOpacity={0.6}
+                    name="New Users"
+                    strokeWidth={2}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="activeUsers" 
+                    stackId="2"
+                    stroke="#10b981" 
+                    fill="#10b981" 
+                    fillOpacity={0.6}
+                    name="Active Users"
+                    strokeWidth={2}
+                  />
+                </AreaChart>
+              ) : (
+                <BarChart data={currentData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis 
+                    dataKey={dataKey} 
+                    tick={{ fontSize: 12, fill: '#6b7280' }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 12, fill: '#6b7280' }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'var(--nextui-colors-background)',
+                      border: '1px solid var(--nextui-colors-border)',
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                    }}
+                  />
+                  <Legend />
+                  <Bar dataKey="newUsers" fill="#3b82f6" name="New Users" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="activeUsers" fill="#10b981" name="Active Users" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              )}
+            </ResponsiveContainer>
             )}
           </CardBody>
         </Card>
@@ -379,17 +379,18 @@ const AdminDashboard = () => {
                     </div>
                   </div>
                                      <div className="flex items-center gap-3">
-                     <div className="text-right">
-                       <p className="text-xs text-gray-500 dark:text-gray-400">{report.postTitle}</p>
-                       <p className="text-xs text-gray-400 dark:text-gray-500">by {report.authorName}</p>
-                     </div>
-                     <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                      <div className="text-right min-w-0 flex-1">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[120px]">{report.postTitle}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 truncate max-w-[120px]">by {report.authorName}</p>
+                      </div>
+                     <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded flex-shrink-0">
                        {report.reportCount} reports
                      </span>
                      <Button
                        size="sm"
                        variant="light"
                        onPress={() => router.push(`/manage/posts/reports/${report.reportedId}`)}
+                       className="flex-shrink-0"
                      >
                        <Eye className="h-4 w-4" />
                      </Button>
@@ -446,17 +447,18 @@ const AdminDashboard = () => {
                     </div>
                   </div>
                                      <div className="flex items-center gap-3">
-                     <div className="text-right">
-                       <p className="text-xs text-gray-500 dark:text-gray-400">{report.userName}</p>
-                       <p className="text-xs text-gray-400 dark:text-gray-500">{report.userEmail}</p>
-                     </div>
-                     <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                      <div className="text-right min-w-0 flex-1">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[120px]">{report.userName}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 truncate max-w-[120px]">{report.userEmail}</p>
+                      </div>
+                     <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded flex-shrink-0">
                        {report.reportCount} reports
                      </span>
                      <Button
                        size="sm"
                        variant="light"
                        onPress={() => router.push(`/manage/users/reports/${report.reportedId}`)}
+                       className="flex-shrink-0"
                      >
                        <Eye className="h-4 w-4" />
                      </Button>
@@ -491,10 +493,10 @@ const AdminDashboard = () => {
                     <p className="text-xs text-gray-500 dark:text-gray-400">Requiring attention</p>
                   </div>
                 </div>
-                                 <div className="text-right">
+                <div className="text-right">
                    <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{reportsSummaryData?.reportsByType?.posts?.count || 0}</p>
-                   <p className="text-xs text-gray-500 dark:text-gray-400">posts</p>
-                 </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">posts</p>
+                </div>
               </div>
 
               <div className="flex items-center justify-between p-4 bg-red-50 dark:bg-red-900/10 rounded-lg">
@@ -507,9 +509,9 @@ const AdminDashboard = () => {
                     <p className="text-xs text-gray-500 dark:text-gray-400">Requiring attention</p>
                   </div>
                 </div>
-                                 <div className="text-right">
+                <div className="text-right">
                    <p className="text-2xl font-bold text-red-600 dark:text-red-400">{reportsSummaryData?.reportsByType?.users?.count || 0}</p>
-                   <p className="text-xs text-gray-500 dark:text-gray-400">users</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">users</p>
                  </div>
               </div>
 
@@ -560,14 +562,14 @@ const AdminDashboard = () => {
                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Reported Comments</h3>
                <p className="text-sm text-gray-600 dark:text-gray-400">Latest comment reports requiring attention</p>
              </div>
-             <Button
-               size="sm"
-               color="primary"
-               variant="flat"
-               onPress={() => router.push('/manage/comments/reports')}
-             >
-               View All
-             </Button>
+                           <Button
+                size="sm"
+                color="primary"
+                variant="flat"
+                onPress={() => router.push('/manage/comments/list')}
+              >
+                View All
+              </Button>
            </CardHeader>
            <CardBody>
              <div className="space-y-4">
@@ -589,22 +591,23 @@ const AdminDashboard = () => {
                        </p>
                      </div>
                    </div>
-                   <div className="flex items-center gap-3">
-                     <div className="text-right">
-                       <p className="text-xs text-gray-500 dark:text-gray-400">{report.commentContent}</p>
-                       <p className="text-xs text-gray-400 dark:text-gray-500">by {report.authorName}</p>
-                     </div>
-                     <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-                       {report.reportCount} reports
-                     </span>
-                     <Button
-                       size="sm"
-                       variant="light"
-                       onPress={() => router.push(`/manage/comments/reports/${report.reportedId}`)}
-                     >
-                       <Eye className="h-4 w-4" />
-                     </Button>
-                   </div>
+                                       <div className="flex items-center gap-3">
+                      <div className="text-right min-w-0 flex-1">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[120px]">{report.commentContent}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 truncate max-w-[120px]">by {report.authorName}</p>
+                      </div>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded flex-shrink-0">
+                        {report.reportCount} reports
+                      </span>
+                                             <Button
+                         size="sm"
+                         variant="light"
+                         onPress={() => router.push('/manage/comments/list')}
+                         className="flex-shrink-0"
+                       >
+                         <Eye className="h-4 w-4" />
+                       </Button>
+                    </div>
                  </div>
                ))}
                {reportedComments.length === 0 && (
@@ -617,57 +620,57 @@ const AdminDashboard = () => {
            </CardBody>
          </Card>
 
-                   {/* Quick Actions */}
-          <Card className="shadow-lg">
-            <CardHeader className='inline-block'>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Quick Actions</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Common admin tasks and shortcuts</p>
-            </CardHeader>
+      {/* Quick Actions */}
+      <Card className="shadow-lg">
+        <CardHeader className='inline-block'>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Quick Actions</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Common admin tasks and shortcuts</p>
+        </CardHeader>
                          <CardBody className="p-4">
                <div className="grid grid-cols-2 gap-4 h-full">
-                 <Button
-                   variant="bordered"
+            <Button
+              variant="bordered"
                    className="h-32 flex-col gap-3 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors rounded-lg"
-                   onPress={() => router.push('/manage/users/list')}
-                 >
-                   <div className="rounded-full bg-blue-100 p-3 dark:bg-blue-900/20">
-                     <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                   </div>
-                   <span className="text-sm font-medium">Manage Users</span>
-                 </Button>
-                 <Button
-                   variant="bordered"
+              onPress={() => router.push('/manage/users/list')}
+            >
+              <div className="rounded-full bg-blue-100 p-3 dark:bg-blue-900/20">
+                <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <span className="text-sm font-medium">Manage Users</span>
+            </Button>
+            <Button
+              variant="bordered"
                    className="h-32 flex-col gap-3 hover:bg-green-50 dark:hover:bg-green-900/10 transition-colors rounded-lg"
-                   onPress={() => router.push('/manage/posts/list')}
-                 >
-                   <div className="rounded-full bg-green-100 p-3 dark:bg-green-900/20">
-                     <FileText className="h-6 w-6 text-green-600 dark:text-green-400" />
-                   </div>
-                   <span className="text-sm font-medium">Manage Posts</span>
-                 </Button>
-                 <Button
-                   variant="bordered"
+              onPress={() => router.push('/manage/posts/list')}
+            >
+              <div className="rounded-full bg-green-100 p-3 dark:bg-green-900/20">
+                <FileText className="h-6 w-6 text-green-600 dark:text-green-400" />
+              </div>
+              <span className="text-sm font-medium">Manage Posts</span>
+            </Button>
+            <Button
+              variant="bordered"
                    className="h-32 flex-col gap-3 hover:bg-orange-50 dark:hover:bg-orange-900/10 transition-colors rounded-lg"
-                   onPress={() => router.push('/manage/posts/reports')}
-                 >
-                   <div className="rounded-full bg-orange-100 p-3 dark:bg-orange-900/20">
-                     <AlertTriangle className="h-6 w-6 text-orange-600 dark:text-orange-400" />
-                   </div>
-                   <span className="text-sm font-medium">Review Reports</span>
-                 </Button>
-                 <Button
-                   variant="bordered"
-                   className="h-32 flex-col gap-3 hover:bg-purple-50 dark:hover:bg-purple-900/10 transition-colors rounded-lg"
-                   onPress={() => router.push('/statistics/users')}
-                 >
-                   <div className="rounded-full bg-purple-100 p-3 dark:bg-purple-900/20">
-                     <TrendingUp className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                   </div>
-                   <span className="text-sm font-medium">View Statistics</span>
-                 </Button>
+              onPress={() => router.push('/manage/posts/reports')}
+            >
+              <div className="rounded-full bg-orange-100 p-3 dark:bg-orange-900/20">
+                <AlertTriangle className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+              </div>
+              <span className="text-sm font-medium">Review Reports</span>
+            </Button>
+                         <Button
+               variant="bordered"
+                    className="h-32 flex-col gap-3 hover:bg-purple-50 dark:hover:bg-purple-900/10 transition-colors rounded-lg"
+                               onPress={() => router.push('/manage/comments/list')}
+             >
+               <div className="rounded-full bg-purple-100 p-3 dark:bg-purple-900/20">
+                 <MessageSquare className="h-6 w-6 text-purple-600 dark:text-purple-400" />
                </div>
-             </CardBody>
-          </Card>
+               <span className="text-sm font-medium">Reported Comments</span>
+             </Button>
+          </div>
+        </CardBody>
+      </Card>
        </div>
     </div>
   );
