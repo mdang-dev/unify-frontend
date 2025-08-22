@@ -23,7 +23,7 @@ import {
 
 const AdminDashboard = () => {
   const router = useRouter();
-  const [chartPeriod, setChartPeriod] = useState('12months');
+  const [chartPeriod, setChartPeriod] = useState('7days');
   const [chartType, setChartType] = useState('area');
 
   // Fetch dashboard statistics from API
@@ -33,38 +33,16 @@ const AdminDashboard = () => {
     refetchInterval: 30000, // Refetch every 30 seconds
   });
 
-  // Mock data for different chart periods
-  const chartData = {
-    '7days': [
-      { day: 'Mon', newUsers: 45, totalUsers: 12400, activeUsers: 8900 },
-      { day: 'Tue', newUsers: 52, totalUsers: 12452, activeUsers: 8950 },
-      { day: 'Wed', newUsers: 48, totalUsers: 12500, activeUsers: 9000 },
-      { day: 'Thu', newUsers: 61, totalUsers: 12561, activeUsers: 9050 },
-      { day: 'Fri', newUsers: 55, totalUsers: 12616, activeUsers: 9100 },
-      { day: 'Sat', newUsers: 67, totalUsers: 12683, activeUsers: 9150 },
-      { day: 'Sun', newUsers: 58, totalUsers: 12741, activeUsers: 9200 },
-    ],
-    '30days': [
-      { day: 'Week 1', newUsers: 320, totalUsers: 12400, activeUsers: 8900 },
-      { day: 'Week 2', newUsers: 350, totalUsers: 12750, activeUsers: 9100 },
-      { day: 'Week 3', newUsers: 380, totalUsers: 13130, activeUsers: 9300 },
-      { day: 'Week 4', newUsers: 410, totalUsers: 13540, activeUsers: 9500 },
-    ],
-    '12months': [
-      { month: 'Jan', newUsers: 120, totalUsers: 1200, activeUsers: 800 },
-      { month: 'Feb', newUsers: 150, totalUsers: 1350, activeUsers: 950 },
-      { month: 'Mar', newUsers: 180, totalUsers: 1530, activeUsers: 1100 },
-      { month: 'Apr', newUsers: 200, totalUsers: 1730, activeUsers: 1250 },
-      { month: 'May', newUsers: 220, totalUsers: 1950, activeUsers: 1400 },
-      { month: 'Jun', newUsers: 250, totalUsers: 2200, activeUsers: 1550 },
-      { month: 'Jul', newUsers: 280, totalUsers: 2480, activeUsers: 1700 },
-      { month: 'Aug', newUsers: 300, totalUsers: 2780, activeUsers: 1850 },
-      { month: 'Sep', newUsers: 320, totalUsers: 3100, activeUsers: 2000 },
-      { month: 'Oct', newUsers: 350, totalUsers: 3450, activeUsers: 2150 },
-      { month: 'Nov', newUsers: 380, totalUsers: 3830, activeUsers: 2300 },
-      { month: 'Dec', newUsers: 400, totalUsers: 4230, activeUsers: 2450 },
-    ],
-  };
+  // Fetch analytics data from API
+  const { data: analyticsData, isLoading: analyticsLoading, error: analyticsError } = useQuery({
+    queryKey: ['dashboard-analytics', chartPeriod],
+    queryFn: () => dashboardQueryApi.getAnalytics(chartPeriod),
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
+
+  // Get chart data from API response
+  const currentData = analyticsData?.data || [];
+  const dataKey = chartPeriod === '12months' ? 'month' : 'day';
 
   // Mock data for pending reports
   const mockPendingReports = [
@@ -130,11 +108,10 @@ const AdminDashboard = () => {
     return severity.charAt(0).toUpperCase() + severity.slice(1);
   };
 
-  const currentData = chartData[chartPeriod];
-  const dataKey = chartPeriod === '12months' ? 'month' : 'day';
+
 
   // Handle loading and error states
-  if (statsLoading) {
+  if (statsLoading || analyticsLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -145,13 +122,15 @@ const AdminDashboard = () => {
     );
   }
 
-  if (statsError) {
+  if (statsError || analyticsError) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <p className="text-red-600 dark:text-red-400 mb-2">Failed to load dashboard data</p>
-          <p className="text-gray-600 dark:text-gray-400 text-sm">{statsError.message}</p>
+          <p className="text-gray-600 dark:text-gray-400 text-sm">
+            {statsError?.message || analyticsError?.message}
+          </p>
         </div>
       </div>
     );
@@ -291,79 +270,95 @@ const AdminDashboard = () => {
             </div>
           </CardHeader>
           <CardBody>
-            <ResponsiveContainer width="100%" height={350}>
-              {chartType === 'area' ? (
-                <AreaChart data={currentData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis 
-                    dataKey={dataKey} 
-                    tick={{ fontSize: 12, fill: '#6b7280' }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis 
-                    tick={{ fontSize: 12, fill: '#6b7280' }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip 
-                    contentStyle={{
-                      backgroundColor: 'var(--nextui-colors-background)',
-                      border: '1px solid var(--nextui-colors-border)',
-                      borderRadius: '12px',
-                      boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-                    }}
-                  />
-                  <Legend />
-                  <Area 
-                    type="monotone" 
-                    dataKey="newUsers" 
-                    stackId="1"
-                    stroke="#3b82f6" 
-                    fill="#3b82f6" 
-                    fillOpacity={0.6}
-                    name="New Users"
-                    strokeWidth={2}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="activeUsers" 
-                    stackId="2"
-                    stroke="#10b981" 
-                    fill="#10b981" 
-                    fillOpacity={0.6}
-                    name="Active Users"
-                    strokeWidth={2}
-                  />
-                </AreaChart>
-              ) : (
-                <BarChart data={currentData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis 
-                    dataKey={dataKey} 
-                    tick={{ fontSize: 12, fill: '#6b7280' }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis 
-                    tick={{ fontSize: 12, fill: '#6b7280' }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip 
-                    contentStyle={{
-                      backgroundColor: 'var(--nextui-colors-background)',
-                      border: '1px solid var(--nextui-colors-border)',
-                      borderRadius: '12px',
-                      boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-                    }}
-                  />
-                  <Legend />
-                  <Bar dataKey="newUsers" fill="#3b82f6" name="New Users" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="activeUsers" fill="#10b981" name="Active Users" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              )}
-            </ResponsiveContainer>
+            {analyticsLoading ? (
+              <div className="flex items-center justify-center h-[350px]">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Loading chart data...</p>
+                </div>
+              </div>
+            ) : currentData.length === 0 ? (
+              <div className="flex items-center justify-center h-[350px]">
+                <div className="text-center">
+                  <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-sm text-gray-500 dark:text-gray-400">No data available for this period</p>
+                </div>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={350}>
+                {chartType === 'area' ? (
+                  <AreaChart data={currentData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis 
+                      dataKey={dataKey} 
+                      tick={{ fontSize: 12, fill: '#6b7280' }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 12, fill: '#6b7280' }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip 
+                      contentStyle={{
+                        backgroundColor: 'var(--nextui-colors-background)',
+                        border: '1px solid var(--nextui-colors-border)',
+                        borderRadius: '12px',
+                        boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                      }}
+                    />
+                    <Legend />
+                    <Area 
+                      type="monotone" 
+                      dataKey="newUsers" 
+                      stackId="1"
+                      stroke="#3b82f6" 
+                      fill="#3b82f6" 
+                      fillOpacity={0.6}
+                      name="New Users"
+                      strokeWidth={2}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="activeUsers" 
+                      stackId="2"
+                      stroke="#10b981" 
+                      fill="#10b981" 
+                      fillOpacity={0.6}
+                      name="Active Users"
+                      strokeWidth={2}
+                    />
+                  </AreaChart>
+                ) : (
+                  <BarChart data={currentData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis 
+                      dataKey={dataKey} 
+                      tick={{ fontSize: 12, fill: '#6b7280' }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 12, fill: '#6b7280' }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip 
+                      contentStyle={{
+                        backgroundColor: 'var(--nextui-colors-background)',
+                        border: '1px solid var(--nextui-colors-border)',
+                        borderRadius: '12px',
+                        boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                      }}
+                    />
+                    <Legend />
+                    <Bar dataKey="newUsers" fill="#3b82f6" name="New Users" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="activeUsers" fill="#10b981" name="Active Users" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                )}
+              </ResponsiveContainer>
+            )}
           </CardBody>
         </Card>
 

@@ -14,4 +14,15 @@ export const dashboardQueryApi = {
             throw error;
         }
     },
+    getAnalytics: async (period) => {
+        try {
+            const res = await httpClient(`${url}/analytics?period=${period}`);
+            return res.data;
+        } catch (error) {
+            if (process.env.NODE_ENV === 'development') {
+                console.error('Error fetching dashboard analytics:', error);
+            }
+            throw error;
+        }
+    },
 };
