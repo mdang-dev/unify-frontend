@@ -16,7 +16,7 @@ import { useAuthStore } from '@/src/stores/auth.store';
 import { useMutation } from '@tanstack/react-query';
 import { reportsCommandApi } from '@/src/apis/reports/command/report.command.api';
 import Caption from './_components/caption';
-import Hashtag from './_components/hashtag';
+import { extractHashtags } from '@/src/utils/hashtag.util';
 import User from './_components/user';
 
 const PostItem = ({ post }) => {
@@ -88,23 +88,16 @@ const PostItem = ({ post }) => {
     [reportPost]
   );
 
-  const hashtags = post.captions.split(/(\#[a-zA-Z0-9_]+)/g).filter((part) => part.startsWith('#'));
-
   const transformHashtags = (text) => {
-    return text.split(/(\#[a-zA-Z0-9_]+)/g).map((part, index) => {
-      if (part.startsWith('#')) {
-        return (
-          <Link
-            key={index}
-            href={`/explore/${part.substring(1)}`}
-            className="text-blue-500 transition-colors hover:underline dark:text-blue-400"
-          >
-            {part}
-          </Link>
-        );
-      }
-      return part;
+    const hashtags = extractHashtags(text);
+    let transformedText = text;
+    
+    hashtags.forEach(hashtag => {
+      const regex = new RegExp(`#${hashtag}\\b`, 'g');
+      transformedText = transformedText.replace(regex, `<a href="/explore/${hashtag}" class="text-blue-500 hover:underline">#${hashtag}</a>`);
     });
+    
+    return transformedText;
   };
 
   return (
@@ -171,12 +164,6 @@ const PostItem = ({ post }) => {
           </div>
 
           <Caption text={transformHashtags(post.captions)} />
-
-          <div className="mt-2 flex flex-wrap">
-            {hashtags.map((hashtag, index) => (
-              <Hashtag key={index} content={hashtag} />
-            ))}
-          </div>
 
           <div className="mt-2">
             <CommentButton

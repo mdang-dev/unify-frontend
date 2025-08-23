@@ -194,7 +194,8 @@
             "Title": "Posts with #{hashtag}",
             "NoPosts": "No posts found with this hashtag",
             "Loading": "Loading...",
-            "Error": "Error"
+            "Error": "Error",
+            "PostsFound": "posts found"
         }
     },
     "Reels": {

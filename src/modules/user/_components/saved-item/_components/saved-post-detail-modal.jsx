@@ -14,6 +14,7 @@ import { useQuery } from '@tanstack/react-query';
 import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
 import { commentsQueryApi } from '@/src/apis/comments/query/comments.query.api';
 import NavButton from './nav-button';
+import { extractHashtags } from '@/src/utils/hashtag.util';
 
 const SavedPostDetailModal = ({ post, onClose, onDelete }) => {
   const [openList, setOpenList] = useState(false);
@@ -86,22 +87,17 @@ const handleReportPost = useCallback(
   [createReport]
 );
 
-  // Biến đổi hashtag thành link
+  // Transform hashtags to links
   const transformHashtags = (text) => {
-    return text.split(/(\#[a-zA-Z0-9_]+)/g).map((part, index) => {
-      if (part.startsWith('#')) {
-        return (
-          <Link
-            key={index}
-            href={`/explore/${part.substring(1)}`}
-            className="text-blue-500 hover:underline"
-          >
-            {part}
-          </Link>
-        );
-      }
-      return part;
+    const hashtags = extractHashtags(text);
+    let transformedText = text;
+    
+    hashtags.forEach(hashtag => {
+      const regex = new RegExp(`#${hashtag}\\b`, 'g');
+      transformedText = transformedText.replace(regex, `<a href="/explore/${hashtag}" class="text-blue-500 hover:underline">#${hashtag}</a>`);
     });
+    
+    return transformedText;
   };
 
   const updateComments = useCallback(

@@ -1,16 +1,30 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
+import { useParams } from 'next/navigation';
 import { Skeleton } from '@heroui/react';
 import PostDetailModal from '@/src/components/base/post-detail-modal';
 import PostGrid from '@/src/components/base/post-grid';
 import LoadingIndicator from '@/src/components/base/loading-indicator';
 import { useExplorePosts } from '@/src/hooks/use-explore-posts';
+import { useHashtagPosts } from '@/src/hooks/use-hashtag-posts';
 
-export default function Explore() {
+const Explore = () => {
   const t = useTranslations('Explore');
+  const params = useParams();
   const [selectedPost, setSelectedPost] = useState(null);
+  
+  // Get hashtag from path parameter
+  const hashtag = params.hashtag;
+  
+  // Use appropriate hook based on whether hashtag is present
+  const explorePostsHook = useExplorePosts(20);
+  const hashtagPostsHook = useHashtagPosts(hashtag, 20);
+  
+  // Determine which hook to use
+  const isHashtagMode = !!hashtag;
+  const currentHook = isHashtagMode ? hashtagPostsHook : explorePostsHook;
   
   const {
     posts,
@@ -26,7 +40,7 @@ export default function Explore() {
     fetchNextPage,
     ref,
     shouldFetchNext,
-  } = useExplorePosts(12);
+  } = currentHook;
 
   // Auto-fetch next page when user scrolls to bottom
   useEffect(() => {
@@ -90,7 +104,18 @@ export default function Explore() {
     return (
       <div className="mt-8 flex h-auto w-full flex-wrap justify-center">
         <div className="text-center">
-          <p className="text-lg text-gray-600 dark:text-gray-400">{t('NoPosts')}</p>
+          {isHashtagMode ? (
+            <>
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
+                {t('HashtagTitle', { hashtag })}
+              </h2>
+              <p className="text-lg text-gray-600 dark:text-gray-400">
+                {t('NoPostsForHashtag', { hashtag })}
+              </p>
+            </>
+          ) : (
+            <p className="text-lg text-gray-600 dark:text-gray-400">{t('NoPosts')}</p>
+          )}
         </div>
       </div>
     );
@@ -101,8 +126,16 @@ export default function Explore() {
     <div className="mb-5 mt-8 flex h-auto w-full flex-wrap justify-center">
       <div className="mb-4 w-full text-center">
         <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
-          {t('RecommendedPosts')}
+          {isHashtagMode 
+            ? `${t('PostsForHashtag')} #${hashtag}`
+            : t('RecommendedPosts')
+          }
         </h2>
+        {isHashtagMode && (
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+            {totalPosts} {t('PostsFound')}
+          </p>
+        )}
       </div>
       
       {/* Optimized PostGrid component */}
@@ -140,3 +173,5 @@ export default function Explore() {
     </div>
   );
 }
+
+export default Explore;

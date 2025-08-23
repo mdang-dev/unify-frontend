@@ -23,6 +23,20 @@ export default function CommentButton({ children, className = '', postId }) {
   const { user } = useAuthStore();
   const currentUserId = user?.id;
 
+  // Early return if postId is not provided
+  if (!postId) {
+    console.warn('CommentButton: postId prop is missing');
+    return (
+      <button 
+        className={`bg-transparent dark:text-white ${className}`}
+        disabled
+        title="Cannot comment: post ID missing"
+      >
+        <i className="fa-regular fa-comment opacity-50"></i>
+      </button>
+    );
+  }
+
   const { data: comments = [], isLoading } = useQuery({
     queryKey: [QUERY_KEYS.COMMENTS_BY_POST, postId],
     queryFn: () => commentsQueryApi.getCommentsByPostId(postId),

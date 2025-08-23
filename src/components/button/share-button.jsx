@@ -56,10 +56,24 @@ const ShareButton = ({ post, className = '' }) => {
   const [chatPartner, setChatPartner] = useState(null);
   const { sendMessage, isConnected } = useChat(user, chatPartner);
 
-  // Generate share link and content
+  // Early return if post is not provided or missing required properties
+  if (!post || !post.id) {
+    console.warn('ShareButton: post prop is missing or invalid:', post);
+    return (
+      <button 
+        className={`bg-transparent text-xl dark:text-white ${className}`}
+        disabled
+        title="Cannot share: post information missing"
+      >
+        <i className="fa-regular fa-paper-plane opacity-50"></i>
+      </button>
+    );
+  }
+
+  // Generate share link and content with safe property access
   const shareLink = `${window.location.origin}/shared/${post.id}`;
-  const shareTitle = post?.content || 'Check out this post on Unify!';
-  const shareText = post?.content ? `${post.captions.substring(0, 100)}...` : 'Check out this amazing post on Unify!';
+  const shareTitle = post?.content || post?.captions || 'Check out this post on Unify!';
+  const shareText = post?.captions ? `${post.captions.substring(0, 100)}...` : 'Check out this amazing post on Unify!';
 
   // Filter friends by search
   const filteredFriends = useMemo(() => {
@@ -72,6 +86,11 @@ const ShareButton = ({ post, className = '' }) => {
   }, [friendUsers, search]);
 
   const handleSend = async (friend) => {
+    if (!post?.id) {
+      toast.error('Cannot share: post information missing');
+      return;
+    }
+    
     setSending(true);
     const content = `POST_SHARE:${post.id}`;
     try {
@@ -372,7 +391,7 @@ const ShareButton = ({ post, className = '' }) => {
                       </LineShareButton>
 
                       {/* Pinterest (if post has images) */}
-                      {post?.fileUrls && post.fileUrls.length > 0 && (
+                      {post?.fileUrls && Array.isArray(post.fileUrls) && post.fileUrls.length > 0 && (
                         <PinterestShareButton
                           url={shareLink}
                           media={post.fileUrls[0]}

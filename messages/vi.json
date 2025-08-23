@@ -194,7 +194,8 @@
             "Title": "Bài viết với #{hashtag}",
             "NoPosts": "Không tìm thấy bài viết nào với hashtag này",
             "Loading": "Đang tải...",
-            "Error": "Lỗi"
+            "Error": "Lỗi",
+            "PostsFound": "bài viết được tìm thấy"
         }
     },
     "Reels": {
