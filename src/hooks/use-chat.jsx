@@ -425,7 +425,7 @@ export const useChat = (user, chatPartner) => {
     retryDelay: 1000,
   });
 
-  // Chat list query - FIXED: Proper query key and enabled condition
+  // Chat list query
   const {
     data: chatList = [],
     isLoading: isLoadingChatList,

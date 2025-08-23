@@ -5,6 +5,12 @@ import FollowNotification from '../sidebar/_components/follow-notification';
 import LikeNotification from '../sidebar/_components/like-notification';
 import CommentNotification from '../sidebar/_components/comment-notification';
 import { TagNotification } from '../sidebar/_components/tag-notification';
+import ReportApprovedNotification from '../sidebar/_components/report-approved-notification';
+import AccountSuspendedNotification from '../sidebar/_components/account-suspended-notification';
+import AccountBannedNotification from '../sidebar/_components/account-banned-notification';
+import PostReportNotification from '../sidebar/_components/post-report-notification';
+import CommentReportNotification from '../sidebar/_components/comment-report-notification';
+import UserReportNotification from '../sidebar/_components/user-report-notification';
 import { getNotificationProps, isValidNotification } from '@/src/utils/notification.util';
 
 const NotificationGroup = ({ notifications, onNotificationClick }) => {
@@ -14,6 +20,12 @@ const NotificationGroup = ({ notifications, onNotificationClick }) => {
     like: LikeNotification,
     comment: CommentNotification,
     tag: TagNotification,
+    report_approved: ReportApprovedNotification,
+    account_suspended: AccountSuspendedNotification,
+    account_banned: AccountBannedNotification,
+    post_report: PostReportNotification,
+    comment_report: CommentReportNotification,
+    user_report: UserReportNotification,
   }), []);
 
   // ✅ REFACTORED: Render notification with cleaner logic

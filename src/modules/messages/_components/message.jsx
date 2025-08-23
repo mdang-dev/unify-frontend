@@ -242,7 +242,7 @@ const Message = ({ messages, messagesEndRef, avatar, onRetryMessage }) => {
   };
 
   return (
-    <div className="m-4 mb-0 flex flex-col gap-3">
+    <div className="flex flex-col gap-1 w-full">
       {messages.map((message, index) => {
         const isCurrentUser = message.sender === currentUser;
         const isFirstOfGroup = index === 0 || messages[index - 1].sender !== message.sender;
@@ -273,7 +273,7 @@ const Message = ({ messages, messagesEndRef, avatar, onRetryMessage }) => {
             )}
 
             <div
-              className={`flex max-w-[75%] flex-col ${
+              className={`flex max-w-[75%] min-w-0 flex-col ${
                 isCurrentUser ? 'items-end' : 'items-start'
               } ${!isCurrentUser && !isFirstOfGroup ? 'pl-[50px]' : ''}`}
             >

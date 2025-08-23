@@ -5,14 +5,34 @@ import FollowNotification from './follow-notification';
 import { TagNotification } from './tag-notification';
 import LikeNotification from './like-notification';
 import CommentNotification from './comment-notification';
+import ReportApprovedNotification from './report-approved-notification';
+import AccountSuspendedNotification from './account-suspended-notification';
+import AccountBannedNotification from './account-banned-notification';
+import PostReportNotification from './post-report-notification';
+import CommentReportNotification from './comment-report-notification';
+import UserReportNotification from './user-report-notification';
 import { useNotification } from '@/src/hooks/use-notification';
 import { useDesktopNotifications } from '@/src/hooks/use-desktop-notifications';
-import { getNotificationProps, isValidNotification } from '@/src/utils/notification.util';
 import dynamic from 'next/dynamic';
 
 const PostDetailModal = dynamic(() => import('../../post-detail-modal'), { ssr: false });
 
 const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
+  const [hasError, setHasError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // Error boundary effect
+  useEffect(() => {
+    const handleError = (error) => {
+      console.error('Notification modal error:', error);
+      setHasError(true);
+      setErrorMessage('Something went wrong loading notifications');
+    };
+
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
+
   const { 
     notifications, 
     unreadCount, 
@@ -20,133 +40,182 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
     markAllAsReadSilently,
     markAsRead, 
     isFetching,
-    setModalOpen
+    setModalOpen,
+    isWebSocketConnected,
+    webSocketError
   } = useNotification(userId);
   const { requestPermission, permission, isSupported } = useDesktopNotifications();
   
   const [postModalOpen, setPostModalOpen] = useState(false);
   const [selectedPostId, setSelectedPostId] = useState(null);
   const [selectedCommentId, setSelectedCommentId] = useState(null);
-  const [modalWidth, setModalWidth] = useState(0);
-  const [prevIsOpen, setPrevIsOpen] = useState(false);
 
+  // Reset error state when modal opens
   useEffect(() => {
-    setModalWidth(isNotificationOpen ? 471 : 0);
-    
-    if (isNotificationOpen && !prevIsOpen && unreadCount > 0) {
-      markAllAsReadSilently();
-      setModalOpen(true);
+    if (isNotificationOpen && hasError) {
+      setHasError(false);
+      setErrorMessage('');
     }
-    
-    setPrevIsOpen(isNotificationOpen);
-  }, [isNotificationOpen, unreadCount, markAllAsReadSilently, setModalOpen, prevIsOpen]);
+  }, [isNotificationOpen, hasError]);
 
   useEffect(() => {
-    if (!isNotificationOpen && prevIsOpen) {
+    if (isNotificationOpen) {
+      if (unreadCount > 0) {
+        markAllAsReadSilently();
+        setModalOpen(true);
+      }
+    } else {
       setModalOpen(false);
-      
       if (unreadCount > 0) {
         markAllAsRead();
       }
     }
-  }, [isNotificationOpen, unreadCount, markAllAsRead, setModalOpen, prevIsOpen]);
+  }, [isNotificationOpen, unreadCount, markAllAsReadSilently, markAllAsRead, setModalOpen]);
 
   const handleRequestDesktopNotifications = useCallback(async () => {
     const granted = await requestPermission();
-    if (granted) {
-      console.log('Desktop notifications enabled');
-    } else {
-      console.log('Desktop notifications denied');
-    }
+    // Desktop notification permission result handled silently
   }, [requestPermission]);
 
   const sortedNotifications = useMemo(() => {
-    return Array.isArray(notifications)
-      ? [...notifications].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-      : [];
+    try {
+      if (!Array.isArray(notifications)) {
+        return [];
+      }
+      return [...notifications].sort((a, b) => {
+        try {
+          const dateA = new Date(a?.timestamp || 0);
+          const dateB = new Date(b?.timestamp || 0);
+          return dateB - dateA;
+        } catch (error) {
+          return 0;
+        }
+      });
+    } catch (error) {
+      console.error('Error processing notifications:', error);
+      return [];
+    }
   }, [notifications]);
 
   const parseNotificationData = useCallback((notification) => {
-    let postId = null;
-    let commentId = null;
-
-    if (notification.data) {
-      try {
-        const data = JSON.parse(notification.data);
-        postId = data.postId || null;
-        commentId = data.commentId || null;
-      } catch (e) {
-        console.warn('[NotificationModal] Failed to parse data field:', e);
+    try {
+      if (!notification) return {};
+      
+      if (notification.data && typeof notification.data === 'string') {
+        return JSON.parse(notification.data);
       }
+      return notification.data || {};
+    } catch (error) {
+      return {};
     }
-
-    if (!postId) {
-      postId = notification?.data?.postId || 
-               notification?.data?.post?.id || 
-               notification?.postId || 
-               notification?.post?.id || 
-               null;
-
-      if (!postId && notification.link) {
-        try {
-          const path = new URL(notification.link, window.location.origin).pathname;
-          const match = path.match(/\/posts\/([^\/?#]+)/);
-          if (match) postId = match[1];
-        } catch {}
-      }
-    }
-
-    if (!commentId && ['comment', 'reply', 'comment_reply'].includes(notification.type?.toLowerCase())) {
-      commentId = notification?.data?.commentId || 
-                  notification?.data?.comment?.id || 
-                  notification?.commentId || 
-                  notification?.comment?.id || 
-                  null;
-    }
-
-    return { postId, commentId };
   }, []);
 
   const openFromNotification = useCallback((notification) => {
-    if (!notification) return;
+    try {
+      if (!notification) return;
 
-    const { postId, commentId } = parseNotificationData(notification);
+      const notificationData = parseNotificationData(notification);
+      const postId = notificationData.postId || notification.postId;
+      const commentId = notificationData.commentId;
 
-    if (postId) {
-      setSelectedPostId(postId);
-      setSelectedCommentId(commentId || null);
-      setPostModalOpen(true);
-    } else if (notification.link) {
-      try {
-        window.location.href = notification.link;
-      } catch {}
+      if (postId) {
+        const event = new CustomEvent('openPostModal', {
+          detail: { postId, commentId }
+        });
+        window.dispatchEvent(event);
+      }
+    } catch (error) {
+      console.error('Error opening notification:', error);
     }
+  }, [parseNotificationData]);
 
-    if (notification.id) {
+  const handleNotificationClick = useCallback((notification) => {
+    try {
+      if (!notification) return;
+
       markAsRead({ notificationId: notification.id });
+      openFromNotification(notification);
+    } catch (error) {
+      console.error('Error handling notification click:', error);
     }
-  }, [parseNotificationData, markAsRead]);
+  }, [markAsRead, openFromNotification]);
+
+  const isValidNotification = useCallback((notification) => {
+    try {
+      return notification && 
+             notification.id && 
+             notification.type && 
+             notification.sender && 
+             notification.timestamp;
+    } catch (error) {
+      return false;
+    }
+  }, []);
+
+  const getNotificationProps = useCallback((notification, onClick) => {
+    try {
+      const notificationData = parseNotificationData(notification);
+      
+      return {
+        id: notification.id,
+        sender: notification.sender,
+        message: notification.message,
+        timestamp: notification.timestamp,
+        isSeen: notification.isRead === true,
+        onClick: () => onClick(notification),
+        postId: notificationData.postId || notification.postId,
+        commentId: notificationData.commentId,
+        link: notification.link,
+        data: notificationData,
+      };
+    } catch (error) {
+      return {};
+    }
+  }, [parseNotificationData]);
 
   const notificationComponents = {
     follow: FollowNotification,
     like: LikeNotification,
     comment: CommentNotification,
     tag: TagNotification,
+    report_approved: ReportApprovedNotification,
+    account_suspended: AccountSuspendedNotification,
+    account_banned: AccountBannedNotification,
+    post_report: PostReportNotification,
+    comment_report: CommentReportNotification,
+    user_report: UserReportNotification,
   };
 
   const renderNotification = useCallback((notification) => {
-    if (!isValidNotification(notification)) return null;
+    try {
+      if (!isValidNotification(notification)) return null;
 
-    const type = notification.type.toLowerCase();
-    const Component = notificationComponents[type];
-    if (!Component) return null;
+      const type = notification.type?.toLowerCase();
+      if (!type) {
+        return null;
+      }
 
-    if (type === 'tag') {
-      return <Component key={notification.id} isSeen={notification.isRead === true} />;
+      const Component = notificationComponents[type];
+      if (!Component) {
+        return null;
+      }
+
+      // Special case for TagNotification (different props)
+      if (type === 'tag') {
+        return <Component key={notification.id} isSeen={notification.isRead === true} />;
+      }
+
+      const props = getNotificationProps(notification, openFromNotification);
+      if (!props || Object.keys(props).length === 0) {
+        return null;
+      }
+
+      return <Component key={notification.id} {...props} />;
+    } catch (error) {
+      console.error('Error rendering notification:', error, notification);
+      return null;
     }
-
-    return <Component key={notification.id} {...getNotificationProps(notification, openFromNotification)} />;
-  }, [openFromNotification]);
+  }, [openFromNotification, isValidNotification, getNotificationProps, notificationComponents]);
 
   const handleClosePostModal = useCallback(() => {
     setPostModalOpen(false);
@@ -169,69 +238,71 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
   }, []);
 
   return (
-    <div className="fixed left-20 z-50 flex justify-start border-l bg-black bg-opacity-50 dark:border-transparent">
+    <div className={`fixed left-20 z-50 flex justify-start border-l bg-black bg-opacity-50 dark:border-transparent transition-all duration-300 ease-in-out ${isNotificationOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
       <div
         ref={modalRef}
-        className={`h-screen max-w-lg overflow-hidden border-r border-neutral-200 bg-white text-black shadow-lg dark:border-transparent dark:bg-neutral-900 dark:text-white ${
-          isNotificationOpen ? 'animate-fadeScale' : 'animate-fadeOut'
-        } transition-all duration-300 ease-in-out`}
-        style={{ width: modalWidth }}
+        className={`h-screen bg-white overflow-hidden rounded-r-lg border-l border-neutral-300 dark:border-transparent dark:bg-neutral-900 transition-all duration-300 ease-in-out ${
+          isNotificationOpen && 'animate-fadeScale shadow-right-left'
+        } ${
+          !isNotificationOpen && 'animate-fadeOut'
+        }`}
+        style={{ width: isNotificationOpen ? 510 : 0 }}
       >
-        <div className="border-b border-gray-200 px-5 py-4 dark:border-neutral-700">
-          <div className="mb-3 flex items-center justify-between">
-            <h1 className="text-2xl font-bold">Notifications</h1>
-            <div className="flex items-center space-x-2">
-              {isSupported && permission !== 'granted' && (
-                <button
-                  onClick={handleRequestDesktopNotifications}
-                  className="text-xs text-neutral-800 hover:text-zinc-400 dark:text-white dark:hover:text-zinc-400"
-                  title="Enable push notifications for desktop and mobile browsers"
-                >
-                  <i className="fa-solid fa-desktop mr-1"></i>
-                  Enable Push
-                </button>
-              )}
-              {!isSupported && (
-                <span
-                  className="text-xs text-gray-500 dark:text-gray-400"
-                  title="Push notifications are not supported in this browser"
-                >
-                  <i className="fa-solid fa-info-circle mr-1"></i>
-                  Not Supported
-                </span>
-              )}
-            </div>
+        <div className="flex h-16 items-center justify-between border-b border-white px-5 dark:border-black">
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl font-semibold text-black dark:text-white">
+              Notifications
+            </h2>
           </div>
-          {!isSupported && (
-            <div className="mb-3 rounded-md bg-yellow-50 p-3 text-sm text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200">
-              <i className="fa-solid fa-exclamation-triangle mr-2"></i>
-              Push notifications are not supported in this browser. Consider using Chrome, Firefox, Safari, or Edge for the best experience.
-            </div>
-          )}
+          {/* <button
+            onClick={handleRequestDesktopNotifications}
+            className="flex flex-col items-center gap-1 rounded-lg bg-blue-500 px-3 py-2 text-white transition-all duration-200 hover:bg-blue-600 active:scale-95"
+          >
+            <i className="fa-solid fa-bell text-sm"></i>
+            <span className="text-xs font-medium">Enable</span>
+            <span className="text-xs">Push</span>
+          </button> */}
         </div>
 
-        <div className="no-scrollbar h-[calc(100%-120px)] max-h-full space-y-1 overflow-y-auto px-5 pb-5 pt-3">
+        {!isSupported && (
+          <div className="border-b border-gray-200 px-5 py-3 dark:border-gray-800">
+            <div className="flex items-center gap-2 text-sm text-orange-600 dark:text-orange-400">
+              <i className="fa-solid fa-exclamation-triangle text-xs"></i>
+              Desktop notifications not supported in this browser
+            </div>
+          </div>
+        )}
+
+        <div className="no-scrollbar h-[calc(100%-70px)] max-h-full space-y-1 overflow-y-auto px-5 pb-5 pt-3 transition-all duration-300 ease-in-out">
           {isFetching && sortedNotifications.length === 0 ? (
             <div className="flex items-center justify-center py-8">
-              <div className="text-gray-400 dark:text-gray-600">Loading notifications...</div>
-            </div>
-          ) : sortedNotifications.length > 0 ? (
-            sortedNotifications.map((notification, index) => (
-              <div key={notification.id} className="space-y-2">
-                {renderNotification(notification)}
-
-                {index < sortedNotifications.length - 1 && (
-                  <hr className="my-5 border-white dark:border-black" />
-                )}
+              <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                <i className="fa-solid fa-circle-notch fa-spin"></i>
+                Loading notifications...
               </div>
-            ))
-          ) : (
-            <div className="flex flex-col items-center justify-center py-8">
-              <i className="fa-solid fa-bell mb-4 text-4xl text-gray-300 dark:text-gray-600"></i>
-              <p className="text-center text-gray-400 dark:text-gray-600">No notifications yet</p>
-              <p className="mt-2 text-center text-sm text-gray-300 dark:text-gray-700">
-                When you get notifications, they&apos;ll show up here
+            </div>
+          ) : sortedNotifications.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <div className="mb-3 rounded-full bg-gray-100 p-3 dark:bg-gray-800">
+                <i className="fa-regular fa-bell text-2xl text-gray-400"></i>
+              </div>
+              <h3 className="mb-1 text-lg font-medium text-gray-900 dark:text-white">
+                No notifications yet
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                When you get notifications, they'll show up here
               </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {sortedNotifications.map((notification, index) => (
+                <div
+                  key={notification.id}
+                  className="notification-item"
+                >
+                  {renderNotification(notification)}
+                </div>
+              ))}
             </div>
           )}
         </div>
