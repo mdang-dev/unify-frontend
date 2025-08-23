@@ -58,6 +58,25 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
     }
   }, [isNotificationOpen, hasError]);
 
+  // ✅ FIX: Reset post modal state when notification modal closes
+  useEffect(() => {
+    if (!isNotificationOpen) {
+      setPostModalOpen(false);
+      setSelectedPostId(null);
+      setSelectedCommentId(null);
+    }
+  }, [isNotificationOpen]);
+
+  // ✅ FIX: Reset post modal state when notification modal is reopened
+  useEffect(() => {
+    if (isNotificationOpen) {
+      // Reset any stale post modal state when notification modal opens
+      setPostModalOpen(false);
+      setSelectedPostId(null);
+      setSelectedCommentId(null);
+    }
+  }, [isNotificationOpen]);
+
   useEffect(() => {
     if (isNotificationOpen) {
       if (unreadCount > 0) {
@@ -101,11 +120,28 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
     try {
       if (!notification) return {};
       
+      // ✅ DEBUG: Log raw notification data
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[NotificationModal] Parsing notification data:', {
+          rawData: notification.data,
+          type: typeof notification.data,
+          hasData: !!notification.data,
+          notificationType: notification.type,
+          link: notification.link,
+          postId: notification.postId
+        });
+      }
+      
       if (notification.data && typeof notification.data === 'string') {
-        return JSON.parse(notification.data);
+        const parsed = JSON.parse(notification.data);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[NotificationModal] Parsed JSON data:', parsed);
+        }
+        return parsed;
       }
       return notification.data || {};
     } catch (error) {
+      console.error('Error parsing notification data:', error);
       return {};
     }
   }, []);
@@ -115,14 +151,62 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
       if (!notification) return;
 
       const notificationData = parseNotificationData(notification);
-      const postId = notificationData.postId || notification.postId;
+      let postId = notificationData.postId || notification.postId;
       const commentId = notificationData.commentId;
 
-      if (postId) {
-        const event = new CustomEvent('openPostModal', {
-          detail: { postId, commentId }
+      // ✅ FIX: Extract postId from link field for like notifications if not found in data
+      if (!postId && notification.link) {
+        const linkMatch = notification.link.match(/\/posts\/([^\/]+)/);
+        if (linkMatch) {
+          postId = linkMatch[1];
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[NotificationModal] Extracted postId from link:', postId);
+          }
+        }
+      }
+
+      // ✅ FIX: Additional fallback - try to extract from message or other fields
+      if (!postId && notification.message) {
+        const messageMatch = notification.message.match(/\/posts\/([^\/]+)/);
+        if (messageMatch) {
+          postId = messageMatch[1];
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[NotificationModal] Extracted postId from message:', postId);
+          }
+        }
+      }
+
+      // ✅ DEBUG: Log notification data for troubleshooting
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[NotificationModal] Opening notification:', {
+          notification,
+          notificationData,
+          postId,
+          commentId,
+          type: notification.type,
+          link: notification.link,
+          message: notification.message
         });
-        window.dispatchEvent(event);
+      }
+
+      if (postId) {
+        // ✅ FIX: Set state directly instead of using custom event
+        setSelectedPostId(postId);
+        setSelectedCommentId(commentId || null);
+        setPostModalOpen(true);
+      } else {
+        console.warn('[NotificationModal] No postId found in notification:', notification);
+        // ✅ DEBUG: Log all available fields for debugging
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[NotificationModal] Available notification fields:', {
+            id: notification.id,
+            type: notification.type,
+            data: notification.data,
+            link: notification.link,
+            message: notification.message,
+            postId: notification.postId
+          });
+        }
       }
     } catch (error) {
       console.error('Error opening notification:', error);
@@ -132,6 +216,15 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
   const handleNotificationClick = useCallback((notification) => {
     try {
       if (!notification) return;
+
+      // ✅ DEBUG: Log notification click
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[NotificationModal] Notification clicked:', {
+          id: notification.id,
+          type: notification.type,
+          data: notification.data
+        });
+      }
 
       markAsRead({ notificationId: notification.id });
       openFromNotification(notification);
@@ -155,6 +248,15 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
   const getNotificationProps = useCallback((notification, onClick) => {
     try {
       const notificationData = parseNotificationData(notification);
+      let postId = notificationData.postId || notification.postId;
+      
+      // ✅ FIX: Extract postId from link field if not found in data (for like notifications)
+      if (!postId && notification.link) {
+        const linkMatch = notification.link.match(/\/posts\/([^\/]+)/);
+        if (linkMatch) {
+          postId = linkMatch[1];
+        }
+      }
       
       return {
         id: notification.id,
@@ -162,8 +264,8 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
         message: notification.message,
         timestamp: notification.timestamp,
         isSeen: notification.isRead === true,
-        onClick: () => onClick(notification),
-        postId: notificationData.postId || notification.postId,
+        onClick: () => onClick(notification), // ✅ FIX: Ensure onClick is properly bound
+        postId: postId,
         commentId: notificationData.commentId,
         link: notification.link,
         data: notificationData,
@@ -195,6 +297,16 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
         return null;
       }
 
+      // ✅ DEBUG: Log like notification data specifically
+      if (type === 'like' && process.env.NODE_ENV === 'development') {
+        console.log('[NotificationModal] Rendering like notification:', {
+          id: notification.id,
+          data: notification.data,
+          link: notification.link,
+          postId: notification.postId
+        });
+      }
+
       const Component = notificationComponents[type];
       if (!Component) {
         return null;
@@ -205,9 +317,14 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
         return <Component key={notification.id} isSeen={notification.isRead === true} />;
       }
 
-      const props = getNotificationProps(notification, openFromNotification);
+      const props = getNotificationProps(notification, handleNotificationClick); // ✅ FIX: Use handleNotificationClick to mark as read
       if (!props || Object.keys(props).length === 0) {
         return null;
+      }
+
+      // ✅ DEBUG: Log final props for like notifications
+      if (type === 'like' && process.env.NODE_ENV === 'development') {
+        console.log('[NotificationModal] Like notification props:', props);
       }
 
       return <Component key={notification.id} {...props} />;
@@ -215,27 +332,29 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
       console.error('Error rendering notification:', error, notification);
       return null;
     }
-  }, [openFromNotification, isValidNotification, getNotificationProps, notificationComponents]);
+  }, [handleNotificationClick, isValidNotification, getNotificationProps, notificationComponents]);
 
   const handleClosePostModal = useCallback(() => {
+    // ✅ FIX: Only close post modal, keep notification modal open
     setPostModalOpen(false);
     setSelectedPostId(null);
     setSelectedCommentId(null);
   }, []);
 
-  useEffect(() => {
-    const handleOpenPostModal = (event) => {
-      const { postId, commentId } = event.detail || {};
-      if (!postId) return;
-      
-      setSelectedPostId(postId);
-      setSelectedCommentId(commentId || null);
-      setPostModalOpen(true);
-    };
+  // ✅ REMOVE: No longer need custom event listener since we handle state directly
+  // useEffect(() => {
+  //   const handleOpenPostModal = (event) => {
+  //     const { postId, commentId } = event.detail || {};
+  //     if (!postId) return;
+  //     
+  //     setSelectedPostId(postId);
+  //     setSelectedCommentId(commentId || null);
+  //     setPostModalOpen(true);
+  //   };
 
-    window.addEventListener('openPostModal', handleOpenPostModal);
-    return () => window.removeEventListener('openPostModal', handleOpenPostModal);
-  }, []);
+  //   window.addEventListener('openPostModal', handleOpenPostModal);
+  //   return () => window.removeEventListener('openPostModal', handleOpenPostModal);
+  // }, []);
 
   return (
     <div className={`fixed left-20 z-50 flex justify-start border-l bg-black bg-opacity-50 dark:border-transparent transition-all duration-300 ease-in-out ${isNotificationOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
@@ -293,6 +412,11 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
             </div>
           ) : (
             <div className="space-y-2">
+              {process.env.NODE_ENV === 'development' && (
+                <div className="text-xs text-gray-500 p-2 bg-gray-100 rounded">
+                  Rendering {sortedNotifications.length} notifications
+                </div>
+              )}
               {sortedNotifications.map((notification, index) => (
                 <div
                   key={notification.id}
@@ -308,6 +432,7 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
 
       {postModalOpen && selectedPostId && (
         <PostDetailModal
+          key={`${selectedPostId}-${selectedCommentId || 'no-comment'}`} // ✅ FIX: Add key to force re-render when post/comment changes
           postId={selectedPostId}
           onClose={handleClosePostModal}
           scrollToCommentId={selectedCommentId}
