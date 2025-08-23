@@ -388,7 +388,7 @@ const Message = ({ messages, messagesEndRef, avatar, onRetryMessage, onReply }) 
   };
 
   return (
-    <div className="m-4 mb-0 flex flex-col gap-3">
+    <div className="flex flex-col gap-3 p-4 max-w-full overflow-hidden">
       {messages.map((message, index) => {
         const isCurrentUser = message.sender === currentUser;
         const isFirstOfGroup = index === 0 || messages[index - 1].sender !== message.sender;
@@ -446,27 +446,27 @@ const Message = ({ messages, messagesEndRef, avatar, onRetryMessage, onReply }) 
         return (
           <div
             key={`${message.id || message.timestamp || 'no-id'}-${index}`}
-            className={`message-item group flex ${isCurrentUser ? 'justify-end' : 'justify-start'} rounded-lg p-1 transition-all duration-200`}
+            className={`message-item group flex ${isCurrentUser ? 'justify-end' : 'justify-start'} rounded-xl p-2 transition-all duration-200 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 max-w-full`}
             data-message-id={message.id || message.timestamp || `temp-${index}`}
             data-message-index={index}
             data-message-sender={message.sender}
           >
             {isFirstOfGroup && !isCurrentUser && (
-              <div className="mr-3">
-                <Link href={`/others-profile/${messages[0]?.sender || 'unknown'}`} className="hover:opacity-80 transition-opacity">
+              <div className="mr-3 flex-shrink-0">
+                <Link href={`/others-profile/${messages[0]?.sender || 'unknown'}`} className="hover:opacity-80 transition-all duration-200 hover:scale-105">
                   <img
                     src={avatar}
                     alt="Avatar"
-                    className="h-10 w-10 rounded-full border-2 border-neutral-700 cursor-pointer"
-                    width={35}
-                    height={35}
+                    className="h-10 w-10 rounded-full border-2 border-blue-200 dark:border-blue-700 cursor-pointer shadow-md hover:shadow-lg transition-all duration-200"
+                    width={40}
+                    height={40}
                   />
                 </Link>
               </div>
             )}
 
             <div
-              className={`relative flex max-w-[75%] flex-col ${
+              className={`relative flex max-w-[75%] flex-col min-w-0 ${
                 isCurrentUser ? 'items-end' : 'items-start'
               } ${!isCurrentUser && !isFirstOfGroup ? 'pl-[50px]' : ''} group`}
             >
@@ -486,15 +486,15 @@ const Message = ({ messages, messagesEndRef, avatar, onRetryMessage, onReply }) 
               {/* Reply Display - Enhanced styling to distinguish from regular messages */}
               {message.replyToMessageId && (
                 <div 
-                  className="mb-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border-l-4 border-blue-400 dark:border-blue-500 cursor-pointer hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-800/30 dark:hover:to-indigo-800/30 hover:border-blue-500 dark:hover:border-blue-400 transition-all duration-200 group/reply shadow-sm hover:shadow-md"
+                  className="mb-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-2xl border-l-4 border-blue-400 dark:border-blue-500 cursor-pointer hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-800/40 dark:hover:to-indigo-800/40 hover:border-blue-500 dark:hover:border-blue-400 transition-all duration-200 group/reply shadow-md hover:shadow-lg"
                   onClick={() => scrollToReplyMessage(message.replyToMessageId)}
                   title="Click to view original message"
                 >
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-800/50">
-                      <Reply className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-800/60">
+                      <Reply className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                     </div>
-                    <span className="text-xs text-blue-700 dark:text-blue-300 font-medium">
+                    <span className="text-sm text-blue-700 dark:text-blue-300 font-medium">
                       {(() => {
                         const replyToMessage = messages.find(msg => msg.id === message.replyToMessageId);
                         if (replyToMessage) {
@@ -505,7 +505,7 @@ const Message = ({ messages, messagesEndRef, avatar, onRetryMessage, onReply }) 
                       })()}
                     </span>
                   </div>
-                  <div className="text-xs text-blue-800 dark:text-blue-200 bg-white/80 dark:bg-gray-800/80 p-2 rounded border border-blue-200 dark:border-blue-700/50 group-hover:border-gray-400 dark:group-hover:border-gray-600 transition-colors">
+                  <div className="text-sm text-blue-800 dark:text-blue-200 bg-white/90 dark:bg-gray-800/90 p-3 rounded-xl border border-blue-200 dark:border-blue-700/60 group-hover:border-blue-300 dark:group-hover:border-blue-600 transition-colors">
                     {(() => {
                       const replyToMessage = messages.find(msg => msg.id === message.replyToMessageId);
                       if (replyToMessage) {
@@ -652,14 +652,20 @@ const Message = ({ messages, messagesEndRef, avatar, onRetryMessage, onReply }) 
                   
                   {message.content && (
                     <div
-                      className={`relative rounded-2xl p-3 pb-1 shadow-md transition-all duration-300 ease-in-out ${
+                      className={`relative rounded-3xl p-4 pb-2 shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out max-w-full break-words ${
                         isCurrentUser
-                          ? 'bg-gradient-to-br from-gray-600 to-gray-700 dark:from-gray-700 dark:to-gray-800 text-white'
-                          : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700'
+                          ? 'bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 text-white shadow-blue-500/25'
+                          : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-100 dark:border-gray-700 shadow-gray-200/50 dark:shadow-gray-800/50'
                       }`}
                     >
-                      {renderContent(message.content)}
-                      <div className="pb-1 text-[#d4d7de] dark:text-white text-xs flex items-center gap-2">
+                      <div className="break-words">
+                        {renderContent(message.content)}
+                      </div>
+                      <div className={`pb-1 text-xs flex items-center gap-2 mt-2 ${
+                        isCurrentUser 
+                          ? 'text-blue-100 dark:text-blue-200' 
+                          : 'text-gray-500 dark:text-gray-400'
+                      }`}>
                         <span>{formatMessageTime(message.timestamp)}</span>
                         {shouldShowStatus && (
                           <span className="text-green-400 text-lg"><CheckCheck className='w-4 h-4'/></span>

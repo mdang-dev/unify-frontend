@@ -114,22 +114,37 @@ export const useChat = (user, chatPartner) => {
       return [];
     }
     
-    // ✅ FIXED: Minimal deduplication to preserve real-time functionality
+    // ✅ FIXED: Improved deduplication to prevent file message duplicates
     const allMessages = [...serverMessages, ...optimistic];
     
-    // ✅ FIXED: Only remove exact duplicates by ID to preserve real-time messages
+    // ✅ FIXED: Better duplicate removal logic for file messages
     const uniqueMessages = allMessages.reduce((acc, current) => {
       const isDuplicate = acc.some(msg => {
-        // Only remove exact duplicates by ID
+        // Check by ID first (most reliable)
         if (msg.id === current.id) return true;
         
-        // For optimistic messages, be very lenient to preserve real-time functionality
+        // For optimistic messages, check content and time more strictly
         if (current.isOptimistic && msg.isOptimistic) {
           // Only remove if it's the exact same optimistic message (same timestamp)
           if (msg.content === current.content && 
               msg.sender === current.sender &&
               Math.abs(new Date(msg.timestamp).getTime() - new Date(current.timestamp).getTime()) < 100) { // Very strict: only 100ms
             return true;
+          }
+        }
+        
+        // For file messages, check content, sender, and time more carefully
+        if (msg.content === current.content && 
+            msg.sender === current.sender &&
+            msg.receiver === current.receiver) {
+          const timeDiff = Math.abs(new Date(msg.timestamp).getTime() - new Date(current.timestamp).getTime());
+          // For file messages, use a wider time window to catch duplicates
+          if (timeDiff < 2000) { // 2 seconds for file uploads
+            // Additional check: if both have fileUrls, they're likely duplicates
+            if (msg.fileUrls && current.fileUrls && 
+                msg.fileUrls.length > 0 && current.fileUrls.length > 0) {
+              return true;
+            }
           }
         }
         
@@ -157,19 +172,12 @@ export const useChat = (user, chatPartner) => {
       return true;
     });
     
-    // ✅ OPTIMIZED: Only sort if we have multiple messages
-    if (validMessages.length <= 1) {
-      return validMessages;
-    }
-    
-    // ✅ IMPROVED: Sort with better error handling
-    try {
-      return sortMessages(validMessages);
-    } catch (error) {
-      console.error('Error sorting messages:', error);
-      // Fallback: return messages in original order
-      return validMessages;
-    }
+    // ✅ IMPROVED: Sort messages by timestamp for consistent ordering
+    return validMessages.sort((a, b) => {
+      const timeA = new Date(a.timestamp).getTime();
+      const timeB = new Date(b.timestamp).getTime();
+      return timeA - timeB;
+    });
   }, [conversationMessages, optimisticMessages, chatPartnerId]);
 
   // Helper function to check if timestamps are close (for optimistic message matching)
@@ -245,9 +253,12 @@ export const useChat = (user, chatPartner) => {
               const newMap = new Map(prev);
               const existing = newMap.get(receivedMessage.sender) || [];
               
-              // ✅ FIXED: Very lenient duplicate checking to preserve real-time functionality
+              // ✅ FIXED: Improved duplicate checking to prevent duplicates
               const messageExists = existing.some(msg => 
-                msg.id === receivedMessage.id // Only check by ID
+                msg.id === receivedMessage.id || // Check by ID first
+                (msg.content === receivedMessage.content && 
+                 msg.sender === receivedMessage.sender &&
+                 Math.abs(new Date(msg.timestamp).getTime() - new Date(receivedMessage.timestamp).getTime()) < 1000) // 1 second window
               );
               
               if (!messageExists) {
@@ -297,54 +308,85 @@ export const useChat = (user, chatPartner) => {
         } else if (isOutgoingMessage) {
           // This is a message sent by the current user to someone else
           
-          // ✅ OPTIMIZED: Remove optimistic message immediately
-          removeOptimisticMessage(receivedMessage.receiver, receivedMessage.content, receivedMessage.timestamp);
-          
-          // ✅ OPTIMIZED: Use flushSync for immediate updates
+          // ✅ FIXED: Remove optimistic message immediately and replace with confirmed message
           flushSync(() => {
-            // Add to conversation messages (grouped by receiver)
-            setConversationMessages(prev => {
+            // Remove optimistic message
+            setOptimisticMessages(prev => {
               const newMap = new Map(prev);
               const existing = newMap.get(receivedMessage.receiver) || [];
-              const updated = [...existing, receivedMessage];
-              newMap.set(receivedMessage.receiver, sortMessages(updated));
+              
+              // ✅ IMPROVED: Better optimistic message removal for file messages
+              const filtered = existing.filter(msg => {
+                if (!msg.isOptimistic) return true;
+                
+                // For file messages, match by content and approximate time
+                const contentMatch = msg.content === receivedMessage.content;
+                const timeDiff = Math.abs(new Date(msg.timestamp).getTime() - new Date(receivedMessage.timestamp).getTime());
+                const timeMatch = timeDiff < 2000; // 2 second window for file uploads
+                
+                // Remove if it matches the confirmed message
+                return !(contentMatch && timeMatch);
+              });
+              
+              newMap.set(receivedMessage.receiver, filtered);
               return newMap;
             });
             
-            // Update chat list to show latest message
-            queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user.id], (old) => {
-              if (!old) return old;
+            // Add confirmed message to conversation
+            setConversationMessages(prev => {
+              const newMap = new Map(prev);
+              const existing = newMap.get(receivedMessage.receiver) || [];
               
-              // ✅ OPTIMIZED: Update and reorder chat list
-              const updatedChats = old.map(chat => {
-                if (chat.userId === receivedMessage.receiver) {
-                  return {
-                    ...chat,
-                    lastMessage: receivedMessage.content || 'File sent',
-                    lastUpdated: receivedMessage.timestamp,
-                    lastMessageSender: receivedMessage.sender,
-                  };
-                }
-                return chat;
-              });
+              // ✅ FIXED: Check for duplicates before adding
+              const messageExists = existing.some(msg => 
+                msg.id === receivedMessage.id || // Check by ID first
+                (msg.content === receivedMessage.content && 
+                 msg.sender === receivedMessage.sender &&
+                 Math.abs(new Date(msg.timestamp).getTime() - new Date(receivedMessage.timestamp).getTime()) < 1000) // 1 second window
+              );
               
-              // ✅ OPTIMIZED: Sort to move current chat partner to top
-              return updatedChats.sort((a, b) => {
-                // Current chat partner goes to top
-                if (a.userId === receivedMessage.receiver) return -1;
-                if (b.userId === receivedMessage.receiver) return 1;
-                
-                // Sort others by last updated time (newest first)
-                const timeA = new Date(a.lastUpdated || 0).getTime();
-                const timeB = new Date(b.lastUpdated || 0).getTime();
-                return timeB - timeA;
-              });
+              if (!messageExists) {
+                const updated = [...existing, receivedMessage];
+                newMap.set(receivedMessage.receiver, sortMessages(updated));
+              }
+              
+              return newMap;
+            });
+          });
+          
+          // Update chat list to show latest message
+          queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user.id], (old) => {
+            if (!old) return old;
+            
+            // ✅ OPTIMIZED: Update and reorder chat list
+            const updatedChats = old.map(chat => {
+              if (chat.userId === receivedMessage.receiver) {
+                return {
+                  ...chat,
+                  lastMessage: receivedMessage.content || 'File sent',
+                  lastUpdated: receivedMessage.timestamp,
+                  lastMessageSender: receivedMessage.sender,
+                };
+              }
+              return chat;
+            });
+            
+            // ✅ OPTIMIZED: Sort to move current chat partner to top
+            return updatedChats.sort((a, b) => {
+              // Current chat partner goes to top
+              if (a.userId === receivedMessage.receiver) return -1;
+              if (b.userId === receivedMessage.receiver) return 1;
+              
+              // Sort others by last updated time (newest first)
+              const timeA = new Date(a.lastUpdated || 0).getTime();
+              const timeB = new Date(b.lastUpdated || 0).getTime();
+              return timeB - timeA;
             });
           });
         }
-              } catch (error) {
-          // Handle error silently
-        }
+      } catch (error) {
+        // Handle error silently
+      }
     });
 
     // Subscribe to chat updates
@@ -390,16 +432,16 @@ export const useChat = (user, chatPartner) => {
               const newMap = new Map(prev);
               const existing = newMap.get(sendConfirmation.receiver) || [];
               
-              // ✅ FIXED: Very lenient optimistic message removal to preserve real-time functionality
+              // ✅ FIXED: Improved optimistic message removal for file messages
               const filtered = existing.filter(msg => {
                 if (!msg.isOptimistic) return true;
                 
-                // Match by content and approximate time, but be very lenient
+                // For file messages, match by content and approximate time
                 const contentMatch = msg.content === sendConfirmation.content;
                 const timeDiff = Math.abs(new Date(msg.timestamp).getTime() - new Date(sendConfirmation.timestamp).getTime());
-                const timeMatch = timeDiff < 1000; // 1 second window for matching
+                const timeMatch = timeDiff < 2000; // 2 second window for file uploads
                 
-                // Keep message if it doesn't match the confirmed one
+                // Remove if it matches the confirmed message
                 return !(contentMatch && timeMatch);
               });
               
@@ -424,9 +466,12 @@ export const useChat = (user, chatPartner) => {
             const newMap = new Map(prev);
             const existing = newMap.get(sendConfirmation.receiver) || [];
             
-            // ✅ FIXED: Very lenient duplicate checking to preserve real-time functionality
+            // ✅ FIXED: Improved duplicate checking to prevent duplicates
             const messageExists = existing.some(msg => 
-              msg.id === sendConfirmation.id // Only check by ID
+              msg.id === sendConfirmation.id || // Check by ID first
+              (msg.content === sendConfirmation.content && 
+               msg.sender === sendConfirmation.sender &&
+               Math.abs(new Date(msg.timestamp).getTime() - new Date(sendConfirmation.timestamp).getTime()) < 1000) // 1 second window
             );
             
             if (!messageExists) {
@@ -488,77 +533,80 @@ export const useChat = (user, chatPartner) => {
                 const newMap = new Map(prev);
                 const existing = newMap.get(sendConfirmation.receiver) || [];
                 
-                // ✅ FIXED: Very lenient optimistic message removal to preserve real-time functionality
+                // ✅ FIXED: Improved optimistic message removal for file messages
                 const filtered = existing.filter(msg => {
                   if (!msg.isOptimistic) return true;
                   
-                  // Match by content and approximate time, but be very lenient
+                  // For file messages, match by content and approximate time
                   const contentMatch = msg.content === sendConfirmation.content;
                   const timeDiff = Math.abs(new Date(msg.timestamp).getTime() - new Date(sendConfirmation.timestamp).getTime());
-                  const timeMatch = timeDiff < 1000; // 1 second window for matching
+                  const timeMatch = timeDiff < 2000; // 2 second window for file uploads
                   
-                  // Keep message if it doesn't match the confirmed one
+                  // Remove if it matches the confirmed message
                   return !(contentMatch && timeMatch);
                 });
                 
                 newMap.set(sendConfirmation.receiver, filtered);
                 return newMap;
               });
+            });
+
+            // Add the confirmed message to conversation
+            const confirmedMessage = {
+              id: sendConfirmation.id, // Use server-generated ID
+              content: sendConfirmation.content,
+              sender: sendConfirmation.sender,
+              receiver: sendConfirmation.receiver,
+              timestamp: sendConfirmation.timestamp,
+              fileUrls: sendConfirmation.fileUrls || [],
+              replyToMessageId: sendConfirmation.replyToMessageId,
+              isOptimistic: false,
+            };
+            
+            setConversationMessages(prev => {
+              const newMap = new Map(prev);
+              const existing = newMap.get(sendConfirmation.receiver) || [];
               
-              // Add the confirmed message to conversation
-              const confirmedMessage = {
-                id: sendConfirmation.id, // Use server-generated ID
-                content: sendConfirmation.content,
-                sender: sendConfirmation.sender,
-                receiver: sendConfirmation.receiver,
-                timestamp: sendConfirmation.timestamp,
-                fileUrls: sendConfirmation.fileUrls || [],
-                replyToMessageId: sendConfirmation.replyToMessageId,
-                isOptimistic: false,
-              };
+              // ✅ FIXED: Improved duplicate checking to prevent duplicates
+              const messageExists = existing.some(msg => 
+                msg.id === sendConfirmation.id || // Check by ID first
+                (msg.content === sendConfirmation.content && 
+                 msg.sender === sendConfirmation.sender &&
+                 Math.abs(new Date(msg.timestamp).getTime() - new Date(sendConfirmation.timestamp).getTime()) < 1000) // 1 second window
+              );
               
-              setConversationMessages(prev => {
-                const newMap = new Map(prev);
-                const existing = newMap.get(sendConfirmation.receiver) || [];
-                
-                // ✅ FIXED: Very lenient duplicate checking to preserve real-time functionality
-                const messageExists = existing.some(msg => 
-                  msg.id === sendConfirmation.id // Only check by ID
-                );
-                
-                if (!messageExists) {
-                  const updated = [...existing, confirmedMessage];
-                  newMap.set(sendConfirmation.receiver, sortMessages(updated));
+              if (!messageExists) {
+                const updated = [...existing, confirmedMessage];
+                newMap.set(sendConfirmation.receiver, sortMessages(updated));
+              }
+              
+              return newMap;
+            });
+            
+            // ✅ OPTIMIZED: Update and reorder chat list
+            queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user.id], (old) => {
+              if (!old) return old;
+              
+              const updatedChats = old.map(chat => {
+                if (chat.userId === sendConfirmation.receiver) {
+                  return {
+                    ...chat,
+                    lastMessage: sendConfirmation.content || 'File sent',
+                    lastUpdated: sendConfirmation.timestamp,
+                    lastMessageSender: sendConfirmation.sender,
+                  };
                 }
-                
-                return newMap;
+                return chat;
               });
               
-              // ✅ OPTIMIZED: Update and reorder chat list
-              queryClient.setQueryData([QUERY_KEYS.CHAT_LIST, user.id], (old) => {
-                if (!old) return old;
+              // Sort to move current chat partner to top
+              return updatedChats.sort((a, b) => {
+                if (a.userId === sendConfirmation.receiver) return -1;
+                if (b.userId === sendConfirmation.receiver) return 1;
                 
-                const updatedChats = old.map(chat => {
-                  if (chat.userId === sendConfirmation.receiver) {
-                    return {
-                      ...chat,
-                      lastMessage: sendConfirmation.content || 'File sent',
-                      lastUpdated: sendConfirmation.timestamp,
-                      lastMessageSender: sendConfirmation.sender,
-                    };
-                  }
-                  return chat;
-                });
-                
-                // Sort to move current chat partner to top
-                return updatedChats.sort((a, b) => {
-                  if (a.userId === sendConfirmation.receiver) return -1;
-                  if (b.userId === sendConfirmation.receiver) return 1;
-                  
-                  const timeA = new Date(a.lastUpdated || 0).getTime();
-                  const timeB = new Date(b.lastUpdated || 0).getTime();
-                  return timeB - timeA;
-                });
+                const timeA = new Date(a.lastUpdated || 0).getTime();
+                const timeB = new Date(b.lastUpdated || 0).getTime();
+                return timeB - timeA;
               });
             });
           } else if (sendConfirmation.error) {
@@ -608,17 +656,25 @@ export const useChat = (user, chatPartner) => {
         
         if (existing.length === 0) return prev;
         
-        // ✅ FIXED: Only remove obvious duplicates to preserve real-time functionality
+        // ✅ FIXED: Better duplicate removal for file messages
         const uniqueMessages = existing.reduce((acc, current) => {
           const isDuplicate = acc.some(msg => {
-            // Only remove exact duplicates by ID
+            // Check by ID first (most reliable)
             if (msg.id === current.id) return true;
             
-            // For content duplicates, be extremely strict to avoid removing real-time messages
+            // For content duplicates, check more carefully for file messages
             if (msg.content === current.content && msg.sender === current.sender) {
               const timeDiff = Math.abs(new Date(msg.timestamp).getTime() - new Date(current.timestamp).getTime());
-              // Only remove if timestamps are very close (within 100ms) - likely a real duplicate
-              return timeDiff < 100;
+              
+              // For file messages, use wider time window
+              if (msg.fileUrls && current.fileUrls && 
+                  msg.fileUrls.length > 0 && current.fileUrls.length > 0) {
+                // If both have fileUrls, they're likely duplicates within 3 seconds
+                return timeDiff < 3000;
+              }
+              
+              // For text messages, use stricter time window
+              return timeDiff < 1000;
             }
             
             return false;
@@ -632,7 +688,7 @@ export const useChat = (user, chatPartner) => {
         }, []);
         
         if (uniqueMessages.length !== existing.length) {
-          console.log(`Cleaned up ${existing.length - uniqueMessages.length} obvious duplicate messages`);
+          console.log(`Cleaned up ${existing.length - uniqueMessages.length} duplicate messages`);
           newMap.set(chatPartnerId, sortMessages(uniqueMessages));
           return newMap;
         }
@@ -647,14 +703,30 @@ export const useChat = (user, chatPartner) => {
         
         if (existing.length === 0) return prev;
         
-        // ✅ FIXED: Only remove obvious optimistic duplicates
-        const uniqueOptimistic = existing.reduce((acc, current) => {
+        // ✅ FIXED: Better duplicate removal for optimistic file messages
+        const uniqueMessages = existing.reduce((acc, current) => {
           const isDuplicate = acc.some(msg => {
-            if (msg.content === current.content && msg.sender === current.sender) {
-              const timeDiff = Math.abs(new Date(msg.timestamp).getTime() - new Date(current.timestamp).getTime());
-              // Only remove if timestamps are very close (within 50ms) - likely a real duplicate
-              return timeDiff < 50;
+            // Check by ID first
+            if (msg.id === current.id) return true;
+            
+            // For optimistic messages, check content and time more strictly
+            if (msg.isOptimistic && current.isOptimistic) {
+              if (msg.content === current.content && 
+                  msg.sender === current.sender &&
+                  msg.receiver === current.receiver) {
+                const timeDiff = Math.abs(new Date(msg.timestamp).getTime() - new Date(current.timestamp).getTime());
+                
+                // For file messages, use wider time window
+                if (msg.fileUrls && current.fileUrls && 
+                    msg.fileUrls.length > 0 && current.fileUrls.length > 0) {
+                  return timeDiff < 2000; // 2 seconds for file uploads
+                }
+                
+                // For text messages, use stricter time window
+                return timeDiff < 500; // 500ms for text messages
+              }
             }
+            
             return false;
           });
           
@@ -665,9 +737,9 @@ export const useChat = (user, chatPartner) => {
           return acc;
         }, []);
         
-        if (uniqueOptimistic.length !== existing.length) {
-          console.log(`Cleaned up ${existing.length - uniqueOptimistic.length} obvious duplicate optimistic messages`);
-          newMap.set(chatPartnerId, uniqueOptimistic);
+        if (uniqueMessages.length !== existing.length) {
+          console.log(`Cleaned up ${existing.length - uniqueMessages.length} duplicate optimistic messages`);
+          newMap.set(chatPartnerId, uniqueMessages);
           return newMap;
         }
         
@@ -722,6 +794,7 @@ export const useChat = (user, chatPartner) => {
     if (serverMessages.length > 0 && chatPartnerId) {
       setConversationMessages(prev => {
         const newMap = new Map(prev);
+        const existing = newMap.get(chatPartnerId) || [];
         
         // ✅ IMPROVED: Better message synchronization with timestamp validation
         const validServerMessages = serverMessages.filter(msg => {
@@ -731,15 +804,33 @@ export const useChat = (user, chatPartner) => {
           }
           const timestamp = new Date(msg.timestamp);
           if (isNaN(timestamp.getTime())) {
-            console.warn('Server message has invalid timestamp:', msg);
+            console.warn('Server has invalid timestamp:', msg);
             return false;
           }
           return true;
         });
         
-        // ✅ IMPROVED: Sort server messages before storing
-        const sortedServerMessages = sortMessages(validServerMessages);
-        newMap.set(chatPartnerId, sortedServerMessages);
+        // ✅ IMPROVED: Merge server messages with existing ones, avoiding duplicates
+        const mergedMessages = [...existing];
+        
+        validServerMessages.forEach(serverMsg => {
+          // Check if this server message already exists
+          const exists = existing.some(existingMsg => 
+            existingMsg.id === serverMsg.id || // Check by ID first
+            (existingMsg.content === serverMsg.content && 
+             existingMsg.sender === serverMsg.sender &&
+             existingMsg.receiver === serverMsg.receiver &&
+             Math.abs(new Date(existingMsg.timestamp).getTime() - new Date(serverMsg.timestamp).getTime()) < 1000) // 1 second window
+          );
+          
+          if (!exists) {
+            mergedMessages.push(serverMsg);
+          }
+        });
+        
+        // ✅ IMPROVED: Sort merged messages before storing
+        const sortedMessages = sortMessages(mergedMessages);
+        newMap.set(chatPartnerId, sortedMessages);
         
         return newMap;
       });
@@ -839,6 +930,8 @@ export const useChat = (user, chatPartner) => {
         const isDuplicate = existing.some(msg => 
           msg.isOptimistic && 
           msg.content === optimisticMessage.content &&
+          msg.sender === optimisticMessage.sender &&
+          msg.receiver === optimisticMessage.receiver &&
           Math.abs(new Date(msg.timestamp).getTime() - new Date(optimisticMessage.timestamp).getTime()) < 1000
         );
         

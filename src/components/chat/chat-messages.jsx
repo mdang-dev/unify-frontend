@@ -38,13 +38,13 @@ export const ChatMessages = ({ chatPartner, user }) => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-gray-900">
+    <div className="flex flex-col h-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 max-w-full overflow-hidden">
       <ChatHeader chatPartner={chatPartner} />
       
       {/* Debug panel in development */}
       <DebugPanel />
       
-      <div className="flex-1 overflow-y-auto p-4 space-y-4" ref={messagesContainerRef}>
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 max-w-full" ref={messagesContainerRef}>
         {chatMessages.map((message) => (
           <MessageItem
             key={message.id || `temp-${message.timestamp}`}
