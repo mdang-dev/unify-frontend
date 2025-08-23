@@ -868,34 +868,35 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
   };
 
   return (
-    <div className="ml-auto">
-      <div className="flex w-full">
-        <div className="flex h-screen basis-1/3 flex-col">
-          <div className="sticky top-0 z-10 border-r-1 px-4 py-3 shadow-md dark:border-r-neutral-700 dark:bg-neutral-900">
-            <div className="mb-4 flex items-center justify-between">
-              <h1 className="text-3xl font-bold dark:text-white">{t('Title')}</h1>
+    <div className="w-full max-w-full overflow-hidden min-h-screen">
+      <div className="flex w-full h-screen max-h-screen">
+        {/* Left Sidebar - Chat List - Smaller for large devices */}
+        <div className="flex h-full w-full max-w-[280px] flex-col flex-shrink-0 border-r border-gray-200 dark:border-neutral-700 sm:max-w-[300px] md:max-w-[320px] lg:max-w-[340px] xl:max-w-[360px]">
+          <div className="sticky top-0 z-10 border-b border-gray-200 px-2 py-2 shadow-sm dark:border-neutral-700 dark:bg-neutral-900 sm:px-3 md:px-3 lg:px-4">
+            <div className="mb-2 flex items-center justify-between sm:mb-3 md:mb-3">
+              <h1 className="text-base font-bold dark:text-white sm:text-lg md:text-lg lg:text-xl">{t('Title')}</h1>
             </div>
-            <div className="mb-2">
+            <div className="mb-2 sm:mb-3">
               <Input
                 placeholder={t('Search')}
-                className={`h-10 w-full border-gray-300 p-3 placeholder-gray-500 dark:border-neutral-600`}
-                value={searchQuery} // Bind input to searchQuery state
-                onChange={(e) => setSearchQuery(e.target.value)} // Update searchQuery on input change
+                className="h-8 w-full border-gray-300 p-1.5 placeholder-gray-500 dark:border-neutral-600 text-sm sm:h-9 sm:p-2 sm:text-base md:h-9 md:p-2 lg:h-10 lg:p-2.5"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
           </div>
 
-          {/* Chat List */}
-          <div className="flex-1 overflow-y-scroll border-r-1 px-4 py-1 scrollbar-hide dark:border-r-neutral-700 dark:bg-black">
+          {/* Chat List - Smaller spacing for large devices */}
+          <div className="flex-1 overflow-y-auto px-2 py-1 scrollbar-hide dark:border-neutral-700 dark:bg-black sm:px-3 sm:py-2 md:px-3 lg:px-4">
             {!isUserHydrated ? (
               <div className="flex h-full items-center justify-center">
-                <p className="text-lg text-gray-500 dark:text-neutral-400">{t('LoadingUser')}</p>
+                <p className="text-base text-gray-500 dark:text-neutral-400 md:text-lg">{t('LoadingUser')}</p>
               </div>
             ) : isLoadingChatList ? (
               <ChatListSkeleton />
             ) : !chatList ? (
               <div className="flex h-full items-center justify-center">
-                <p className="text-lg text-gray-500 dark:text-neutral-400">
+                <p className="text-base text-gray-500 dark:text-neutral-400 md:text-lg">
                   {chatListError ? t('ErrorLoadingChats') : t('LoadingChats')}
                 </p>
               </div>
@@ -903,49 +904,48 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
               filteredChatList.map((chat, index) => (
                 <div
                   key={chat?.userId || index}
-                  className={`mt-3 flex w-full max-w-md cursor-pointer items-center justify-between rounded-lg p-3 transition duration-200 ease-in-out ${
+                  className={`mt-1 flex w-full max-w-full cursor-pointer items-center justify-between rounded-lg p-2 transition duration-200 ease-in-out sm:mt-2 sm:rounded-xl sm:p-3 md:mt-2 md:p-3 ${
                     chat?.userId === chatPartner
                       ? 'bg-gray-200 shadow-md ring-1 ring-white dark:bg-neutral-800 dark:ring-neutral-600'
                       : 'hover:bg-gray-300 dark:hover:bg-neutral-700'
                   } text-black dark:text-white`}
                   onClick={() => handleChatSelect(chat)}
                 >
-                  <div className="flex items-center">
-                    <div className="relative">
+                  <div className="flex items-center min-w-0 flex-1">
+                    <div className="relative flex-shrink-0">
                       <Link href={`/others-profile/${chat?.username}`} className="hover:opacity-80 transition-opacity">
                         <img
                           src={chat?.avatar?.url || AvatarDefault?.src}
                           alt="Avatar"
-                          className="h-12 w-12 rounded-full border-2 border-gray-500 dark:border-neutral-500 cursor-pointer"
+                          className="h-9 w-9 rounded-full border-2 border-gray-500 dark:border-neutral-500 cursor-pointer sm:h-10 sm:w-10 md:h-10 md:w-10 lg:h-11 lg:w-11 xl:h-12 xl:w-12"
                         />
                       </Link>
-                      {/* Active Status Indicator - More Visible and Intuitive */}
-                      <div className={`absolute top-[85%] right-[15%] transform translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 ${
+                      {/* Active Status Indicator - Smaller for large devices */}
+                      <div className={`absolute top-[85%] right-[12%] transform translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 border-white dark:border-gray-800 sm:w-2.5 sm:h-2.5 md:w-2.5 md:h-2.5 lg:w-3 lg:h-3 xl:w-3.5 xl:h-3.5 ${
                         (() => {
                           const userStatus = getUserStatus(chat?.userId);
                           if (userStatus.active) {
-                            return 'bg-green-500 shadow-lg'; // Online - with shadow for visibility
+                            return 'bg-green-500 shadow-lg';
                           } else if (userStatus.lastActive) {
                             const lastActive = new Date(userStatus.lastActive);
                             const now = new Date();
                             const diffInMinutes = Math.floor((now - lastActive) / (1000 * 60));
                             
-                            if (diffInMinutes < 5) return 'bg-yellow-500'; // Away (recently active)
-                            else if (diffInMinutes < 30) return 'bg-orange-500'; // Busy
-                            else return 'bg-gray-400'; // Offline
+                            if (diffInMinutes < 5) return 'bg-yellow-500';
+                            else if (diffInMinutes < 30) return 'bg-orange-500';
+                            else return 'bg-gray-400';
                           } else {
-                            return 'bg-gray-400'; // Default offline
+                            return 'bg-gray-400';
                           }
                         })()
                       }`}></div>
                     </div>
-                    <div className="ml-4">
-                      <h4 className="w-23 truncate text-sm font-medium">
+                    <div className="ml-2 min-w-0 flex-1 sm:ml-3 md:ml-3 lg:ml-4">
+                      <h4 className="truncate text-xs font-medium sm:text-sm md:text-sm lg:text-base">
                         {chat?.fullname || chat?.fullName || opChat?.fullname || t('UnknownUser')}
                       </h4>
-                      <div className="w-60 truncate text-sm text-neutral-500 dark:text-gray-400">
+                      <div className="min-w-0 truncate text-xs text-neutral-500 dark:text-gray-400 sm:text-sm mt-0.5 sm:mt-1">
                         {(() => {
-                          // Check if user is typing to current user
                           if (isUserTyping(chat?.userId, user?.id)) {
                             return (
                               <div className="flex items-center">
@@ -959,15 +959,15 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                             );
                           }
                           return (
-                            <div className="flex flex-col gap-1">
+                            <div className="flex flex-col gap-0.5 sm:gap-1">
                               {chat?.lastMessage ? (
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                                <div className="flex items-center gap-1 sm:gap-2">
+                                  <span className="text-xs text-gray-500 dark:text-gray-400 font-medium truncate">
                                     {chat?.lastMessageSender === user?.id ? 'You' : 
                                      chat?.fullname || chat?.fullName || 'Unknown'}
                                   </span>
-                                  <span className="text-xs text-gray-400 dark:text-gray-500">•</span>
-                                  <span className="truncate block text-sm text-gray-700 dark:text-gray-300">
+                                  <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:inline">•</span>
+                                  <span className="truncate block text-xs text-gray-700 dark:text-gray-300 sm:text-sm max-w-[100px] sm:max-w-[120px] md:max-w-[140px] lg:max-w-[160px] xl:max-w-[180px]">
                                     {chat?.lastMessage}
                                   </span>
                                 </div>
@@ -980,13 +980,13 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                           );
                         })()}
                       </div>
-                      {/* Status and Last Seen - More Intuitive Format */}
+                      {/* Status and Last Seen - Smaller for large devices */}
                       {(() => {
                         const userStatus = getUserStatus(chat?.userId);
                         if (userStatus.active) {
                           return (
-                            <div className="flex items-center gap-1 mt-1">
-                              <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                            <div className="flex items-center gap-1 mt-1 sm:mt-1.5">
+                              <div className="w-1.5 h-1.5 rounded-full bg-green-500 sm:w-2 sm:h-2 md:w-2 md:h-2 lg:w-2.5 lg:h-2.5"></div>
                               <span className="text-xs text-green-600 dark:text-green-400 font-medium">
                                 Online
                               </span>
@@ -1015,9 +1015,9 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                           }
                           
                           return (
-                            <div className="flex items-center gap-1 mt-1">
-                              <div className="w-2 h-2 rounded-full bg-gray-400"></div>
-                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                            <div className="flex items-center gap-1 mt-1 sm:mt-1.5">
+                              <div className="w-1.5 h-1.5 rounded-full bg-gray-400 sm:w-2 sm:h-2 md:w-2 md:h-2 lg:w-2.5 lg:h-2.5"></div>
+                              <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[80px] sm:max-w-[90px] md:max-w-[100px] lg:max-w-[120px] xl:max-w-[140px]">
                                 {statusText}
                               </span>
                             </div>
@@ -1027,7 +1027,7 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                       })()}
                     </div>
                   </div>
-                  <span className="text-sm text-gray-400">
+                  <span className="text-xs text-gray-400 flex-shrink-0 ml-2 sm:ml-3 md:ml-3">
                     {chat?.lastUpdated
                       ? new Date(chat.lastUpdated).toLocaleTimeString('vi-VN', {
                           hour: '2-digit',
@@ -1039,7 +1039,7 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
               ))
             ) : (
               <div className="flex h-full items-center justify-center">
-                <p className="text-lg text-gray-500 dark:text-neutral-400">
+                <p className="text-base text-gray-500 dark:text-neutral-400 md:text-lg">
                   {t('LetsStartChat')}
                 </p>
               </div>
@@ -1047,76 +1047,77 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
           </div>
         </div>
 
-        {/* Chat Window */}
-        <div className="ml-5 mr-5 h-screen basis-2/3">
+        {/* Chat Window - Better proportions and spacing */}
+        <div className="flex-1 flex flex-col min-w-0 h-screen max-w-full">
           {!opChat?.userId ? (
             <div className="h-full w-full">
-                          <div className="flex h-full items-center justify-center">
-              <h1 className="text-lg text-gray-500 dark:text-neutral-400">
-                {t('SelectChatToStart')}
-              </h1>
-            </div>
+              <div className="flex h-full items-center justify-center">
+                <h1 className="text-lg text-gray-500 dark:text-neutral-400 px-6 text-center max-w-md">
+                  {t('SelectChatToStart')}
+                </h1>
+              </div>
             </div>
           ) : (
             <>
-              <div className="flex w-full p-3">
-                <div className="flex grow">
-                  <div className="relative">
+              {/* Chat Header - Smaller for large devices */}
+              <div className="flex w-full p-2 border-b border-gray-200 dark:border-neutral-700 max-w-full sm:p-2 md:p-3 lg:p-3 lg:pl-7">
+                <div className="flex grow min-w-0 max-w-full items-center">
+                  <div className="relative flex-shrink-0">
                     <Link href={`/others-profile/${opChat?.username}`} className="hover:opacity-80 transition-opacity">
                       <img
                         src={opChat?.avatar || AvatarDefault.src}
                         alt="Avatar user"
-                        className="h-12 w-12 rounded-full border-2 border-gray-500 dark:border-neutral-700 cursor-pointer"
+                        className="h-8 w-8 rounded-full border-2 border-gray-500 dark:border-neutral-700 cursor-pointer sm:h-9 sm:w-9 md:h-10 md:w-10 lg:h-11 lg:w-11 xl:h-12 xl:w-12"
                       />
                     </Link>
-                                          {/* Active Status Indicator - More Visible and Intuitive */}
-                      <div className={`absolute top-[68%] right-[15%] transform translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 ${
-                        (() => {
-                          const userStatus = getUserStatus(opChat?.userId);
-                          if (userStatus.active) {
-                            return 'bg-green-500 shadow-lg'; // Online - with shadow for visibility
-                          } else if (userStatus.lastActive) {
-                            const lastActive = new Date(userStatus.lastActive);
-                            const now = new Date();
-                            const diffInMinutes = Math.floor((now - lastActive) / (1000 * 60));
-                            
-                            if (diffInMinutes < 5) return 'bg-yellow-500'; // Away (recently active)
-                            else if (diffInMinutes < 30) return 'bg-orange-500'; // Busy
-                            else return 'bg-gray-400'; // Offline
-                          }
-                          return 'bg-gray-400'; // Default offline
-                        })()
-                      }`}></div>
+                    {/* Active Status Indicator - Smaller for large devices */}
+                    <div className={`absolute top-[70%] right-[12%] transform translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 border-white dark:border-gray-800 sm:top-[75%] sm:w-2.5 sm:h-2.5 md:w-2.5 md:h-2.5 lg:w-3 lg:h-3 xl:w-3.5 xl:h-3.5 ${
+                      (() => {
+                        const userStatus = getUserStatus(opChat?.userId);
+                        if (userStatus.active) {
+                          return 'bg-green-500 shadow-lg';
+                        } else if (userStatus.lastActive) {
+                          const lastActive = new Date(userStatus.lastActive);
+                          const now = new Date();
+                          const diffInMinutes = Math.floor((now - lastActive) / (1000 * 60));
+                          
+                          if (diffInMinutes < 5) return 'bg-yellow-500';
+                          else if (diffInMinutes < 30) return 'bg-orange-500';
+                          else return 'bg-gray-400';
+                        }
+                        return 'bg-gray-400';
+                      })()
+                    }`}></div>
                   </div>
-                  <div className="ml-5">
-                    <h4 className="w-60 truncate text-sm font-medium dark:text-white">
+                  <div className="ml-2 min-w-0 flex-1 sm:ml-3 md:ml-3 lg:ml-4 max-w-full">
+                    <h4 className="truncate text-sm font-medium dark:text-white max-w-full sm:text-base md:text-base lg:text-lg">
                       {opChat?.fullname || t('Fullname')}
                     </h4>
-                    <div className="flex flex-col gap-1">
-                      <p className="w-40 truncate text-sm text-gray-500 dark:text-neutral-400">
+                    <div className="flex flex-col gap-0.5 sm:gap-1 max-w-full mt-0.5 sm:mt-1">
+                      <p className="truncate text-xs text-gray-500 dark:text-neutral-400 max-w-full sm:text-sm md:text-sm lg:text-base">
                         {opChat?.username || t('Username')}
                       </p>
-                      {/* Status and Last Seen - Consolidated and More Intuitive */}
-                      <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${
+                      {/* Status and Last Seen - Smaller for large devices */}
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <div className={`w-1.5 h-1.5 rounded-full sm:w-2 sm:h-2 md:w-2 md:h-2 lg:w-2.5 lg:h-2.5 ${
                           (() => {
                             const userStatus = getUserStatus(opChat?.userId);
                             if (userStatus.active) {
-                              return 'bg-green-500'; // Online
+                              return 'bg-green-500';
                             } else if (userStatus.lastActive) {
                               const lastActive = new Date(userStatus.lastActive);
                               const now = new Date();
                               const diffInMinutes = Math.floor((now - lastActive) / (1000 * 60));
                               
-                              if (diffInMinutes < 5) return 'bg-yellow-500'; // Away (recently active)
-                              else if (diffInMinutes < 30) return 'bg-orange-500'; // Busy
-                              else return 'bg-gray-400'; // Offline
+                              if (diffInMinutes < 5) return 'bg-yellow-500';
+                              else if (diffInMinutes < 30) return 'bg-orange-500';
+                              else return 'bg-gray-400';
                             } else {
-                              return 'bg-gray-400'; // Default offline
+                              return 'bg-gray-400';
                             }
                           })()
                         }`}></div>
-                        <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">
+                        <span className="text-xs text-gray-600 dark:text-gray-300 font-medium truncate max-w-[100px] sm:max-w-[110px] md:max-w-[120px] lg:max-w-[150px] xl:max-w-[180px]">
                           {(() => {
                             const userStatus = getUserStatus(opChat?.userId);
                             if (userStatus.active) {
@@ -1150,25 +1151,27 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                     </div>
                   </div>
                 </div>
-                <div className="flex w-1/3 items-center justify-end text-2xl">
+                {/* Action Buttons - Smaller for large devices */}
+                <div className="flex items-center justify-end gap-1 sm:gap-1.5 md:gap-2 text-base sm:text-lg md:text-lg lg:text-xl ml-2 sm:ml-3">
                   {isUploading && (
-                    <div className="mr-2 flex items-center text-sm text-gray-600 dark:text-gray-400">
-                      <span>⏳ Processing files...</span>
+                    <div className="mr-1 flex items-center text-xs text-gray-600 dark:text-gray-400 sm:mr-2 md:mr-2 md:text-sm">
+                      <span className="hidden sm:inline">⏳ Processing files...</span>
+                      <span className="sm:hidden">⏳</span>
                     </div>
                   )}
                   <button
                     title={t('Call')}
                     onClick={handleCall}
-                    className="mr-2 rounded-md p-2 transition duration-200 ease-in-out hover:bg-gray-300 dark:hover:bg-neutral-700"
+                    className="rounded-lg p-1.5 transition duration-200 ease-in-out hover:bg-gray-300 dark:hover:bg-neutral-700 sm:p-2 md:p-2 lg:p-2.5"
                   >
-                    <i className="fa-solid fa-phone dark:text-zinc-100"></i>
+                    <i className="fa-solid fa-phone dark:text-zinc-100 text-sm sm:text-base md:text-base lg:text-lg"></i>
                   </button>
                   <button
                     title={t('VideoCall')}
                     onClick={handleVideoCall}
-                    className="mr-2 rounded-md p-2 transition duration-200 ease-in-out hover:bg-gray-300 dark:hover:bg-neutral-700"
+                    className="rounded-lg p-1.5 transition duration-200 ease-in-out hover:bg-gray-300 dark:hover:bg-neutral-700 sm:p-2 md:p-2 lg:p-2.5"
                   >
-                    <i className="fa-solid fa-video dark:text-zinc-100"></i>
+                    <i className="fa-solid fa-video dark:text-zinc-100 text-sm sm:text-base md:text-base lg:text-lg"></i>
                   </button>
                   
                   {/* Message Search Button */}
@@ -1178,42 +1181,33 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                       title="Search Messages (Ctrl+K)"
                       onClick={() => {
                         if (!showSearchDropdown) {
-                          // Get search button position and position dropdown below it
                           if (searchButtonRef.current) {
                             const rect = searchButtonRef.current.getBoundingClientRect();
-                            const dropdownX = rect.left - 200; // Center dropdown on button
-                            const dropdownY = rect.bottom + 20; // 10px below button
+                            const dropdownX = rect.left - 200;
+                            const dropdownY = rect.bottom + 20;
                             setDropdownPosition({ x: dropdownX, y: dropdownY });
                           }
                         }
                         setShowSearchDropdown(!showSearchDropdown);
                       }}
-                      className="mr-2 rounded-md p-2 transition duration-200 ease-in-out hover:bg-gray-300 dark:hover:bg-neutral-700"
+                      className="rounded-lg p-1.5 transition duration-200 ease-in-out hover:bg-gray-300 dark:hover:bg-neutral-700 sm:p-2 md:p-2.5 lg:p-3"
                     >
-                      <i className="fa-solid fa-magnifying-glass ark:text-zinc-100"></i>
-
+                      <i className="fa-solid fa-magnifying-glass dark:text-zinc-100 text-sm sm:text-base md:text-base lg:text-lg"></i>
                     </button>
                     
-
-                    
-                    {/* Search Dropdown */}
+                    {/* Search Dropdown - Better responsive positioning */}
                     {showSearchDropdown && (
                       <div 
                         ref={dropdownRef}
-                        className="search-dropdown fixed top-12 w-64 bg-white dark:bg-black rounded-lg shadow-2xl border border-gray-200 dark:border-gray-800 z-50"
+                        className="search-dropdown fixed top-12 w-64 sm:w-72 bg-white dark:bg-black rounded-xl shadow-2xl border border-gray-200 dark:border-gray-800 z-50"
                         style={{
                           left: `${dropdownPosition.x}px`,
                           top: `${dropdownPosition.y}px`
                         }}
                       >
-                        {/* Drag Handle */}
-                        {/* DIRECTIVE: DRAGGABLE SEARCH DROPDOWN
-                            - CAN be dragged anywhere on the entire page/viewport
-                            - CANNOT go too far out of viewport (90% visibility minimum)
-                            - Provides maximum positioning flexibility while maintaining strong accessibility
-                            - Use the three-dot handle below to drag */}
+                        {/* Drag Handle - Better responsive styling */}
                         <div 
-                          className={`drag-handle p-3 border-b border-gray-200 dark:border-gray-800 cursor-move bg-gray-50 dark:bg-gray-900 rounded-t-lg transition-all duration-200 select-none ${
+                          className={`drag-handle p-3 sm:p-4 border-b border-gray-200 dark:border-gray-800 cursor-move bg-gray-50 dark:bg-gray-900 rounded-t-xl transition-all duration-200 select-none ${
                             isDragging 
                               ? 'bg-gray-100 dark:bg-gray-800 shadow-lg ring-2 ring-gray-300 dark:ring-gray-600' 
                               : 'hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -1225,8 +1219,6 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                             setIsStartingDrag(true);
                             
                             if (dropdownRef.current) {
-                              // Calculate offset from mouse to the dropdown's current position
-                              // This ensures the dropdown sticks to the mouse pointer
                               const offsetX = e.clientX - dropdownPosition.x;
                               const offsetY = e.clientY - dropdownPosition.y;
                               
@@ -1239,7 +1231,6 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                             }
                           }}
                           onMouseEnter={() => {
-                            // Prevent closing when hovering over drag handle
                             if (isStartingDrag) {
                               return;
                             }
@@ -1247,76 +1238,76 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                           title="Drag to move search dropdown"
                         >
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <div className={`w-2 h-2 rounded-full transition-colors ${
+                            <div className="flex items-center gap-1.5 sm:gap-2">
+                              <div className={`w-1.5 h-1.5 rounded-full transition-colors sm:w-2 sm:h-2 ${
                                 isDragging ? 'bg-gray-600 dark:bg-gray-400' : 'bg-gray-400 dark:bg-gray-600'
                               }`}></div>
-                              <div className={`w-2 h-2 rounded-full transition-colors ${
+                              <div className={`w-1.5 h-1.5 rounded-full transition-colors sm:w-2 sm:h-2 ${
                                 isDragging ? 'bg-gray-600 dark:bg-gray-400' : 'bg-gray-400 dark:bg-gray-600'
                               }`}></div>
-                              <div className={`w-2 h-2 rounded-full transition-colors ${
+                              <div className={`w-1.5 h-1.5 rounded-full transition-colors sm:w-2 sm:h-2 ${
                                 isDragging ? 'bg-gray-600 dark:bg-gray-400' : 'bg-gray-400 dark:bg-gray-600'
                               }`}></div>
                             </div>
-                            <div className="flex-1 ml-3">
-                              <h3 className="text-base font-semibold text-gray-900 dark:text-white">Search Messages</h3>
+                            <div className="flex-1 ml-3 sm:ml-4">
+                              <h3 className="text-sm font-semibold text-gray-900 dark:text-white sm:text-base">Search Messages</h3>
                               <p className="text-xs text-gray-500 dark:text-gray-400">
                                 Search in your chat with {opChat?.fullname || 'this user'}
                               </p>
                             </div>
                             <button
                               onClick={handleDropdownClose}
-                              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 ml-2 transition-colors"
+                              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 ml-2 sm:ml-3 transition-colors"
                             >
-                              <X className="w-4 h-4" />
+                              <X className="w-4 h-4 sm:w-5 sm:h-5" />
                             </button>
                           </div>
                         </div>
                         
-                        <div className="p-3">
+                        <div className="p-3 sm:p-4">
                           <div className="relative">
-                            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-600 dark:text-gray-400" />
+                            <Search className="absolute left-2.5 sm:left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 dark:text-gray-400" />
                             <input
                               ref={searchInputRef}
                               type="text"
                               placeholder="Search in this conversation..."
                               value={messageSearchQuery}
                               onChange={(e) => setMessageSearchQuery(e.target.value)}
-                              className="w-full pl-7 pr-3 py-1.5 text-sm border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-500 focus:border-gray-400 dark:focus:border-gray-500 transition-all duration-200"
+                              className="w-full pl-8 sm:pl-10 pr-3 py-2 sm:py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500 focus:border-gray-400 dark:focus:border-gray-500 transition-all duration-200"
                               autoFocus
                             />
                             {messageSearchQuery && (
-                                                              <button
-                                  onClick={() => setMessageSearchQuery('')}
-                                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
+                              <button
+                                onClick={() => setMessageSearchQuery('')}
+                                className="absolute right-2.5 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                              >
+                                <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                              </button>
                             )}
                           </div>
                           
-                          {/* Search Results Counter and Navigation */}
+                          {/* Search Results Counter and Navigation - Better responsive layout */}
                           {messageSearchQuery.trim() && searchResults.length > 0 && (
-                            <div className="mt-3 flex items-center justify-between">
-                              <div className="text-xs text-gray-600 dark:text-gray-400">
+                            <div className="mt-3 sm:mt-4 flex items-center justify-between">
+                              <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                                 {selectedResultIndex + 1} of {searchResults.length} matches
                               </div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1.5 sm:gap-2">
                                 <button
                                   onClick={() => handleSearchNavigation('up')}
-                                  className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
+                                  className="p-1 sm:p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
                                   title="Previous result"
                                 >
-                                  <svg className="w-4 h-4 text-gray-600 group-hover:text-gray-800 dark:text-gray-400 dark:group-hover:text-gray-200 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 group-hover:text-gray-800 dark:text-gray-400 dark:group-hover:text-gray-200 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
                                   </svg>
                                 </button>
                                 <button
                                   onClick={() => handleSearchNavigation('down')}
-                                  className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
+                                  className="p-1 sm:p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
                                   title="Next result"
                                 >
-                                  <svg className="w-4 h-4 text-gray-600 group-hover:text-gray-800 dark:text-gray-400 dark:group-hover:text-gray-200 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 group-hover:text-gray-800 dark:text-gray-400 dark:group-hover:text-gray-200 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                   </svg>
                                 </button>
@@ -1324,20 +1315,20 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                             </div>
                           )}
                           
-                          {/* Status Messages */}
+                          {/* Status Messages - Better responsive spacing */}
                           {messageSearchQuery.trim() && searchResults.length === 0 && !isSearching && (
-                            <div className="mt-3 text-center text-gray-500 dark:text-gray-400">
-                              <Search className="w-6 h-6 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
-                              <p className="text-xs">No messages found</p>
-                              <p className="text-xs">Try different keywords</p>
+                            <div className="mt-3 sm:mt-4 text-center text-gray-500 dark:text-gray-400">
+                              <Search className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 sm:mb-3 text-gray-300 dark:text-gray-600" />
+                              <p className="text-xs sm:text-sm">No messages found</p>
+                              <p className="text-xs mt-0.5 sm:mt-1">Try different keywords</p>
                             </div>
                           )}
                           
-                          {/* Loading State */}
+                          {/* Loading State - Better responsive spacing */}
                           {isSearching && (
-                            <div className="mt-3 text-center text-gray-500 dark:text-gray-400">
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 dark:border-gray-400 mx-auto mb-1"></div>
-                              <p className="text-xs">Searching messages...</p>
+                            <div className="mt-3 sm:mt-4 text-center text-gray-500 dark:text-gray-400">
+                              <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-gray-600 dark:border-gray-400 mx-auto mb-1.5 sm:mb-2"></div>
+                              <p className="text-xs sm:text-sm">Searching messages...</p>
                             </div>
                           )}
                         </div>
@@ -1348,11 +1339,12 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
               </div>
               <hr className="dark:border-neutral-700" />
 
-              <div className="h-[80%] overflow-y-scroll scrollbar-hide">
+              {/* Messages Area - Smaller for large devices */}
+              <div className="flex-1 overflow-y-scroll scrollbar-hide px-2 py-1 sm:px-3 sm:py-2 md:px-4 md:py-2 lg:px-5 lg:py-3">
                 {!chatPartner ? (
                   <div className="flex h-full items-center justify-center">
-                    <div className="text-center">
-                      <p className="text-gray-500 dark:text-neutral-400 mb-2">Select a chat to start messaging</p>
+                    <div className="text-center px-4">
+                      <p className="text-base text-gray-500 dark:text-neutral-400 mb-2 sm:text-lg">Select a chat to start messaging</p>
                       <p className="text-sm text-gray-400">Choose someone from the chat list</p>
                     </div>
                   </div>
@@ -1360,8 +1352,8 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                   <MessageSkeleton />
                 ) : messagesError ? (
                   <div className="flex h-full items-center justify-center">
-                    <div className="text-center">
-                      <p className="text-red-500 dark:text-red-400 mb-2">
+                    <div className="text-center px-4">
+                      <p className="text-base text-red-500 dark:text-red-400 mb-2 sm:text-lg">
                         {messagesError?.message || t('ErrorLoadingMessages') || 'Error loading messages'}
                       </p>
                       <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
@@ -1369,7 +1361,7 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                       </p>
                       <button 
                         onClick={() => refreshMessages()}
-                        className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
+                        className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors sm:px-5 sm:py-2.5"
                       >
                         {t('Retry') || 'Retry'}
                       </button>
@@ -1377,8 +1369,8 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                   </div>
                 ) : chatMessages?.length === 0 ? (
                   <div className="flex h-full items-center justify-center">
-                    <div className="text-center">
-                      <p className="text-gray-500 dark:text-neutral-400 mb-2">No messages yet</p>
+                    <div className="text-center px-4">
+                      <p className="text-base text-gray-500 dark:text-neutral-400 mb-2 sm:text-lg">No messages yet</p>
                       <p className="text-sm text-gray-400">Start a conversation!</p>
                     </div>
                   </div>
@@ -1391,16 +1383,16 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                       onReply={handleReplyClick}
                     />
                     
-                    {/* Typing Indicator - Below Messages */}
+                    {/* Typing Indicator - Smaller for large devices */}
                     {isUserTyping(opChat?.userId, user?.id) && (
-                      <div className="px-4 py-2" ref={typingIndicatorRef}>
+                      <div className="px-2 py-2 sm:px-3 sm:py-2.5 md:px-4 md:py-3" ref={typingIndicatorRef}>
                         <div className="flex items-start">
                           {/* Avatar */}
-                          <div className="flex-shrink-0 mr-3">
+                          <div className="flex-shrink-0 mr-2 sm:mr-3 md:mr-3 lg:mr-4">
                             <img
                               src={opChat?.avatar || AvatarDefault.src}
                               alt="Avatar"
-                              className="h-10 w-10 rounded-full border border-gray-300 dark:border-gray-600"
+                              className="h-10 w-10 rounded-full border border-gray-300 dark:border-gray-600 sm:h-11 sm:w-11 md:h-11 md:w-11 lg:h-12 lg:w-12"
                             />
                           </div>
                           
@@ -1421,33 +1413,34 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                 )}
               </div>
 
-              <div className={`relative w-full`}>
+              {/* Message Input Area - Smaller for large devices */}
+              <div className="relative w-full p-2 sm:p-2.5 md:p-3 lg:p-4 lg:pt-0 xl:pt-0 xl:p-4">
                 {files.length > 0 && (
-                  <div className="absolute bottom-24 left-0 right-0 mx-3 rounded-lg bg-neutral-800 p-3 shadow-lg dark:bg-neutral-800">
+                  <div className="absolute bottom-20 left-0 right-0 mx-2 rounded-lg bg-neutral-800 p-2 shadow-lg dark:bg-neutral-800 sm:bottom-21 sm:mx-2.5 sm:p-2.5 md:bottom-22 md:mx-3 md:p-3 lg:bottom-24 lg:mx-4 lg:p-3 xl:bottom-26 xl:mx-4">
                     <FileUploadProgress
                       files={files}
                       onRemove={handleRemoveFile}
                       onClearAll={handleClearAllFiles}
                       showFileInfo={true}
-                      className="max-h-54 overflow-y-auto"
+                      className="max-h-32 sm:max-h-36 md:max-h-40 lg:max-h-44 xl:max-h-48 overflow-y-auto"
                     />
                   </div>
                 )}
 
-                {/* Reply indicator */}
+                {/* Reply indicator - Smaller for large devices */}
                 {replyingTo && (
-                  <div className="absolute bottom-24 left-0 right-0 mx-3 rounded-lg bg-gray-50 dark:bg-gray-900 p-3 shadow-lg border border-gray-200 dark:border-gray-700">
+                  <div className="absolute bottom-20 left-0 right-0 mx-2 rounded-lg bg-gray-50 dark:bg-gray-900 p-2 shadow-lg border border-gray-200 dark:border-gray-700 sm:bottom-21 sm:mx-2.5 sm:p-2.5 md:bottom-22 md:mx-3 md:p-3 lg:bottom-24 lg:mx-4 lg:p-3 xl:bottom-26 xl:mx-4">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Reply className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                        <div className="flex flex-col">
-                          <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">
+                      <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+                        <Reply className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400 flex-shrink-0 sm:w-4 sm:h-4" />
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <span className="text-xs text-gray-700 dark:text-gray-300 font-medium sm:text-sm">
                             {getReplyContext(replyingTo)}
                           </span>
-                          <span className="text-xs text-gray-600 dark:text-gray-400 truncate max-w-[300px]">
+                          <span className="text-xs text-gray-600 dark:text-gray-400 truncate max-w-[180px] sm:max-w-[200px] md:max-w-[250px] lg:max-w-[300px] xl:max-w-[350px]">
                             {replyingTo.content ? 
-                              (replyingTo.content.length > 60 ? 
-                                replyingTo.content.substring(0, 60) + '...' : 
+                              (replyingTo.content.length > 35 ? 
+                                replyingTo.content.substring(0, 35) + '...' : 
                                 replyingTo.content
                               ) : 
                               'File message'
@@ -1457,31 +1450,32 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                       </div>
                       <button
                         onClick={handleCancelReply}
-                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0 ml-2 sm:ml-2.5"
                         title="Cancel reply"
                       >
-                        <X className="w-4 h-4" />
+                        <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       </button>
                     </div>
                   </div>
                 )}
 
-                <div className="flex w-full items-center justify-center rounded-3xl border border-zinc-300 p-3 text-black dark:border-neutral-700 dark:text-white">
+                {/* Message Input - Smaller for large devices */}
+                <div className="flex w-full items-center justify-center rounded-2xl sm:rounded-2xl md:rounded-3xl border border-zinc-300 p-2 text-black dark:border-neutral-700 dark:text-white sm:p-2.5 md:p-3 lg:p-3.5 xl:p-4">
                   {user?.avatar?.url && (
                     <Link href={`/others-profile/${user?.username}`} className="hover:opacity-80 transition-opacity">
                       <img
                         src={user?.avatar.url}
                         alt="Avatar"
-                        className="h-10 w-10 rounded-full border-2 border-gray-500 dark:border-neutral-700 cursor-pointer"
+                        className="h-7 w-7 rounded-full border-2 border-gray-500 dark:border-neutral-700 cursor-pointer sm:h-8 sm:w-8 md:h-9 md:w-9 lg:h-10 lg:w-10 xl:h-11 xl:w-11"
                       />
                     </Link>
                   )}
 
                   <button
                     onClick={() => document.getElementById('chatFileInput').click()}
-                    className="ml-3 mr-3 text-black hover:text-zinc-500 dark:text-zinc-100 dark:hover:text-zinc-500"
+                    className="ml-1 mr-1 text-black hover:text-zinc-500 dark:text-zinc-100 dark:hover:text-zinc-500 sm:ml-1.5 sm:mr-1.5 md:ml-2 md:mr-2 lg:ml-2.5 lg:mr-2.5 xl:ml-3 xl:mr-3"
                   >
-                    <Plus size={28} />
+                    <Plus size={18} className="sm:w-5 sm:h-5 md:w-5.5 md:h-5.5 lg:w-6 lg:h-6 xl:w-7 xl:h-7" />
                   </button>
                   <input
                     type="file"
@@ -1492,11 +1486,11 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                     onChange={handleFileChange}
                   />
 
-                  <div className="flex-grow relative">
+                  <div className="flex-grow relative min-w-0">
                     <input
                       type="text"
-                      placeholder={replyingTo ? `${getReplyContext(replyingTo)}: ${replyingTo.content ? (replyingTo.content.length > 30 ? replyingTo.content.substring(0, 30) + '...' : replyingTo.content) : 'File message'}` : t('Message')}
-                      className={`w-full rounded-3xl border border-zinc-300 px-4 py-2 text-black placeholder-zinc-400 focus:outline-none dark:border-neutral-700 dark:bg-black dark:text-white ${replyingTo ? 'pl-10' : ''}`}
+                      placeholder={replyingTo ? `${getReplyContext(replyingTo)}: ${replyingTo.content ? (replyingTo.content.length > 25 ? replyingTo.content.substring(0, 25) + '...' : replyingTo.content) : 'File message'}` : t('Message')}
+                      className={`w-full rounded-2xl sm:rounded-2xl md:rounded-3xl border border-zinc-300 px-2 py-1.5 text-black placeholder-zinc-400 focus:outline-none dark:border-neutral-700 dark:bg-black dark:text-white text-sm sm:px-2.5 sm:py-2 sm:text-base md:px-3 md:py-2 lg:px-3.5 lg:py-2.5 xl:px-4 xl:py-3 ${replyingTo ? 'pl-6 sm:pl-6 md:pl-7 lg:pl-8 xl:pl-9' : ''}`}
                       value={replyingTo ? replyInput : newMessage}
                       onChange={(e) => {
                         if (replyingTo) {
@@ -1505,11 +1499,9 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                           setNewMessage(e.target.value);
                         }
                         
-                        // Send typing event when user types (only if not empty)
                         if (chatPartner && e.target.value.trim()) {
                           handleTyping(chatPartner, true);
                         } else if (chatPartner && !e.target.value.trim()) {
-                          // Stop typing if input is empty
                           stopTyping(chatPartner);
                         }
                       }}
@@ -1525,15 +1517,14 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                         }
                       }}
                       onBlur={() => {
-                        // Stop typing when input loses focus
                         if (chatPartner) {
                           stopTyping(chatPartner);
                         }
                       }}
                     />
                     {replyingTo && (
-                      <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                        <Reply className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                      <div className="absolute left-1.5 top-1/2 transform -translate-y-1/2 pointer-events-none sm:left-1.5 md:left-2 lg:left-2.5 xl:left-3">
+                        <Reply className="w-3 h-3 text-gray-600 dark:text-gray-400 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
                       </div>
                     )}
                   </div>
@@ -1541,13 +1532,13 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                   <button
                     type="button"
                     onClick={() => setShowPicker(!showPicker)}
-                    className="ml-2 text-black hover:text-zinc-500 dark:text-zinc-100 dark:hover:text-zinc-500"
+                    className="ml-1 text-black hover:text-zinc-500 dark:text-zinc-100 dark:hover:text-zinc-500 sm:ml-1.5 md:ml-2 lg:ml-2.5 xl:ml-3"
                   >
-                    <Smile size={28} />
+                    <Smile size={18} className="sm:w-5 sm:h-5 md:w-5.5 md:h-5.5 lg:w-6 lg:h-6 xl:w-7 xl:h-7" />
                   </button>
 
                   {showPicker && (
-                    <div ref={pickerRef} className="absolute bottom-20 right-14 z-50">
+                    <div ref={pickerRef} className="absolute bottom-16 right-2 z-50 sm:bottom-17 sm:right-2.5 md:bottom-18 md:right-3 lg:bottom-20 lg:right-4 xl:bottom-22 xl:right-4">
                       <Picker
                         onEmojiClick={(emojiObject) => {
                           if (replyingTo) {
@@ -1562,10 +1553,10 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                   {(newMessage.trim() || files.length > 0 || (replyingTo && (replyInput.trim() || files.length > 0))) && (
                     <button
                       onClick={replyingTo ? handleSendReply : handleSendMessage}
-                      className="ml-2 text-black hover:text-zinc-500 dark:text-zinc-100 dark:hover:text-zinc-500 transition-all duration-200 hover:scale-105 active:scale-95"
+                      className="ml-1 text-black hover:text-zinc-500 dark:text-zinc-100 dark:hover:text-zinc-500 transition-all duration-200 hover:scale-105 active:scale-95 sm:ml-1.5 md:ml-2 lg:ml-2.5 xl:ml-3"
                       title={replyingTo ? "Send reply" : "Send message"}
                     >
-                      <Send size={30} />
+                      <Send size={18} className="sm:w-5 sm:h-5 md:w-5.5 md:h-5.5 lg:w-6 lg:h-6 xl:w-7 xl:h-7" />
                     </button>
                   )}
                 </div>
