@@ -29,7 +29,7 @@ const MessageSkeleton = () => {
           <div className="flex max-w-[75%] flex-col items-end">
             {/* Right-aligned message skeleton */}
             <div className="mb-3">
-              <div className={`h-12 w-32 rounded-2xl bg-blue-300 dark:bg-blue-600 animate-pulse`}></div>
+              <div className={`h-12 w-32 rounded-2xl bg-gray-300 dark:bg-gray-600 animate-pulse`}></div>
             </div>
             
             {/* Time skeleton */}
