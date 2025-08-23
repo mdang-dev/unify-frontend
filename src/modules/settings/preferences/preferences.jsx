@@ -3,7 +3,7 @@ import { useTranslations } from 'next-intl';
 import ModeSwitch from '@/src/components/base/mode-switch/mode-switch';
 import SelectMenu from './_components/select-menu';
 import PreferenceSection from './_components/preference-section';
-import NotificationSettings from '@/src/components/base/notification-settings';
+// import NotificationSettings from '@/src/components/base/notification-settings';
 
 const Preferences = () => {
   const t = useTranslations('Preferences');
@@ -46,7 +46,6 @@ const Preferences = () => {
           title={t('Notifications.Title')}
           description={t('Notifications.Description')}
         >
-          <NotificationSettings />
         </PreferenceSection>
 
         <PreferenceSection
