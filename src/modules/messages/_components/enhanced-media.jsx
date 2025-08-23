@@ -568,7 +568,7 @@ const EnhancedMedia = ({
       {/* Loading indicator - chỉ hiển thị khi thực sự loading */}
       {isLoading && !isLoaded && (
         <div className="absolute inset-0 bg-neutral-200 dark:bg-neutral-700 rounded-lg flex items-center justify-center">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-500 dark:border-gray-400"></div>
         </div>
       )}
     </div>

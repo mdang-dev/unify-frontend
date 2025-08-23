@@ -3,8 +3,8 @@ import React from 'react';
 const ChatListSkeleton = () => {
   return (
     <div className="px-4 py-1">
-      {/* Generate 8 skeleton chat items */}
-      {Array.from({ length: 8 }).map((_, index) => (
+      {/* Generate 5 skeleton chat items */}
+      {Array.from({ length: 5 }).map((_, index) => (
         <div
           key={index}
           className="mt-3 flex w-full max-w-md cursor-pointer items-center justify-between rounded-lg p-3"
