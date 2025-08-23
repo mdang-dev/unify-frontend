@@ -12,7 +12,7 @@ import PostReportNotification from './post-report-notification';
 import CommentReportNotification from './comment-report-notification';
 import UserReportNotification from './user-report-notification';
 import { useNotification } from '@/src/hooks/use-notification';
-import { useDesktopNotifications } from '@/src/hooks/use-desktop-notifications';
+// import { useDesktopNotifications } from '@/src/hooks/use-desktop-notifications';
 import dynamic from 'next/dynamic';
 
 const PostDetailModal = dynamic(() => import('../../post-detail-modal'), { ssr: false });
@@ -44,7 +44,7 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
     isWebSocketConnected,
     webSocketError
   } = useNotification(userId);
-  const { requestPermission, permission, isSupported } = useDesktopNotifications();
+  // const { requestPermission, permission, isSupported } = useDesktopNotifications();
   
   const [postModalOpen, setPostModalOpen] = useState(false);
   const [selectedPostId, setSelectedPostId] = useState(null);
@@ -91,10 +91,10 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
     }
   }, [isNotificationOpen, unreadCount, markAllAsReadSilently, markAllAsRead, setModalOpen]);
 
-  const handleRequestDesktopNotifications = useCallback(async () => {
-    const granted = await requestPermission();
-    // Desktop notification permission result handled silently
-  }, [requestPermission]);
+  // const handleRequestDesktopNotifications = useCallback(async () => {
+  //   const granted = await requestPermission();
+  //   // Desktop notification permission result handled silently
+  // }, [requestPermission]);
 
   const sortedNotifications = useMemo(() => {
     try {
@@ -152,7 +152,31 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
 
       const notificationData = parseNotificationData(notification);
       let postId = notificationData.postId || notification.postId;
-      const commentId = notificationData.commentId;
+      let commentId = notificationData.commentId;
+
+      // ✅ FIX: Handle post_report notifications - extract entityId as postId
+      if (notification.type === 'post_report' && notificationData.entityId) {
+        postId = notificationData.entityId;
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[NotificationModal] Extracted postId from post_report entityId:', postId);
+        }
+      }
+
+      // ✅ FIX: Handle comment_report notifications - extract entityId as commentId and postId from link
+      if (notification.type === 'comment_report' && notificationData.entityId) {
+        commentId = notificationData.entityId;
+        // For comment reports, we need to extract the postId from the link
+        if (notification.link) {
+          const linkMatch = notification.link.match(/\/posts\/([^\/]+)/);
+          if (linkMatch) {
+            postId = linkMatch[1];
+            if (process.env.NODE_ENV === 'development') {
+              console.log('[NotificationModal] Extracted postId from comment_report link:', postId);
+              console.log('[NotificationModal] Extracted commentId from comment_report entityId:', commentId);
+            }
+          }
+        }
+      }
 
       // ✅ FIX: Extract postId from link field for like notifications if not found in data
       if (!postId && notification.link) {
@@ -249,6 +273,24 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
     try {
       const notificationData = parseNotificationData(notification);
       let postId = notificationData.postId || notification.postId;
+      let commentId = notificationData.commentId;
+      
+      // ✅ FIX: Handle post_report notifications - extract entityId as postId
+      if (notification.type === 'post_report' && notificationData.entityId) {
+        postId = notificationData.entityId;
+      }
+
+      // ✅ FIX: Handle comment_report notifications - extract entityId as commentId and postId from link
+      if (notification.type === 'comment_report' && notificationData.entityId) {
+        commentId = notificationData.entityId;
+        // For comment reports, we need to extract the postId from the link
+        if (notification.link) {
+          const linkMatch = notification.link.match(/\/posts\/([^\/]+)/);
+          if (linkMatch) {
+            postId = linkMatch[1];
+          }
+        }
+      }
       
       // ✅ FIX: Extract postId from link field if not found in data (for like notifications)
       if (!postId && notification.link) {
@@ -266,7 +308,7 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
         isSeen: notification.isRead === true,
         onClick: () => onClick(notification), // ✅ FIX: Ensure onClick is properly bound
         postId: postId,
-        commentId: notificationData.commentId,
+        commentId: commentId,
         link: notification.link,
         data: notificationData,
       };
@@ -381,14 +423,14 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
           </button> */}
         </div>
 
-        {!isSupported && (
+        {/* {!isSupported && (
           <div className="border-b border-gray-200 px-5 py-3 dark:border-gray-800">
             <div className="flex items-center gap-2 text-sm text-orange-600 dark:text-orange-400">
               <i className="fa-solid fa-exclamation-triangle text-xs"></i>
               Desktop notifications not supported in this browser
             </div>
           </div>
-        )}
+        )} */}
 
         <div className="no-scrollbar h-[calc(100%-70px)] max-h-full space-y-1 overflow-y-auto px-5 pb-5 pt-3 transition-all duration-300 ease-in-out">
           {isFetching && sortedNotifications.length === 0 ? (
