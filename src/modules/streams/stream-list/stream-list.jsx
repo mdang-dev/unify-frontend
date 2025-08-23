@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -13,17 +13,18 @@ import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
 import { streamsQueryApi } from '@/src/apis/streams/query/streams.query.api';
 import StreamCard from './_components/stream-card';
 import StreamKeysModal from './_components/stream-keys-modal';
-import CreateStreamModal from './_components/create-stream-modal';
 import StreamCardSkeleton from './_components/stream-card-skeleton';
 import { ButtonCommon } from '@/src/components/button';
-import { useEffect } from 'react';
 import FollowingLiveList from './_components/following-live-list';
 import { useAuthStore } from '@/src/stores/auth.store';
 import { userSuggestionQueryApi } from '@/src/apis/suggested-users/query/suggested-users.query.api';
 import ChatSettingsModal from './_components/chat-settings-modal';
-import { Settings } from 'lucide-react';
+import { Settings, Eye, Radio } from 'lucide-react';
 import SearchBar from './_components/search-bar';
 import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
+import { useSocket } from '@/src/hooks/use-socket';
+import { Skeleton } from '@/src/components/base';
 
 export const mockStreams = [
   {
@@ -233,19 +234,115 @@ const streamers = [
 
 export default function StreamList() {
   const t = useTranslations('Streams');
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [isKeysModalOpen, setIsKeysModalOpen] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [streams, setStreams] = useState([]);
   const isError = undefined;
-  const [enabled, setEnabled] = useState(false);
-  const [delayed, setDelayed] = useState(false);
-  const [followersOnly, setFollowersOnly] = useState(false);
   const user = useAuthStore((s) => s.user);
   const [client, setClient] = useState(false);
-  
+
+  // Socket connection for real-time live status updates
+  const { connected: isSocketConnected, client: socketClient } = useSocket();
+
+  // Local state for user live status (updated via WebSocket)
+  const [isUserLive, setIsUserLive] = useState(false);
+  const [isLiveStatusLoading, setIsLiveStatusLoading] = useState(true);
+
+  // Fetch chat settings
+  const { data: chatSettings, isLoading: isLoadingChatSettings } = useQuery({
+    queryKey: [QUERY_KEYS.STREAM_CHAT_SETTINGS, user?.id],
+    queryFn: () => streamsQueryApi.getChatSettings(user?.id),
+    enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Extract chat settings with defaults
+  const enabled = chatSettings?.isChatEnabled ?? true;
+  const delayed = chatSettings?.isChatDelayed ?? false;
+  const followersOnly = chatSettings?.isChatFollowersOnly ?? false;
+
+  // State setters for chat settings
+  const setEnabled = (value) => {
+    queryClient.setQueryData([QUERY_KEYS.STREAM_CHAT_SETTINGS, user?.id], (old) => ({
+      ...old,
+      isChatEnabled: value,
+    }));
+  };
+
+  const setDelayed = (value) => {
+    queryClient.setQueryData([QUERY_KEYS.STREAM_CHAT_SETTINGS, user?.id], (old) => ({
+      ...old,
+      isChatDelayed: value,
+    }));
+  };
+
+  const setFollowersOnly = (value) => {
+    queryClient.setQueryData([QUERY_KEYS.STREAM_CHAT_SETTINGS, user?.id], (old) => ({
+      ...old,
+      isChatFollowersOnly: value,
+    }));
+  };
+
+  // Handle live stream navigation
+  const handleLiveStreamClick = () => {
+    router.push(`/streams/${user?.username}`);
+  };
+
+  // WebSocket subscription for real-time live status updates
+  useEffect(() => {
+    if (!isSocketConnected || !socketClient || !user?.id) return;
+
+    // Subscribe to user's stream events
+    const streamSubscription = socketClient.subscribe(`/topic/${user?.id}/streams`, (message) => {
+      try {
+        const streamEvent = JSON.parse(message.body);
+        console.log('Stream event received:', streamEvent);
+        
+        // Update local live status based on server event
+        setIsUserLive(streamEvent.isLive || false);
+        setIsLiveStatusLoading(false);
+        
+        // Invalidate related queries to refresh data
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.LIVE_STREAMS] });
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.FOLLOWING, user.id] });
+        
+      } catch (error) {
+        console.error('Error parsing stream event:', error);
+        setIsLiveStatusLoading(false);
+      }
+    });
+
+    // Cleanup subscription on unmount
+    return () => {
+      if (streamSubscription) {
+        streamSubscription.unsubscribe();
+      }
+    };
+  }, [isSocketConnected, socketClient, user?.id, queryClient]);
+
+  // Initial live status check (fallback)
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // Check initial live status from API as fallback
+    const checkInitialLiveStatus = async () => {
+      try {
+        setIsLiveStatusLoading(true);
+        const response = await streamsQueryApi.getUserLiveStatus(user.id);
+        setIsUserLive(response?.isLive || false);
+        setIsLiveStatusLoading(false);
+      } catch (error) {
+        console.error('Error checking initial live status:', error);
+        setIsUserLive(false);
+        setIsLiveStatusLoading(false);
+      }
+    };
+
+    checkInitialLiveStatus();
+  }, [user?.id]);
 
   useEffect(() => {
     setTimeout(() => {
@@ -291,12 +388,12 @@ if(!client) return null;
             <Dialog open={isKeysModalOpen} onOpenChange={setIsKeysModalOpen}>
               <DialogTrigger asChild>
                 <ButtonCommon size="lg" variant="secondary">
-                  Stream Keys
+                  {t('StreamKeys')}
                 </ButtonCommon>
               </DialogTrigger>
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                  <DialogTitle>Stream Keys</DialogTitle>
+                  <DialogTitle>{t('StreamKeys')}</DialogTitle>
                 </DialogHeader>
                 <StreamKeysModal
                   isOpen={isKeysModalOpen}
@@ -305,47 +402,54 @@ if(!client) return null;
               </DialogContent>
             </Dialog>
 
-            {/* Stream Modal */}
-            <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-              <DialogTrigger asChild>
-                <ButtonCommon size="lg" variant="secondary">
-                  + Create Stream
-                </ButtonCommon>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Create a Stream</DialogTitle>
-                </DialogHeader>
-                <CreateStreamModal
-                  isOpen={isCreateModalOpen}
-                  onClose={() => setIsCreateModalOpen(false)}
-                  onStreamCreated={handleStreamCreated}
-                />
-              </DialogContent>
-            </Dialog>
+            {/* Chat Settings Button */}
+            <ButtonCommon 
+              size="lg" 
+              onClick={() => setIsSettingsModalOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <Settings className="h-4 w-4" />
+              {t('ChatSettings')}
+            </ButtonCommon>
 
-            {/* Settings Modal */}
-            <Dialog open={isSettingsModalOpen} onOpenChange={setIsSettingsModalOpen}>
-              <DialogTrigger asChild>
-                <ButtonCommon size="lg" className>
-                  <Settings className="h-4 w-4" />
-                </ButtonCommon>
-              </DialogTrigger>
-              <DialogContent className="bg-[#1e1e1e] text-white sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Chat Settings</DialogTitle>
-                </DialogHeader>
+            {/* Live Stream View Button - Show when user is live, positioned to the right */}
+            {isUserLive && !isLiveStatusLoading && (
+              <ButtonCommon
+                size="lg"
+                onClick={handleLiveStreamClick}
+                className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 relative overflow-hidden group"
+              >
+                {/* Animated stream effect background */}
+                <div className="absolute inset-0 bg-gradient-to-r from-red-400/20 to-pink-400/20 animate-pulse"></div>
+                
+                {/* Live indicator dot */}
+                <div className="relative z-10 flex items-center gap-2">
+                  <div className="relative">
+                    <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
+                    <div className="absolute inset-0 w-2 h-2 bg-white rounded-full"></div>
+                  </div>
+                  <Eye className="h-4 w-4" />
+                  <span className="font-medium">{t('ViewStream')}</span>
+                </div>
+              </ButtonCommon>
+            )}
 
-                <ChatSettingsModal
-                  enabled={enabled}
-                  setEnabled={setEnabled}
-                  delayed={delayed}
-                  setDelayed={setDelayed}
-                  followersOnly={followersOnly}
-                  setFollowersOnly={setFollowersOnly}
-                />
-              </DialogContent>
-            </Dialog>
+            {/* Live Status Loading State */}
+            {isLiveStatusLoading && (
+              <Skeleton className="h-10 w-32 rounded-lg" />
+            )}
+
+            <ChatSettingsModal
+              enabled={enabled}
+              setEnabled={setEnabled}
+              delayed={delayed}
+              setDelayed={setDelayed}
+              followersOnly={followersOnly}
+              setFollowersOnly={setFollowersOnly}
+              isOpen={isSettingsModalOpen}
+              onClose={() => setIsSettingsModalOpen(false)}
+              isLoading={isLoadingChatSettings}
+            />
           </div>
           <FollowingLiveList streamers={following} isLoading={isLoadingStreamer} />
         </div>

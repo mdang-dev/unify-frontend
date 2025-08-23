@@ -1,5 +1,4 @@
 import { UserAvatar } from '@/src/components/base';
-import React from 'react';
 import VerifiedMark from '../../verified-mark';
 import { useRemoteParticipant, useRemoteParticipants } from '@livekit/components-react';
 import { UserIcon } from 'lucide-react';
@@ -10,7 +9,7 @@ export default function Header({
   hostName,
   hostIdentity,
   viewerIdentity,
-  isFollowing,
+  currentUserId,
   name,
 }) {
   const participants = useRemoteParticipants();
@@ -44,7 +43,11 @@ export default function Header({
           )}
         </div>
       </div>
-      <Actions isFollwing={isFollowing} hostIdentity={hostIdentity} isHost={isHost} />
+      <Actions 
+        hostIdentity={hostIdentity} 
+        currentUserId={currentUserId}
+        isHost={isHost} 
+      />
     </div>
   );
 }
