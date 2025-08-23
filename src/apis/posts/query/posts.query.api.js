@@ -25,7 +25,31 @@ export const postsQueryApi = {
   },
   getPostsByHashtag: async (hashtag) => {
     const res = await httpClient(`${url}/hashtag/${hashtag}`);
-    return res.data;
+    // Return posts array for backward compatibility
+    return res.data.posts ?? [];
+  },
+  getPostsByHashtagWithPagination: async (hashtag, pageParam = 0, pageSize = 12) => {
+    try {
+      const res = await httpClient(`${url}/hashtag/${hashtag}`, {
+        params: {
+          page: pageParam,
+          size: pageSize,
+        },
+      });
+      
+      // Transform backend response to match expected frontend format
+      const backendData = res.data;
+      return {
+        posts: backendData.posts ?? [],
+        hasNextPage: backendData.hasNextPage ?? false,
+        currentPage: backendData.currentPage ?? pageParam,
+      };
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error fetching posts by hashtag:', error);
+      }
+      throw error;
+    }
   },
   getRecommendedPosts: async (pageParam = 0, pageSize = 12) => {
     try {
@@ -63,7 +87,7 @@ export const postsQueryApi = {
   },
   getMyArchivedPosts: async (userId) => {
     const res = await httpClient(`${url}/myArchive?userId=${userId}&status=0`);
-    return await res.data;
+    return res.data;
   },
   getPostDetails: async (postId) => {
     const res = await httpClient(`${url}/post_detail/${postId}`);

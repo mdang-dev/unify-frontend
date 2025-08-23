@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { useAuthStore } from '@/src/stores/auth.store';
 import { postsCommandApi } from '@/src/apis/posts/command/posts.command.api';
 import { hashtagCommandApi } from '@/src/apis/hashtag/command/hashtag.command.api';
+import { extractHashtags, generateHashtagObjects, generateHashtagDetailObjects } from '@/src/utils/hashtag.util';
 import { mediaCommandApi } from '@/src/apis/media/command/media.command.api';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import User from './_components/user';
@@ -210,17 +211,14 @@ const PostsCreate = () => {
       const post = await savePostMutation.mutateAsync(newPost);
 
       // Handle hashtags
-      const hashtagList = caption.match(/#[a-zA-Z0-9_]+/g) || [];
+      const hashtagList = extractHashtags(caption);
       const savedHashtags = hashtagList.length
-        ? await insertHashtagsMutation.mutateAsync(hashtagList.map((h) => ({ content: h })))
+        ? await insertHashtagsMutation.mutateAsync(generateHashtagObjects(hashtagList))
         : [];
 
       if (savedHashtags.length > 0) {
         await insertHashtagDetailsMutation.mutateAsync(
-          savedHashtags.map((h) => ({
-            hashtag: h,
-            post: post,
-          }))
+          generateHashtagDetailObjects(savedHashtags, post)
         );
       }
 

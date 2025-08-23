@@ -8,15 +8,20 @@ const Caption = ({ text }) => {
 
   if (!shouldShowMore) {
     return (
-      <div className="my-2 text-wrap text-sm leading-snug text-gray-800 dark:text-gray-200">
-        {text}
-      </div>
+      <div 
+        className="my-2 text-wrap text-sm leading-snug text-gray-800 dark:text-gray-200"
+        dangerouslySetInnerHTML={{ __html: text }}
+      />
     );
   }
 
   return (
     <div className="my-2 text-wrap text-sm leading-snug text-gray-800 dark:text-gray-200">
-      {isExpanded ? text : `${text.slice(0, 100)}...`}
+      <div 
+        dangerouslySetInnerHTML={{ 
+          __html: isExpanded ? text : `${text.slice(0, 100)}...` 
+        }}
+      />
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className="ml-1.5 font-medium text-blue-500 hover:underline focus:outline-none dark:text-blue-400"

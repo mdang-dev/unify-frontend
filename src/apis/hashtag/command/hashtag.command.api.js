@@ -6,7 +6,7 @@ export const hashtagCommandApi = {
     return res.data;
   },
   insertHashtagDetails: async (hashtags) => {
-    const res = await httpClient.post(`/hashtag-details/saveAll`, hashtags);
+    const res = await httpClient.post(`/hashtags/details/saveAll`, hashtags);
     return res.data;
   },
 };

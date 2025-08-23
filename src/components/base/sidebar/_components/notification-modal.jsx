@@ -249,11 +249,9 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
         style={{ width: isNotificationOpen ? 510 : 0 }}
       >
         <div className="flex h-16 items-center justify-between border-b border-white px-5 dark:border-black">
-          <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-semibold text-black dark:text-white">
+            <h2 className="text-3xl font-semibold text-black dark:text-white ml-4 mt-5">
               Notifications
             </h2>
-          </div>
           {/* <button
             onClick={handleRequestDesktopNotifications}
             className="flex flex-col items-center gap-1 rounded-lg bg-blue-500 px-3 py-2 text-white transition-all duration-200 hover:bg-blue-600 active:scale-95"

@@ -10,6 +10,23 @@ const LikeButton = ({ userId, postId, className = '', classText = '' }) => {
 
   const { like, unlike, isLoading } = useToggleLike(userId, postId);
 
+  // Early return if required props are missing
+  if (!userId || !postId) {
+    console.warn('LikeButton: userId or postId prop is missing:', { userId, postId });
+    return (
+      <div className="flex flex-col items-center">
+        <button 
+          className={`bg-transparent dark:text-white ${className}`}
+          disabled
+          title="Cannot like: user ID or post ID missing"
+        >
+          <i className="fa-regular fa-heart opacity-50"></i>
+        </button>
+        <p className={`text-md ${classText}`}>0</p>
+      </div>
+    );
+  }
+
   const handleClick = () => {
     const now = Date.now();
     if (now - lastClickRef.current < 1000) return;
