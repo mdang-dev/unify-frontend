@@ -54,14 +54,8 @@ export const useCallStore = create((set, get) => ({
       if (response.ok) {
         const data = await response.json();
         csrfToken = data.token;
-      } else {
-        // Remove unnecessary warning logs
       }
     } catch (error) {
-      // Only log critical CSRF token errors
-      if (error.name !== 'AbortError') {
-        console.error('Failed to fetch CSRF token for call:', error.message);
-      }
       // Continue without CSRF token if fetch fails
     }
 
@@ -94,7 +88,7 @@ export const useCallStore = create((set, get) => ({
     // ✅ OPTIMIZED: Reset audio to beginning before playing
     sound.currentTime = 0;
     sound.play().catch(error => {
-      console.warn('Failed to play ring sound:', error);
+      // console.warn('Failed to play ring sound:', error);
     });
   },
 
@@ -112,7 +106,7 @@ export const useCallStore = create((set, get) => ({
     // ✅ OPTIMIZED: Reset audio to beginning before playing
     sound.currentTime = 0;
     sound.play().catch(error => {
-      console.warn('Failed to play start sound:', error);
+      // console.warn('Failed to play start sound:', error);
     });
   },
 
@@ -129,7 +123,7 @@ export const useCallStore = create((set, get) => ({
       // Remove unnecessary debug logs
     } else {
       // Only log critical connection issues
-      console.warn('Not connected, cannot send signal');
+      // console.warn('Not connected, cannot send signal');
     }
   },
   startCall: async (otherUser) => {

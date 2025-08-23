@@ -18,7 +18,6 @@ export const useDesktopNotifications = () => {
   // Request notification permission
   const requestPermission = useCallback(async () => {
     if (!isSupported) {
-      console.warn('Desktop notifications are not supported in this browser');
       return false;
     }
 
@@ -35,7 +34,6 @@ export const useDesktopNotifications = () => {
   // Show desktop notification
   const showNotification = useCallback(({ title, body, icon, tag, data, onClick }) => {
     if (!isSupported || permission !== 'granted') {
-      console.warn('Desktop notifications not available or permission denied');
       return null;
     }
 

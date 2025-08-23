@@ -34,8 +34,6 @@ const NotificationSettings = () => {
     const newSettings = { ...settings, [key]: value };
     setSettings(newSettings);
     localStorage.setItem('notificationSettings', JSON.stringify(newSettings));
-    
-    console.log(`🔔 Notification setting updated: ${key} = ${value}`);
   };
 
   const notificationTypes = [

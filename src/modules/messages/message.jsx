@@ -30,7 +30,7 @@ import FileUploadProgress from './_components/file-upload-progress';
 import { optimizeImage } from '@/src/utils/image-optimization.util';
 import { toast } from 'sonner';
 
- const Messages = () => {
+const Messages = () => {
   const t = useTranslations('Messages');
   const user = useAuthStore((s) => s.user);
   const [chatPartner, setChatPartner] = useState(null);
@@ -54,20 +54,17 @@ import { toast } from 'sonner';
   });
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const { 
-    chatMessages, 
-    sendMessage, 
-    chatList, 
-    isLoadingChatList, 
+  const {
+    chatMessages,
+    sendMessage,
+    chatList,
+    isLoadingChatList,
     chatListError,
     isLoadingMessages,
     messagesError,
     sendError,
-    refreshMessages
-  } = useChat(
-    user,
-    chatPartner
-  );
+    refreshMessages,
+  } = useChat(user, chatPartner);
 
   // Silent chat list updates - only log errors
 
@@ -109,7 +106,7 @@ import { toast } from 'sonner';
   const [files, setFiles] = useState([]);
   const [searchQuery, setSearchQuery] = useState(''); // State for search input
   const [isUploading, setIsUploading] = useState(false); // Loading state for file upload
-  
+
   // ✅ PERFORMANCE: Debounced search to prevent excessive filtering
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
@@ -202,10 +199,10 @@ import { toast } from 'sonner';
       // Clear input immediately for instant feedback
       setNewMessage('');
       setFiles([]);
-      
+
       // Send message instantly with no delays
       sendMessage(newMessage, files, chatPartner);
-      
+
       // ✅ REMOVED: Toast notification for successful message sending
       // Users will see the message appear instantly instead
     }
@@ -219,7 +216,7 @@ import { toast } from 'sonner';
         event.preventDefault();
         handleSendMessage();
       }
-      
+
       // Escape: Clear files or close picker
       if (event.key === 'Escape') {
         if (files.length > 0) {
@@ -269,7 +266,7 @@ import { toast } from 'sonner';
 
     setIsUploading(true);
     const validFiles = [];
-    
+
     try {
       for (const file of newFiles) {
         // Validate file size
@@ -284,7 +281,7 @@ import { toast } from 'sonner';
         }
 
         let preview = null;
-        
+
         // Generate preview based on file type
         if (file.type.startsWith('image/')) {
           preview = await generateImagePreview(file);
@@ -314,13 +311,13 @@ import { toast } from 'sonner';
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const img = new Image();
-      
+
       return new Promise((resolve) => {
         // Timeout for preview generation
         setTimeout(() => {
           // Handle timeout silently
         }, 5000);
-        
+
         img.onload = () => {
           try {
             // Calculate optimal thumbnail dimensions
@@ -328,18 +325,18 @@ import { toast } from 'sonner';
             const aspectRatio = img.width / img.height;
             let width = maxSize;
             let height = maxSize;
-            
+
             if (aspectRatio > 1) {
               height = maxSize / aspectRatio;
             } else {
               width = maxSize * aspectRatio;
             }
-            
+
             // Create optimized thumbnail
             canvas.width = width;
             canvas.height = height;
             ctx.drawImage(img, 0, 0, width, height);
-            
+
             const preview = canvas.toDataURL(file.type, 0.8);
             resolve(preview);
           } catch (error) {
@@ -347,12 +344,12 @@ import { toast } from 'sonner';
             resolve(URL.createObjectURL(file));
           }
         };
-        
+
         img.onerror = () => {
           // Handle image load error silently
           resolve(URL.createObjectURL(file));
         };
-        
+
         img.src = URL.createObjectURL(file);
       });
     } catch (error) {
@@ -380,30 +377,30 @@ import { toast } from 'sonner';
   };
 
   // ✅ PERFORMANCE: Memoized chat selection handler
-  const handleChatSelect = useCallback((chat) => {
-    if (process.env.NODE_ENV === 'development') {
-      
-    }
+  const handleChatSelect = useCallback(
+    (chat) => {
+      if (process.env.NODE_ENV === 'development') {
+      }
 
-    if (!chat?.userId || typeof chat.userId !== 'string') {
-      return;
-    }
+      if (!chat?.userId || typeof chat.userId !== 'string') {
+        return;
+      }
 
-    setOpChat({
-      userId: chat.userId,
-      avatar: chat?.avatar?.url,
-      fullname: chat?.fullname || chat?.fullName || 'Unknown User',
-      username: chat?.username || 'unknown',
-    });
-    setChatPartner(chat.userId);
+      setOpChat({
+        userId: chat.userId,
+        avatar: chat?.avatar?.url,
+        fullname: chat?.fullname || chat?.fullName || 'Unknown User',
+        username: chat?.username || 'unknown',
+      });
+      setChatPartner(chat.userId);
 
-    // Force refetch messages for the new chat partner
-    if (user?.id && chat.userId) {
-      queryClient.invalidateQueries([QUERY_KEYS.CHAT_MESSAGES, user.id, chat.userId]);
-    }
-
-
-  }, [user?.id, queryClient]);
+      // Force refetch messages for the new chat partner
+      if (user?.id && chat.userId) {
+        queryClient.invalidateQueries([QUERY_KEYS.CHAT_MESSAGES, user.id, chat.userId]);
+      }
+    },
+    [user?.id, queryClient]
+  );
 
   const handleCall = () => {
     if (!user || !opChat) return;
@@ -447,11 +444,11 @@ import { toast } from 'sonner';
 
   return (
     <div className="ml-auto">
-      <div className="flex w-full">
-        <div className="flex h-screen basis-1/3 flex-col">
-          <div className="sticky top-0 z-10 border-r-1 px-4 py-3 shadow-md dark:border-r-neutral-700 dark:bg-neutral-900">
+      <div className="flex w-full h-screen overflow-hidden">
+        <div className="flex h-full w-1/3 min-w-0 flex-col border-r border-gray-200 dark:border-neutral-700">
+          <div className="sticky top-0 z-10 bg-white dark:bg-neutral-900 px-4 py-3 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
-              <h1 className="text-3xl font-bold dark:text-white">{t('Title')}</h1>
+              <h1 className="text-2xl font-bold dark:text-white truncate">{t('Title')}</h1>
             </div>
             <div className="mb-2">
               <Input
@@ -464,7 +461,7 @@ import { toast } from 'sonner';
           </div>
 
           {/* Chat List */}
-          <div className="flex-1 overflow-y-scroll border-r-1 px-4 py-1 scrollbar-hide dark:border-r-neutral-700 dark:bg-black">
+          <div className="flex-1 overflow-y-auto px-4 py-1 scrollbar-hide bg-white dark:bg-neutral-900">
             {!isUserHydrated ? (
               <div className="flex h-full items-center justify-center">
                 <p className="text-lg text-gray-500 dark:text-neutral-400">{t('LoadingUser')}</p>
@@ -489,21 +486,24 @@ import { toast } from 'sonner';
                   onClick={() => handleChatSelect(chat)}
                 >
                   <div className="flex items-center">
-                    <Link href={`/profile/${chat?.username}`} className="hover:opacity-80 transition-opacity">
+                    <Link
+                      href={`/profile/${chat?.username}`}
+                      className="transition-opacity hover:opacity-80"
+                    >
                       <img
                         src={chat?.avatar?.url || AvatarDefault?.src}
                         alt="Avatar"
-                        className="h-12 w-12 rounded-full border-2 border-gray-500 dark:border-neutral-500 cursor-pointer"
+                        className="h-12 w-12 cursor-pointer rounded-full border-2 border-gray-500 dark:border-neutral-500"
                       />
                     </Link>
-                    <div className="ml-4">
-                      <h4 className="w-23 truncate text-sm font-medium">
-                        {chat?.fullname || chat?.fullName || opChat?.fullname || t('UnknownUser')}
-                      </h4>
-                      <p className="w-60 truncate text-sm text-neutral-500 dark:text-gray-400">
-                        {chat?.lastMessage}
-                      </p>
-                    </div>
+                                      <div className="ml-4 min-w-0 flex-1">
+                    <h4 className="truncate text-sm font-medium dark:text-white">
+                      {chat?.fullname || chat?.fullName || opChat?.fullname || t('UnknownUser')}
+                    </h4>
+                    <p className="truncate text-sm text-neutral-500 dark:text-gray-400">
+                      {chat?.lastMessage}
+                    </p>
+                  </div>
                   </div>
                   <span className="text-sm text-gray-400">
                     {chat?.lastUpdated
@@ -517,45 +517,46 @@ import { toast } from 'sonner';
               ))
             ) : (
               <div className="flex h-full items-center justify-center">
-                <p className="text-lg text-gray-500 dark:text-neutral-400">
-                  {t('LetsStartChat')}
-                </p>
+                <p className="text-lg text-gray-500 dark:text-neutral-400">{t('LetsStartChat')}</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Chat Window */}
-        <div className="ml-5 mr-5 h-screen basis-2/3">
+        <div className="flex h-full w-2/3 min-w-0 flex-col bg-white dark:bg-neutral-900">
           {!opChat?.userId ? (
             <div className="h-full w-full">
-                          <div className="flex h-full items-center justify-center">
-              <h1 className="text-lg text-gray-500 dark:text-neutral-400">
-                {t('SelectChatToStart')}
-              </h1>
-            </div>
+              <div className="flex h-full items-center justify-center">
+                <h1 className="text-lg text-gray-500 dark:text-neutral-400">
+                  {t('SelectChatToStart')}
+                </h1>
+              </div>
             </div>
           ) : (
             <>
-              <div className="flex w-full p-3">
-                <div className="flex grow">
-                  <Link href={`/profile/${opChat?.username}`} className="hover:opacity-80 transition-opacity">
+              <div className="flex w-full p-3 border-b border-gray-200 dark:border-neutral-700">
+                <div className="flex flex-1 min-w-0">
+                  <Link
+                    href={`/profile/${opChat?.username}`}
+                    className="transition-opacity hover:opacity-80 flex-shrink-0"
+                  >
                     <img
                       src={opChat?.avatar || AvatarDefault.src}
                       alt="Avatar user"
-                      className="h-12 w-12 rounded-full border-2 border-gray-500 dark:border-neutral-700 cursor-pointer"
+                      className="h-12 w-12 cursor-pointer rounded-full border-2 border-gray-500 dark:border-neutral-700"
                     />
                   </Link>
-                  <div className="ml-5">
-                    <h4 className="w-60 truncate text-sm font-medium">
+                  <div className="ml-5 min-w-0 flex-1">
+                    <h4 className="truncate text-sm font-medium dark:text-white">
                       {opChat?.fullname || t('Fullname')}
                     </h4>
-                    <p className="w-40 truncate text-sm text-gray-500 dark:text-neutral-400">
+                    <p className="truncate text-sm text-gray-500 dark:text-neutral-400">
                       {opChat?.username || t('Username')}
                     </p>
                   </div>
                 </div>
-                <div className="flex w-1/3 items-center justify-end text-2xl">
+                <div className="flex items-center justify-end text-2xl flex-shrink-0">
                   {isUploading && (
                     <div className="mr-2 flex items-center text-sm text-blue-500">
                       <span>⏳ Processing files...</span>
@@ -583,13 +584,15 @@ import { toast } from 'sonner';
                   </button>
                 </div>
               </div>
-              <hr className="dark:border-neutral-700" />
+              <hr className="dark:border-neutral-700 max-w-[80%] w-auto" />
 
-              <div className="h-[80%] overflow-y-scroll scrollbar-hide">
+              <div className="flex-1 min-h-0 p-4 pb-0 overflow-y-auto scrollbar-hide">
                 {!chatPartner ? (
                   <div className="flex h-full items-center justify-center">
                     <div className="text-center">
-                      <p className="text-gray-500 dark:text-neutral-400 mb-2">Select a chat to start messaging</p>
+                      <p className="mb-2 text-gray-500 dark:text-neutral-400">
+                        Select a chat to start messaging
+                      </p>
                       <p className="text-sm text-gray-400">Choose someone from the chat list</p>
                     </div>
                   </div>
@@ -598,15 +601,18 @@ import { toast } from 'sonner';
                 ) : messagesError ? (
                   <div className="flex h-full items-center justify-center">
                     <div className="text-center">
-                      <p className="text-red-500 dark:text-red-400 mb-2">
-                        {messagesError?.message || t('ErrorLoadingMessages') || 'Error loading messages'}
+                      <p className="mb-2 text-red-500 dark:text-red-400">
+                        {messagesError?.message ||
+                          t('ErrorLoadingMessages') ||
+                          'Error loading messages'}
                       </p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                        {messagesError?.response?.data?.message || 'Please check your connection and try again'}
+                      <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
+                        {messagesError?.response?.data?.message ||
+                          'Please check your connection and try again'}
                       </p>
-                      <button 
+                      <button
                         onClick={() => refreshMessages()}
-                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                        className="rounded-lg bg-blue-500 px-4 py-2 text-white transition-colors hover:bg-blue-600"
                       >
                         {t('Retry') || 'Retry'}
                       </button>
@@ -615,7 +621,7 @@ import { toast } from 'sonner';
                 ) : chatMessages?.length === 0 ? (
                   <div className="flex h-full items-center justify-center">
                     <div className="text-center">
-                      <p className="text-gray-500 dark:text-neutral-400 mb-2">No messages yet</p>
+                      <p className="mb-2 text-gray-500 dark:text-neutral-400">No messages yet</p>
                       <p className="text-sm text-gray-400">Start a conversation!</p>
                     </div>
                   </div>
@@ -628,7 +634,7 @@ import { toast } from 'sonner';
                 )}
               </div>
 
-              <div className={`relative w-full`}>
+              <div className="relative w-full px-4 pb-4">
                 {files.length > 0 && (
                   <div className="absolute bottom-24 left-0 right-0 mx-3 rounded-lg bg-neutral-800 p-3 shadow-lg dark:bg-neutral-800">
                     <FileUploadProgress
@@ -641,13 +647,16 @@ import { toast } from 'sonner';
                   </div>
                 )}
 
-                <div className="flex w-full items-center justify-center rounded-3xl border border-zinc-300 p-3 text-black dark:border-neutral-700 dark:text-white">
+                <div className="flex w-full items-center gap-2 rounded-3xl border border-zinc-300 p-3 text-black dark:border-neutral-700 dark:bg-white">
                   {user?.avatar?.url && (
-                    <Link href={`/profile/${user?.username}`} className="hover:opacity-80 transition-opacity">
+                    <Link
+                      href={`/profile/${user?.username}`}
+                      className="transition-opacity hover:opacity-80"
+                    >
                       <img
                         src={user?.avatar.url}
                         alt="Avatar"
-                        className="h-10 w-10 rounded-full border-2 border-gray-500 dark:border-neutral-700 cursor-pointer"
+                        className="h-10 w-10 cursor-pointer rounded-full border-2 border-gray-500 dark:border-neutral-700"
                       />
                     </Link>
                   )}
@@ -670,7 +679,7 @@ import { toast } from 'sonner';
                   <input
                     type="text"
                     placeholder={t('Message')}
-                    className="flex-grow rounded-3xl border border-zinc-300 px-4 py-2 text-black placeholder-zinc-400 focus:outline-none dark:border-neutral-700 dark:bg-black dark:text-white"
+                    className="flex-1 min-w-0 rounded-3xl border border-zinc-300 px-4 py-2 text-black placeholder-zinc-400 focus:outline-none dark:border-neutral-700 dark:bg-black dark:text-white"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     onKeyDown={(e) => {
@@ -701,7 +710,7 @@ import { toast } from 'sonner';
                   {(newMessage.trim() || files.length > 0) && (
                     <button
                       onClick={handleSendMessage}
-                      className="ml-2 text-black hover:text-zinc-500 dark:text-zinc-100 dark:hover:text-zinc-500 transition-all duration-200 hover:scale-105 active:scale-95"
+                      className="ml-2 text-black transition-all duration-200 hover:scale-105 hover:text-zinc-500 active:scale-95 dark:text-zinc-100 dark:hover:text-zinc-500"
                     >
                       <Send size={30} />
                     </button>

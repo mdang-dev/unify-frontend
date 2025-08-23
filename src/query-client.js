@@ -5,6 +5,7 @@ import { ToastProvider } from '@heroui/toast';
 import { ThemeProvider, useTheme } from 'next-themes';
 import { useState, useEffect, useRef } from 'react';
 import CaptchaScreen from './components/base/captcha-screen';
+import { useReportMonitoring } from './hooks/use-report-monitoring';
 
 function makeQueryClient() {
   return new QueryClient({
@@ -28,6 +29,13 @@ export function getQueryClient() {
     if (!browserQueryClient) browserQueryClient = makeQueryClient();
     return browserQueryClient;
   }
+}
+
+function AppContent({ children }) {
+  // Initialize report monitoring
+  useReportMonitoring();
+  
+  return children;
 }
 
 export default function QueryProvider({ children }) {
@@ -59,8 +67,10 @@ export default function QueryProvider({ children }) {
     <QueryClientProvider client={client}>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <UserHydrator />
+        <AppContent>
+          {children}
+        </AppContent>
         <ToastProvider placement="top-center" />
-        {children}
       </ThemeProvider>
       {/* <ReactQueryDevtools initialIsOpen={false} /> */}
     </QueryClientProvider>

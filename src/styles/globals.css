@@ -263,3 +263,57 @@ body {
   margin: -12px;
   box-shadow: 0 0 20px rgba(107, 114, 128, 0.3);
 }
+
+/* Custom animations for notification modal */
+@keyframes slide-in-from-left {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-in {
+  animation-fill-mode: both;
+}
+
+.slide-in-from-left-2 {
+  animation-name: slide-in-from-left;
+}
+
+.fade-in-0 {
+  animation-name: fade-in;
+}
+
+/* Smooth transitions for modal elements */
+.modal-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Staggered animation delays for notification items */
+.notification-item {
+  animation: slide-in-from-left 0.3s ease-out forwards;
+}
+
+.notification-item:nth-child(1) { animation-delay: 0ms; }
+.notification-item:nth-child(2) { animation-delay: 50ms; }
+.notification-item:nth-child(3) { animation-delay: 100ms; }
+.notification-item:nth-child(4) { animation-delay: 150ms; }
+.notification-item:nth-child(5) { animation-delay: 200ms; }
+.notification-item:nth-child(6) { animation-delay: 250ms; }
+.notification-item:nth-child(7) { animation-delay: 300ms; }
+.notification-item:nth-child(8) { animation-delay: 350ms; }
+.notification-item:nth-child(9) { animation-delay: 400ms; }
+.notification-item:nth-child(10) { animation-delay: 450ms; }

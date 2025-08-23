@@ -89,7 +89,7 @@ export const useFollow = (userId, followingId) => {
     enabled: !!followingId,
   });
 
-  const { data: followingCount = 0, isLoading: isLoaddingFollowing } = useQuery({
+  const { data: followingCount = 0, isLoading: isLoadingFollowing } = useQuery({
     queryKey: [QUERY_KEYS.COUNT_FOLLOWING, followingId],
     queryFn: () => followQueryApi.countFollowing(followingId),
     enabled: !!followingId,
@@ -117,7 +117,7 @@ export const useFollow = (userId, followingId) => {
     isToggleLoading: toggleFollowMutation.isPending,
     followersCount,
     followingCount,
-    isLoaddingFollowing,
+    isLoadingFollowing,
     isLoadingFollowers,
   };
 };

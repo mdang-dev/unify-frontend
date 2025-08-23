@@ -13,11 +13,11 @@ const FollowNotification = React.memo(({ isSeen, sender, timestamp, onClick }) =
 
   // Debug logging (development only)
   // if (process.env.NODE_ENV === 'development') {
-  //   console.log('FollowNotification render:', { 
-  //     user: user?.id, 
-  //     sender: sender?.id, 
+  //   console.log('FollowNotification render:', {
+  //     user: user?.id,
+  //     sender: sender?.id,
   //     senderName: sender?.fullName,
-  //     isSeen 
+  //     isSeen
   //   });
   // }
 
@@ -35,13 +35,12 @@ const FollowNotification = React.memo(({ isSeen, sender, timestamp, onClick }) =
   return (
     <div
       className={`max-h-[88px] cursor-pointer items-center rounded-xl p-2 px-4 transition-colors duration-200 ${
-        isSeen 
-          ? 'hover:bg-gray-100 dark:hover:bg-neutral-800' 
-          : 'bg-gray-200 dark:bg-neutral-800 hover:bg-gray-300 dark:hover:bg-neutral-700'
+        isSeen
+          ? 'hover:bg-gray-100 dark:hover:bg-neutral-800'
+          : 'bg-gray-200 hover:bg-gray-300 dark:bg-neutral-800 dark:hover:bg-neutral-700'
       }`}
     >
-      <div className="flex items-center gap-4"
-            onClick={onClick}>
+      <div className="flex items-center gap-4" onClick={onClick}>
         <Image
           src={sender?.avatar || Avatar}
           alt="User"
@@ -51,25 +50,27 @@ const FollowNotification = React.memo(({ isSeen, sender, timestamp, onClick }) =
         />
         <div className="flex flex-grow flex-col">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-md dark:text-zinc-300">
-              <strong className="text-sm font-extrabold dark:text-zinc-200">
-                {sender.fullName}
-              </strong>{' '}
-              has started following you.{' '}
+            <div className="flex flex-col">
+              <p className="text-md dark:text-zinc-300">
+                <strong className="text-sm font-extrabold dark:text-zinc-200">
+                  {sender.fullName}
+                </strong>{' '}
+                has started following you.{' '}
+              </p>
               <small className="text-zinc-500 dark:text-neutral-500">{timeAgo}</small>
-            </p>
+            </div>
             <div onClick={(e) => e.stopPropagation()}>
               {user?.id && sender?.id ? (
-            <FollowButton
+                <FollowButton
                   userId={user.id}
                   followingId={sender.id}
                   classFollow="bg-red-500 text-white rounded-md px-2 py-1 text-sm w-full h-full self-center"
                   classFollowing="bg-transparent text-black dark:text-zinc-200 border border-gray-400 dark:border-neutral-600 rounded-md px-2 py-1 text-sm bg-transparent w-full h-full self-center"
-              contentFollow="Follow"
-              contentFollowing="Following"
-            />
+                  contentFollow="Follow"
+                  contentFollowing="Following"
+                />
               ) : (
-                <div className="text-xs text-gray-500 dark:text-gray-400 px-2 py-1">
+                <div className="px-2 py-1 text-xs text-gray-500 dark:text-gray-400">
                   {!user?.id ? 'No user' : 'No sender'}
                 </div>
               )}
