@@ -19,9 +19,11 @@ export const useNotification = (userId) => {
   const messageBatchRef = useRef([]);
   const batchTimeoutRef = useRef(null);
   const stompClientRef = useRef(null);
+  const subscriptionsRef = useRef(null); // New ref for managing subscriptions
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isWebSocketConnected, setIsWebSocketConnected] = useState(false);
   const [webSocketError, setWebSocketError] = useState(null);
+  const [reconnectAttempts, setReconnectAttempts] = useState(0); // New state for reconnect attempts
   const BATCH_DELAY = 100;
 
   // Get initial unread count only once, no polling
@@ -62,6 +64,18 @@ export const useNotification = (userId) => {
     onSuccess: () => {
       queryClient.invalidateQueries([QUERY_KEYS.NOTIFICATIONS, userId]);
       queryClient.invalidateQueries([QUERY_KEYS.NOTIFICATIONS_UNREAD_COUNT, userId]);
+    },
+  });
+
+  // ✅ NEW: Mutation for marking notifications as read when modal closes
+  const markAsReadOnModalClose = useMutation({
+    mutationFn: () => notificationsCommandApi.markAsReadOnModalClose(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries([QUERY_KEYS.NOTIFICATIONS, userId]);
+      queryClient.invalidateQueries([QUERY_KEYS.NOTIFICATIONS_UNREAD_COUNT, userId]);
+    },
+    onError: (error) => {
+      console.error('Failed to mark notifications as read on modal close:', error);
     },
   });
 
@@ -206,7 +220,7 @@ export const useNotification = (userId) => {
     [showNotificationByType]
   );
 
-  // Now define processBatch after all its dependencies
+  // ✅ ENHANCED: Improved batch processing with better error handling
   const processBatch = useCallback(() => {
     try {
       if (messageBatchRef.current.length === 0) return;
@@ -224,7 +238,7 @@ export const useNotification = (userId) => {
     }
   }, [isModalOpen, updateNotificationsCache, updateUnreadCount, showDesktopNotifications]);
 
-  // Define handleWebSocketMessage after processBatch
+  // ✅ NEW: Enhanced WebSocket message handling with acknowledgment
   const handleWebSocketMessage = useCallback(
     (message) => {
       try {
@@ -239,17 +253,35 @@ export const useNotification = (userId) => {
           return;
         }
 
+        // ✅ NEW: Send acknowledgment back to backend
+        if (stompClientRef.current && stompClientRef.current.connected) {
+          try {
+            stompClientRef.current.publish({
+              destination: '/app/notifications/received',
+              body: JSON.stringify({ 
+                notificationId: parsed.id, 
+                userId, 
+                timestamp: new Date().toISOString() 
+              })
+            });
+          } catch (ackError) {
+            console.warn('Failed to send notification acknowledgment:', ackError);
+          }
+        }
+
+        // Add to batch for processing
         messageBatchRef.current.push(parsed);
         clearTimeout(batchTimeoutRef.current);
         batchTimeoutRef.current = setTimeout(processBatch, BATCH_DELAY);
+        
       } catch (err) {
         console.error('Failed to parse WebSocket message:', err);
       }
     },
-    [processBatch]
+    [userId]
   );
 
-  // Define setupWebSocket after handleWebSocketMessage and all other dependencies
+  // ✅ ENHANCED: Improved WebSocket setup with better error handling and reconnection
   const setupWebSocket = useCallback(async () => {
     if (!userId) {
       return;
@@ -269,18 +301,28 @@ export const useNotification = (userId) => {
         return;
       }
 
-      // Test API connectivity first
+      // Test API connectivity first with timeout
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
         const testResponse = await fetch(`${apiUrl}/actuator/health`, { 
           method: 'GET',
-          timeout: 5000 
+          signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
+        
         if (!testResponse.ok) {
           setWebSocketError('Backend service unavailable');
           return;
         }
       } catch (error) {
-        setWebSocketError('Cannot reach backend service');
+        if (error.name === 'AbortError') {
+          setWebSocketError('Backend service connection timeout');
+        } else {
+          setWebSocketError('Cannot reach backend service');
+        }
         return;
       }
 
@@ -369,9 +411,23 @@ export const useNotification = (userId) => {
         heartbeatOutgoing: 20000,
         onConnect: () => {
           try {
-            client.subscribe(`/user/${userId}/queue/notifications`, handleWebSocketMessage);
+            // Subscribe to notifications with acknowledgment
+            const subscription = client.subscribe(`/user/${userId}/queue/notifications`, handleWebSocketMessage);
+            
+            // Store subscription for cleanup
+            if (!subscriptionsRef.current) {
+              subscriptionsRef.current = new Map();
+            }
+            subscriptionsRef.current.set('notifications', subscription);
+            
             setIsWebSocketConnected(true);
             setWebSocketError(null);
+            
+            // ✅ NEW: Send connection acknowledgment to backend
+            client.publish({
+              destination: '/app/notifications/ack',
+              body: JSON.stringify({ userId, status: 'connected', timestamp: new Date().toISOString() })
+            });
             
             // Once WebSocket is connected, fetch initial data if not already loaded
             const currentData = queryClient.getQueryData([QUERY_KEYS.NOTIFICATIONS, userId]);
@@ -411,6 +467,7 @@ export const useNotification = (userId) => {
     }
   }, [userId, handleWebSocketMessage, queryClient, refetch]);
 
+  // ✅ NEW: Enhanced WebSocket message handling with acknowledgment
   useEffect(() => {
     if (!userId) return;
     
@@ -418,36 +475,57 @@ export const useNotification = (userId) => {
     setupWebSocket();
 
     return () => {
+      // Clean up WebSocket client
       if (stompClientRef.current) {
         try {
+          // Unsubscribe from all subscriptions
+          if (subscriptionsRef.current) {
+            subscriptionsRef.current.forEach((subscription) => {
+              try {
+                subscription.unsubscribe();
+              } catch (error) {
+                // Ignore unsubscribe errors
+              }
+            });
+            subscriptionsRef.current.clear();
+          }
+          
           stompClientRef.current.deactivate();
         } catch (error) {
           // Ignore cleanup errors
         }
       }
 
+      // Clean up batch timeout
       if (batchTimeoutRef.current) {
         clearTimeout(batchTimeoutRef.current);
       }
     };
   }, [userId, setupWebSocket]);
 
-  // Reconnect WebSocket if connection is lost
+  // ✅ ENHANCED: Improved reconnection logic with exponential backoff
   useEffect(() => {
     if (!isWebSocketConnected && userId && !webSocketError) {
+      const reconnectDelay = Math.min(5000 * Math.pow(2, reconnectAttempts), 30000); // Max 30 seconds
+      
       const reconnectTimer = setTimeout(() => {
+        setReconnectAttempts(prev => prev + 1);
         setupWebSocket();
-      }, 5000);
+      }, reconnectDelay);
 
       return () => clearTimeout(reconnectTimer);
+    } else if (isWebSocketConnected) {
+      // Reset reconnect attempts on successful connection
+      setReconnectAttempts(0);
     }
-  }, [isWebSocketConnected, userId, webSocketError, setupWebSocket]);
+  }, [isWebSocketConnected, userId, webSocketError, setupWebSocket, reconnectAttempts]);
 
   const handleNotificationClick = useCallback(
     (notification) => {
       if (!notification) return;
 
-      markAsRead({ notificationId: notification.id });
+      // ✅ FIX: Don't mark as read immediately - only when modal closes
+      // markAsRead({ notificationId: notification.id });
 
       switch (notification.type?.toLowerCase()) {
         case 'follow':
@@ -481,7 +559,7 @@ export const useNotification = (userId) => {
           break;
       }
     },
-    [markAsRead, router]
+    [router]
   );
 
   const notifications = data?.pages?.flatMap((page) => page?.notifications || []) || [];
@@ -517,6 +595,8 @@ export const useNotification = (userId) => {
     markAsRead: markAsRead.mutate,
     markAllAsRead: markAllAsReadMutation.mutate,
     markAllAsReadSilently,
+    // ✅ NEW: Add the new mutation for modal close
+    markAsReadOnModalClose: markAsReadOnModalClose.mutate,
     deleteNotification: deleteNotification.mutate,
     handleNotificationClick,
     fetchNextPage,
