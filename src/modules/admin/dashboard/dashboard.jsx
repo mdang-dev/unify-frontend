@@ -4,7 +4,7 @@ import React, { useState, useRef } from 'react';
 import { Card, CardBody, CardHeader, Button, Select, SelectItem } from '@heroui/react';
 import { useRouter } from 'next/navigation';
 import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Bar, BarChart } from 'recharts';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { dashboardQueryApi } from '@/src/apis/dashboard';
 import { exportDashboardPDF } from '@/src/utils/pdf-export.util';
 import { toast } from 'sonner';
@@ -31,11 +31,23 @@ const AdminDashboard = () => {
   const [isExporting, setIsExporting] = useState(false);
   const chartRef = useRef(null);
 
+  // Get query client for manual refresh
+  const queryClient = useQueryClient();
+
+  // Handle manual refresh
+  const handleRefresh = () => {
+    queryClient.invalidateQueries(['dashboard-stats']);
+    queryClient.invalidateQueries(['dashboard-analytics']);
+    queryClient.invalidateQueries(['dashboard-reported-posts']);
+    queryClient.invalidateQueries(['dashboard-reported-users']);
+    queryClient.invalidateQueries(['dashboard-reported-comments']);
+    queryClient.invalidateQueries(['dashboard-reports-summary']);
+  };
+
   // Fetch dashboard statistics from API
   const { data: stats, isLoading: statsLoading, error: statsError } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: dashboardQueryApi.getStats,
-    refetchInterval: 30000, // Refetch every 30 seconds
   });
 
   // Fetch analytics data from API
@@ -52,36 +64,42 @@ const AdminDashboard = () => {
       
       return dashboardQueryApi.getAnalytics(apiPeriod);
     },
-    refetchInterval: 30000, // Refetch every 30 seconds
   });
 
   // Fetch reported posts from API
   const { data: reportedPostsData, isLoading: reportedPostsLoading, error: reportedPostsError } = useQuery({
     queryKey: ['dashboard-reported-posts'],
     queryFn: dashboardQueryApi.getReportedPosts,
-    refetchInterval: 30000, // Refetch every 30 seconds
   });
 
   // Fetch reported users from API
   const { data: reportedUsersData, isLoading: reportedUsersLoading, error: reportedUsersError } = useQuery({
     queryKey: ['dashboard-reported-users'],
     queryFn: dashboardQueryApi.getReportedUsers,
-    refetchInterval: 30000, // Refetch every 30 seconds
   });
 
   // Fetch reported comments from API
   const { data: reportedCommentsData, isLoading: reportedCommentsLoading, error: reportedCommentsError } = useQuery({
     queryKey: ['dashboard-reported-comments'],
     queryFn: dashboardQueryApi.getReportedComments,
-    refetchInterval: 30000, // Refetch every 30 seconds
   });
 
   // Fetch reports summary from API
   const { data: reportsSummaryData, isLoading: reportsSummaryLoading, error: reportsSummaryError } = useQuery({
     queryKey: ['dashboard-reports-summary'],
     queryFn: dashboardQueryApi.getReportsSummary,
-    refetchInterval: 30000, // Refetch every 30 seconds
   });
+
+  // Show connection warning if there are multiple errors
+  const errorCount = [statsError, analyticsError, reportedPostsError, reportedUsersError, reportedCommentsError, reportsSummaryError].filter(Boolean).length;
+  
+  React.useEffect(() => {
+    if (errorCount >= 3) {
+      toast.error(`Connection issues detected. ${errorCount} out of 6 data sources failed to load.`, {
+        duration: 5000,
+      });
+    }
+  }, [errorCount]);
 
   // Get chart data from API response
   const currentData = analyticsData?.data || [];
@@ -139,7 +157,11 @@ const AdminDashboard = () => {
 
 
   // Handle loading and error states
-  if (statsLoading || analyticsLoading || reportedPostsLoading || reportedUsersLoading || reportedCommentsLoading || reportsSummaryLoading) {
+  const hasAnyLoading = statsLoading || analyticsLoading || reportedPostsLoading || reportedUsersLoading || reportedCommentsLoading || reportsSummaryLoading;
+  const hasAnyError = statsError || analyticsError || reportedPostsError || reportedUsersError || reportedCommentsError || reportsSummaryError;
+
+  // Show loading only if all queries are loading (initial load)
+  if (hasAnyLoading && !stats && !analyticsData && !reportedPostsData && !reportedUsersData && !reportedCommentsData && !reportsSummaryData) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -150,15 +172,24 @@ const AdminDashboard = () => {
     );
   }
 
-  if (statsError || analyticsError || reportedPostsError || reportedUsersError || reportedCommentsError || reportsSummaryError) {
+  // Show error only if all queries failed (initial load)
+  if (hasAnyError && !stats && !analyticsData && !reportedPostsData && !reportedUsersData && !reportedCommentsData && !reportsSummaryData) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <p className="text-red-600 dark:text-red-400 mb-2">Failed to load dashboard data</p>
-          <p className="text-gray-600 dark:text-gray-400 text-sm">
-            {statsError?.message || analyticsError?.message || reportedPostsError?.message || reportedUsersError?.message || reportedCommentsError?.message || reportsSummaryError?.message}
+          <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+            Please check your connection and try refreshing the page.
           </p>
+          <Button
+            color="primary"
+            variant="flat"
+            startContent={<RefreshCw className="h-4 w-4" />}
+            onPress={handleRefresh}
+          >
+            Retry
+          </Button>
         </div>
       </div>
     );
@@ -186,6 +217,7 @@ const AdminDashboard = () => {
             size="sm"
             variant="flat"
             startContent={<RefreshCw className="h-4 w-4" />}
+            onPress={handleRefresh}
           >
             Refresh
           </Button>
@@ -201,8 +233,22 @@ const AdminDashboard = () => {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Users</p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.totalUsers?.toLocaleString() || 0}</p>
-              <p className="text-xs text-green-600 dark:text-green-400">+{stats?.userGrowthPercent?.toFixed(1) || 0}% from last month</p>
+              {statsLoading ? (
+                <div className="animate-pulse">
+                  <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded mb-1"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+                </div>
+              ) : statsError ? (
+                <div>
+                  <p className="text-sm text-red-600 dark:text-red-400">Failed to load</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Check connection</p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.totalUsers?.toLocaleString() || 0}</p>
+                  <p className="text-xs text-green-600 dark:text-green-400">+{stats?.userGrowthPercent?.toFixed(1) || 0}% from last month</p>
+                </>
+              )}
             </div>
           </CardBody>
         </Card>
@@ -214,8 +260,22 @@ const AdminDashboard = () => {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Posts</p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.totalPosts?.toLocaleString() || 0}</p>
-              <p className="text-xs text-green-600 dark:text-green-400">+{stats?.postGrowthPercent?.toFixed(1) || 0}% from last month</p>
+              {statsLoading ? (
+                <div className="animate-pulse">
+                  <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded mb-1"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+                </div>
+              ) : statsError ? (
+                <div>
+                  <p className="text-sm text-red-600 dark:text-red-400">Failed to load</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Check connection</p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.totalPosts?.toLocaleString() || 0}</p>
+                  <p className="text-xs text-green-600 dark:text-green-400">+{stats?.postGrowthPercent?.toFixed(1) || 0}% from last month</p>
+                </>
+              )}
             </div>
           </CardBody>
         </Card>
@@ -227,8 +287,22 @@ const AdminDashboard = () => {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Pending Reports</p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.totalPendingReports || 0}</p>
-              <p className="text-xs text-orange-600 dark:text-orange-400">{stats?.newReportsToday || 0} new today</p>
+              {statsLoading ? (
+                <div className="animate-pulse">
+                  <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded mb-1"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+                </div>
+              ) : statsError ? (
+                <div>
+                  <p className="text-sm text-red-600 dark:text-red-400">Failed to load</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Check connection</p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.totalPendingReports || 0}</p>
+                  <p className="text-xs text-orange-600 dark:text-orange-400">{stats?.newReportsToday || 0} new today</p>
+                </>
+              )}
             </div>
           </CardBody>
         </Card>
@@ -240,8 +314,22 @@ const AdminDashboard = () => {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Users</p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.activeUsers?.toLocaleString() || 0}</p>
-              <p className="text-xs text-green-600 dark:text-green-400">+{stats?.activeUserGrowthPercent?.toFixed(1) || 0}% from last month</p>
+              {statsLoading ? (
+                <div className="animate-pulse">
+                  <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded mb-1"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+                </div>
+              ) : statsError ? (
+                <div>
+                  <p className="text-sm text-red-600 dark:text-red-400">Failed to load</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Check connection</p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.activeUsers?.toLocaleString() || 0}</p>
+                  <p className="text-xs text-green-600 dark:text-green-400">+{stats?.activeUserGrowthPercent?.toFixed(1) || 0}% from last month</p>
+                </>
+              )}
             </div>
           </CardBody>
         </Card>
@@ -284,13 +372,13 @@ const AdminDashboard = () => {
                 onSelectionChange={(keys) => setChartType(Array.from(keys)[0])}
                 className="w-24"
               >
-                <SelectItem key="area" value="Area">
+                <SelectItem key="area" value="area">
                   <div className="flex items-center gap-2">
                     <Area className="h-3 w-3" />
                     <span>Area</span>
                   </div>
                 </SelectItem>
-                <SelectItem key="bar" value="Bar">
+                <SelectItem key="bar" value="bar">
                   <div className="flex items-center gap-2">
                     <BarChart3 className="h-3 w-3" />
                     <span>Bar</span>
@@ -314,6 +402,23 @@ const AdminDashboard = () => {
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">Loading chart data...</p>
+                </div>
+              </div>
+            ) : analyticsError ? (
+              <div className="flex items-center justify-center h-[350px]">
+                <div className="text-center">
+                  <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                  <p className="text-sm text-red-600 dark:text-red-400 mb-2">Failed to load chart data</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">Connection timeout or server error</p>
+                  <Button
+                    size="sm"
+                    color="primary"
+                    variant="flat"
+                    startContent={<RefreshCw className="h-4 w-4" />}
+                    onPress={() => queryClient.invalidateQueries(['dashboard-analytics'])}
+                  >
+                    Retry
+                  </Button>
                 </div>
               </div>
             ) : currentData.length === 0 ? (
