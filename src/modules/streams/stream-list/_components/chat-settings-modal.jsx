@@ -53,14 +53,18 @@ export default function ChatSettingsModal({
 
   // Update chat settings mutation
   const { mutate: updateChatSettings, isPending } = useMutation({
-    mutationFn: (chatSettings) => streamsCommandApi.updateChatSettings(user?.id, chatSettings),
+    mutationFn: async (chatSettings) => {
+      // Update the settings
+      const result = await streamsCommandApi.updateChatSettings(user?.id, chatSettings);
+      return result;
+    },
     onSuccess: () => {
       toast.success(t('ChatSettingsUpdated'));
       
       // Update local state
       setEnabled(localSettings.isChatEnabled);
       setDelayed(localSettings.isChatDelayed);
-      setFollowersOnly(localSettings.isChatFollowersOnly);
+      setFollowersOnly(localSettings.isFollowersOnly);
       
       // Invalidate related queries
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.STREAM_CHAT_SETTINGS, user?.id] });

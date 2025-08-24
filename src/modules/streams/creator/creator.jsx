@@ -7,17 +7,19 @@ import { useQuery } from '@tanstack/react-query';
 import StreamPlayer from './_components/stream-player';
 import { useParams } from 'next/navigation';
 import { Skeleton } from '@/src/components/base';
+import { streamsQueryApi } from '@/src/apis/streams/query/streams.query.api';
 
 export default function Creator() {
   const { username } = useParams();
   const externalUser = useAuthStore((s) => s.user);
   const { data: user, isLoading: isUserLoading } = useQuery({
-    queryKey: [QUERY_KEYS.USER_PROFILE_BY_USERNAME, username],
-    queryFn: () => userQueryApi.getInfoByUsername(username),
+    queryKey: [QUERY_KEYS.STREAM_BY_USERNAME, username],
+    queryFn: () => userQueryApi.getInfoWithStreamByUsername(username),
     enabled: !!username,
   });
 
-  // Show skeleton loading while data is being fetched
+  console.log(user);
+
 
 
   return (

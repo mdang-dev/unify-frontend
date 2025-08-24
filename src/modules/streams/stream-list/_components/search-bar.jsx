@@ -46,7 +46,7 @@ export default function SearchBar({ placeholder = 'Search...', onSearch, classNa
       <ButtonCommon
         type="submit"
         size="sm"
-        className="ml-2 rounded-full bg-primary text-black transition hover:bg-primary/90"
+        className="ml-2 rounded-full dark:bg-primary dark:text-black transition dark:hover:bg-primary/90 "
       >
         Search
       </ButtonCommon>

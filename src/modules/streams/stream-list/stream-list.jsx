@@ -1,255 +1,83 @@
 'use client';
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState, useEffect } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTrigger,
-  DialogTitle,
-} from '@/src/components/ui/dialog';
-import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
-import { streamsQueryApi } from '@/src/apis/streams/query/streams.query.api';
-import StreamCard from './_components/stream-card';
-import StreamKeysModal from './_components/stream-keys-modal';
-import StreamCardSkeleton from './_components/stream-card-skeleton';
-import { ButtonCommon } from '@/src/components/button';
-import FollowingLiveList from './_components/following-live-list';
-import { useAuthStore } from '@/src/stores/auth.store';
-import { userSuggestionQueryApi } from '@/src/apis/suggested-users/query/suggested-users.query.api';
-import ChatSettingsModal from './_components/chat-settings-modal';
-import { Settings, Eye, Radio } from 'lucide-react';
-import SearchBar from './_components/search-bar';
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect, useMemo } from 'react';
+import { useInView } from 'react-intersection-observer';
 import { useTranslations } from 'next-intl';
+import { Settings, Eye } from 'lucide-react';
+import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
+
+import { streamsQueryApi } from '@/src/apis/streams/query/streams.query.api';
+import { useAuthStore } from '@/src/stores/auth.store';
+import { ButtonCommon } from '@/src/components/button';
+import { Dialog, DialogContent, DialogHeader, DialogTrigger, DialogTitle } from '@/src/components/ui/dialog';
+import { Skeleton } from '@/src/components/ui/skeleton';
+import FollowingLiveList from './_components/following-live-list';
+import StreamCard from './_components/stream-card';
+import StreamCardSkeleton from './_components/stream-card-skeleton';
+import StreamKeysModal from './_components/stream-keys-modal';
+import ChatSettingsModal from './_components/chat-settings-modal';
+import SearchBar from './_components/search-bar';
 import { useRouter } from 'next/navigation';
-import { useSocket } from '@/src/hooks/use-socket';
-import { Skeleton } from '@/src/components/base';
-
-export const mockStreams = [
-  {
-    id: '1',
-    roomId: 'room-1',
-    title: 'Chill Coding with JavaScript',
-    description: 'Relax and build a project live with chill music 🎵',
-    status: 'LIVE',
-    startTime: new Date().toISOString(),
-    viewerCount: 387,
-    streamerName: 'Luna',
-    avatarUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=Luna',
-    thumbnailUrl:
-      'https://images.pexels.com/photos/3861458/pexels-photo-3861458.jpeg?auto=compress&cs=tinysrgb&w=800',
-  },
-  {
-    id: '2',
-    roomId: 'room-2',
-    title: 'Valorant Ranked Grind',
-    description: 'Road to Immortal - Join my ranked journey 🎮',
-    status: 'LIVE',
-    startTime: new Date().toISOString(),
-    viewerCount: 1052,
-    streamerName: 'AceShooter',
-    avatarUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=AceShooter',
-    thumbnailUrl:
-      'https://images.pexels.com/photos/3945683/pexels-photo-3945683.jpeg?auto=compress&cs=tinysrgb&w=800',
-  },
-  {
-    id: '3',
-    roomId: 'room-3',
-    title: 'Morning Yoga Flow 🌿',
-    description: 'Breathe, stretch, and center yourself for the day.',
-    status: 'LIVE',
-    startTime: new Date(Date.now() + 3600000).toISOString(),
-    viewerCount: 0,
-    streamerName: 'Zenita',
-    avatarUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=Zenita',
-    thumbnailUrl:
-      'https://images.pexels.com/photos/317155/pexels-photo-317155.jpeg?auto=compress&cs=tinysrgb&w=800',
-  },
-  {
-    id: '4',
-    roomId: 'room-4',
-    title: 'DJ Set - Night Vibes',
-    description: 'Live DJ session with lo-fi and chill beats 🎧',
-    status: 'LIVE',
-    startTime: new Date().toISOString(),
-    viewerCount: 921,
-    streamerName: 'DJNova',
-    avatarUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=DJNova',
-    thumbnailUrl:
-      'https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg?auto=compress&cs=tinysrgb&w=800',
-  },
-  {
-    id: '5',
-    roomId: 'room-5',
-    title: 'Drawing Commissions Live',
-    description: 'Watch me sketch and paint your favorite characters ✍️',
-    status: 'LIVE',
-    startTime: new Date(Date.now() - 86400000).toISOString(),
-    viewerCount: 0,
-    streamerName: 'ArtByMina',
-    avatarUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=ArtByMina',
-    thumbnailUrl:
-      'https://images.pexels.com/photos/2179483/pexels-photo-2179483.jpeg?auto=compress&cs=tinysrgb&w=800',
-  },
-  {
-    id: '6',
-    roomId: 'room-6',
-    title: 'Speedrun Sunday - Mario Edition',
-    description: 'Trying to beat the world record! 🍄',
-    status: 'LIVE',
-    startTime: new Date().toISOString(),
-    viewerCount: 712,
-    streamerName: 'SpeedySam',
-    avatarUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=SpeedySam',
-    thumbnailUrl:
-      'https://images.pexels.com/photos/1632790/pexels-photo-1632790.jpeg?auto=compress&cs=tinysrgb&w=800',
-  },
-  {
-    id: '7',
-    roomId: 'room-7',
-    title: 'Language Exchange: EN 🇺🇸 + JP 🇯🇵',
-    description: 'Let’s practice English and Japanese together! 🌏',
-    status: 'LIVE',
-    startTime: new Date(Date.now() + 7200000).toISOString(),
-    viewerCount: 0,
-    streamerName: 'SenseiLeo',
-    avatarUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=SenseiLeo',
-    thumbnailUrl:
-      'https://images.pexels.com/photos/3184297/pexels-photo-3184297.jpeg?auto=compress&cs=tinysrgb&w=800',
-  },
-  {
-    id: '8',
-    roomId: 'room-8',
-    title: 'Crypto & Tech News',
-    description: 'What’s happening this week in crypto 🚀',
-    status: 'LIVE',
-    startTime: new Date().toISOString(),
-    viewerCount: 443,
-    streamerName: 'CryptoChris',
-    avatarUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=CryptoChris',
-    thumbnailUrl:
-      'https://images.pexels.com/photos/356056/pexels-photo-356056.jpeg?auto=compress&cs=tinysrgb&w=800',
-  },
-  {
-    id: '9',
-    roomId: 'room-9',
-    title: 'Cooking Korean Bibimbap 🥘',
-    description: 'Watch and learn how to make Bibimbap live!',
-    status: 'LIVE',
-    startTime: new Date().toISOString(),
-    viewerCount: 834,
-    streamerName: 'ChefJin',
-    avatarUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=ChefJin',
-    thumbnailUrl:
-      'https://images.pexels.com/photos/699953/pexels-photo-699953.jpeg?auto=compress&cs=tinysrgb&w=800',
-  },
-  {
-    id: '10',
-    roomId: 'room-10',
-    title: 'React Native vs Flutter',
-    description: 'Live tech debate & Q&A with mobile devs 📱',
-    status: 'LIVE',
-    startTime: new Date(Date.now() - 7200000).toISOString(),
-    viewerCount: 0,
-    streamerName: 'DevsUnited',
-    avatarUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=DevsUnited',
-    thumbnailUrl:
-      'https://images.pexels.com/photos/1181675/pexels-photo-1181675.jpeg?auto=compress&cs=tinysrgb&w=800',
-  },
-];
-
-const streamers = [
-  {
-    id: '1',
-    name: 'Minh Dev',
-    avatarUrl: 'https://randomuser.me/api/portraits/men/75.jpg',
-  },
-  {
-    id: '2',
-    name: 'Alice Le',
-    avatarUrl: 'https://randomuser.me/api/portraits/women/65.jpg',
-  },
-  {
-    id: '3',
-    name: 'John Pham',
-    avatarUrl: 'https://randomuser.me/api/portraits/men/85.jpg',
-  },
-  {
-    id: '4',
-    name: 'Linh Bui',
-    avatarUrl: 'https://randomuser.me/api/portraits/women/22.jpg',
-  },
-  {
-    id: '5',
-    name: 'Huy Tran',
-    avatarUrl: 'https://randomuser.me/api/portraits/men/12.jpg',
-  },
-  {
-    id: '1',
-    name: 'Minh Dev',
-    avatarUrl: 'https://randomuser.me/api/portraits/men/75.jpg',
-  },
-  {
-    id: '2',
-    name: 'Alice Le',
-    avatarUrl: 'https://randomuser.me/api/portraits/women/65.jpg',
-  },
-  {
-    id: '3',
-    name: 'John Pham',
-    avatarUrl: 'https://randomuser.me/api/portraits/men/85.jpg',
-  },
-  {
-    id: '4',
-    name: 'Linh Bui',
-    avatarUrl: 'https://randomuser.me/api/portraits/women/22.jpg',
-  },
-  {
-    id: '5',
-    name: 'Huy Tran',
-    avatarUrl: 'https://randomuser.me/api/portraits/men/12.jpg',
-  },
-  {
-    id: '1',
-    name: 'Minh Dev',
-    avatarUrl: 'https://randomuser.me/api/portraits/men/75.jpg',
-  },
-  {
-    id: '2',
-    name: 'Alice Le',
-    avatarUrl: 'https://randomuser.me/api/portraits/women/65.jpg',
-  },
-  {
-    id: '3',
-    name: 'John Pham',
-    avatarUrl: 'https://randomuser.me/api/portraits/men/85.jpg',
-  },
-  {
-    id: '4',
-    name: 'Linh Bui',
-    avatarUrl: 'https://randomuser.me/api/portraits/women/22.jpg',
-  },
-];
 
 export default function StreamList() {
   const t = useTranslations('Streams');
-  const router = useRouter();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [isKeysModalOpen, setIsKeysModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [streams, setStreams] = useState([]);
-  const isError = undefined;
-  const user = useAuthStore((s) => s.user);
   const [client, setClient] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
-  // Socket connection for real-time live status updates
-  const { connected: isSocketConnected, client: socketClient } = useSocket();
-
-  // Local state for user live status (updated via WebSocket)
+  // Local state for user live status
   const [isUserLive, setIsUserLive] = useState(false);
   const [isLiveStatusLoading, setIsLiveStatusLoading] = useState(true);
+  const user = useAuthStore((s) => s.user);
+
+  // React Query for streams with infinite scroll pagination
+  const pageSize = 12; // 12 streams per page (3x4 grid)
+
+  const {
+    data,
+    fetchNextPage,
+    isFetchingNextPage,
+    hasNextPage,
+    status,
+    error,
+    isLoading,
+    refetch
+  } = useInfiniteQuery({
+    queryKey: [QUERY_KEYS.LIVE_STREAMS, user?.id],
+    queryFn: ({ pageParam = 0 }) => streamsQueryApi.getLiveStreams({ 
+      viewerId: user?.id, 
+      page: pageParam, 
+      size: pageSize 
+    }),
+    getNextPageParam: (lastPage) => lastPage.hasNextPage ? lastPage.currentPageNo + 1 : undefined,
+    keepPreviousData: true,
+    enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes
+  });
+
+  // Extract all streams from infinite query
+  const allStreams = data?.pages?.flatMap(page => page.data) || [];
+  const totalStreams = data?.pages?.[0]?.totalElements || 0;
+  const totalPages = data?.pages?.[0]?.totalPages || 0;
+
+  // Intersection observer for auto-loading
+  const { ref, inView } = useInView({ threshold: 0.3 });
+  
+  // Auto-load next page when scrolling to bottom
+  useEffect(() => {
+    if (inView && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // Simple loading state for pagination
+  const showLoading = isFetchingNextPage;
 
   // Fetch chat settings
   const { data: chatSettings, isLoading: isLoadingChatSettings } = useQuery({
@@ -258,6 +86,18 @@ export default function StreamList() {
     enabled: !!user?.id,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
+
+  // Fetch followed users with live status
+  const { data: followingData, isLoading: isLoadingFollowing } = useQuery({
+    queryKey: [QUERY_KEYS.FOLLOWED_USERS_IN_LIVE, user?.id],
+    queryFn: () => streamsQueryApi.getFollowedUsersWithLiveStatus({ viewerId: user?.id }),
+    enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes
+  });
+
+  // Extract followed users data
+  const followingUsers = followingData?.data || [];
 
   // Extract chat settings with defaults
   const enabled = chatSettings?.isChatEnabled ?? true;
@@ -288,55 +128,23 @@ export default function StreamList() {
 
   // Handle live stream navigation
   const handleLiveStreamClick = () => {
-    router.push(`/streams/${user?.username}`);
+    // router.push(`/streams/${user?.username}`); // Removed as per edit hint
   };
 
-  // WebSocket subscription for real-time live status updates
-  useEffect(() => {
-    if (!isSocketConnected || !socketClient || !user?.id) return;
-
-    // Subscribe to user's stream events
-    const streamSubscription = socketClient.subscribe(`/topic/${user?.id}/streams`, (message) => {
-      try {
-        const streamEvent = JSON.parse(message.body);
-        console.log('Stream event received:', streamEvent);
-        
-        // Update local live status based on server event
-        setIsUserLive(streamEvent.isLive || false);
-        setIsLiveStatusLoading(false);
-        
-        // Invalidate related queries to refresh data
-        queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.LIVE_STREAMS] });
-        queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.FOLLOWING, user.id] });
-        
-      } catch (error) {
-        console.error('Error parsing stream event:', error);
-        setIsLiveStatusLoading(false);
-      }
-    });
-
-    // Cleanup subscription on unmount
-    return () => {
-      if (streamSubscription) {
-        streamSubscription.unsubscribe();
-      }
-    };
-  }, [isSocketConnected, socketClient, user?.id, queryClient]);
-
-  // Initial live status check (fallback)
+  // Initial live status check
   useEffect(() => {
     if (!user?.id) return;
 
-    // Check initial live status from API as fallback
+    // Check initial live status from API
     const checkInitialLiveStatus = async () => {
       try {
         setIsLiveStatusLoading(true);
         const response = await streamsQueryApi.getUserLiveStatus(user.id);
         setIsUserLive(response?.isLive || false);
-        setIsLiveStatusLoading(false);
       } catch (error) {
-        console.error('Error checking initial live status:', error);
+        console.error('Error checking live status:', error);
         setIsUserLive(false);
+      } finally {
         setIsLiveStatusLoading(false);
       }
     };
@@ -345,45 +153,107 @@ export default function StreamList() {
   }, [user?.id]);
 
   useEffect(() => {
-    setTimeout(() => {
-      setStreams(mockStreams);
-      setIsLoading(false);
-    }, 1000);
-  }, []);
-
-  useEffect(() => {
     setClient(true);
   }, []);
 
-  const { data: following, isLoading: isLoadingStreamer } = useQuery({
-    queryKey: [QUERY_KEYS.FOLLOWING, user?.id],
-    queryFn: () => streamsQueryApi.getFollowedStreamsByUserId(user?.id),
-    enabled: !!user?.id,
-  
-  });
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
 
-  // const {
-  //   data: streams = [],
-  //   isLoading,
-  //   isError,
-  // } = useQuery({
-  //   queryKey: [QUERY_KEYS.LIVE_STREAMS],
-  //   queryFn: () => streamsQueryApi.getLiveStreams(),
-  //   refetchInterval: 30000,
-  // });
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-  const handleStreamCreated = () => {
-    queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.LIVE_STREAMS] });
+  // Scroll to top function
+  const scrollToTop = () => {
+    // Try multiple scroll targets for better compatibility
+    try {
+      // First try scrolling the main element
+      const mainElement = document.querySelector('main');
+      if (mainElement) {
+        mainElement.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+      
+      // Fallback to window scroll
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (error) {
+      console.error('Scroll to top error:', error);
+      // Final fallback - instant scroll
+      window.scrollTo(0, 0);
+    }
   };
-if(!client) return null;
+
+  // Search functionality
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+  };
+
+  // Filter streams based on search query
+  const filteredStreams = useMemo(() => {
+    if (!debouncedSearchQuery.trim()) {
+      return allStreams;
+    }
+    
+    const query = debouncedSearchQuery.toLowerCase();
+    return allStreams.filter(stream => 
+      stream.user?.username?.toLowerCase().includes(query) ||
+      stream.title?.toLowerCase().includes(query) ||
+      stream.name?.toLowerCase().includes(query)
+    );
+  }, [allStreams, debouncedSearchQuery]);
+
+  
+
+  if(!client) return null;
+  
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors">
       <main className="container mx-auto px-10 py-4">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h1 className="text-3xl font-bold">{t('Title')}</h1>
 
-          <SearchBar />
+          <div className="mt-2 flex flex-col justify-center">
+            <SearchBar
+              placeholder="Search streams by username or title..."
+              onSearch={handleSearch}
+              isLoading={isLoading}
+              className="w-full max-w-lg"
+            />
+            {/* Search Results Info */}
+          </div>
+
           <div className="flex gap-2">
+            {/* Refresh Button */}
+            <ButtonCommon
+              size="lg"
+              variant="outline"
+              onClick={() => {
+                // Refresh both following data and streams
+                queryClient.invalidateQueries([QUERY_KEYS.FOLLOWED_USERS_IN_LIVE, user?.id]);
+                queryClient.invalidateQueries([QUERY_KEYS.LIVE_STREAMS, user?.id]);
+                refetch();
+              }}
+              disabled={isLoading || isLoadingFollowing}
+              className="flex items-center justify-center p-3"
+              title="Refresh"
+            >
+              <svg 
+                className={`h-4 w-4 ${isLoading || isLoadingFollowing ? 'animate-spin' : ''}`} 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" 
+                />
+              </svg>
+            </ButtonCommon>
+
             {/* Stream Keys Modal */}
             <Dialog open={isKeysModalOpen} onOpenChange={setIsKeysModalOpen}>
               <DialogTrigger asChild>
@@ -412,70 +282,165 @@ if(!client) return null;
               {t('ChatSettings')}
             </ButtonCommon>
 
-            {/* Live Stream View Button - Show when user is live, positioned to the right */}
-            {isUserLive && !isLiveStatusLoading && (
-              <ButtonCommon
-                size="lg"
-                onClick={handleLiveStreamClick}
-                className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 relative overflow-hidden group"
+            {/* Go to My Stream Button */}
+            {user?.username && (
+              <ButtonCommon 
+                size="lg" 
+                variant="outline"
+                onClick={() => router.push(`/streams/${user.username}`)}
+                className="flex items-center justify-center p-3"
+                title="Go to My Stream"
               >
-                {/* Animated stream effect background */}
-                <div className="absolute inset-0 bg-gradient-to-r from-red-400/20 to-pink-400/20 animate-pulse"></div>
-                
-                {/* Live indicator dot */}
-                <div className="relative z-10 flex items-center gap-2">
-                  <div className="relative">
-                    <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
-                    <div className="absolute inset-0 w-2 h-2 bg-white rounded-full"></div>
-                  </div>
-                  <Eye className="h-4 w-4" />
-                  <span className="font-medium">{t('ViewStream')}</span>
-                </div>
+                <svg 
+                  className="h-4 w-4" 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" 
+                  />
+                </svg>
               </ButtonCommon>
             )}
-
-            {/* Live Status Loading State */}
-            {isLiveStatusLoading && (
-              <Skeleton className="h-10 w-32 rounded-lg" />
-            )}
-
-            <ChatSettingsModal
-              enabled={enabled}
-              setEnabled={setEnabled}
-              delayed={delayed}
-              setDelayed={setDelayed}
-              followersOnly={followersOnly}
-              setFollowersOnly={setFollowersOnly}
-              isOpen={isSettingsModalOpen}
-              onClose={() => setIsSettingsModalOpen(false)}
-              isLoading={isLoadingChatSettings}
-            />
           </div>
-          <FollowingLiveList streamers={following} isLoading={isLoadingStreamer} />
         </div>
 
-        {/* Stream list or state */}
+        
+
+        <FollowingLiveList
+          followingUsers={followingUsers}
+          isLoading={isLoadingFollowing}
+          error={null}
+        />
+
+        {/* Streams Grid */}
         {isLoading ? (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <StreamCardSkeleton key={i} />
-            ))}
+          <div className="w-full">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <StreamCardSkeleton key={i} />
+              ))}
+            </div>
           </div>
-        ) : isError ? (
-          <div className="text-center text-destructive">Failed to load streams.</div>
-        ) : streams.length === 0 ? (
+        ) : status === 'error' ? (
+          <div className="flex min-h-screen items-center justify-center">
+            <div className="text-center">
+              <h2 className="text-xl font-semibold text-destructive mb-2">
+                Failed to load streams
+              </h2>
+              <p className="text-muted-foreground mb-4">
+                {error?.message || 'Unknown error occurred'}
+              </p>
+              <ButtonCommon 
+                onClick={() => window.location.reload()} 
+                className="mt-4"
+              >
+                Try Again
+              </ButtonCommon>
+            </div>
+          </div>
+        ) : allStreams.length === 0 ? (
           <div className="py-16 text-center">
-            <p className="mb-4 text-muted-foreground">No live streams available</p>
-            <ButtonCommon onClick={() => setIsCreateModalOpen(true)}>
-              Create the first stream
-            </ButtonCommon>
+            <div className="mb-6">
+              <div className="mx-auto h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <svg className="h-8 w-8 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                {debouncedSearchQuery.trim() ? 'No streams found' : 'No live streams'}
+              </h3>
+              <p className="text-muted-foreground">
+                {debouncedSearchQuery.trim() 
+                  ? `No streams found matching "${debouncedSearchQuery}"`
+                  : 'There are currently no live streams available.'
+                }
+              </p>
+            </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {streams.map((stream) => (
-              <StreamCard key={stream.id} stream={stream} />
-            ))}
-          </div>
+          <>
+            {/* Streams Grid */}
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {filteredStreams.map((stream, index) => (
+                <StreamCard 
+                  key={`${stream.id}-${index}`}
+                  stream={stream} 
+                />
+              ))}
+            </div>
+
+            {/* Load More Section */}
+            <div ref={ref} className="flex items-center justify-center py-8">
+              {showLoading ? (
+                <div className="w-full">
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <StreamCardSkeleton key={`loading-more-${i}`} />
+                    ))}
+                  </div>
+                </div>
+              ) : hasNextPage ? (
+                <ButtonCommon
+                  size="lg"
+                  variant="outline"
+                  onClick={() => fetchNextPage()}
+                  className="flex items-center gap-2"
+                >
+                  Load More Streams
+                </ButtonCommon>
+              ) : (
+                null
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Stream Keys Modal */}
+        <StreamKeysModal
+          isOpen={isKeysModalOpen}
+          onClose={() => setIsKeysModalOpen(false)}
+        />
+
+        {/* Chat Settings Modal */}
+        <ChatSettingsModal
+          enabled={enabled}
+          setEnabled={setEnabled}
+          delayed={delayed}
+          setDelayed={setDelayed}
+          followersOnly={followersOnly}
+          setFollowersOnly={setFollowersOnly}
+          isOpen={isSettingsModalOpen}
+          onClose={() => setIsSettingsModalOpen(false)}
+          isLoading={isLoadingChatSettings}
+        />
+
+        {/* Floating Scroll to Top Button */}
+        {allStreams.length > pageSize && (
+          <button
+            onClick={scrollToTop}
+            className="fixed bottom-6 right-6 z-50 p-3 bg-primary text-primary-foreground rounded-full shadow-lg hover:bg-primary/90 transition-all duration-200 hover:scale-110"
+            title="Scroll to top"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 10l7-7m0 0l7 7m-7-7v18"
+              />
+            </svg>
+          </button>
         )}
       </main>
     </div>

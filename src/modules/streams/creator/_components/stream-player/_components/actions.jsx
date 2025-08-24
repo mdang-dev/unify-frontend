@@ -22,8 +22,8 @@ export default function Actions({ currentUserId, hostIdentity, isHost }) {
         'transition-all duration-300 ease-in-out',
         'hover:scale-105 hover:shadow-lg hover:brightness-110 active:scale-95',
         following
-          ? 'bg-neutral-500 text-white hover:bg-neutral-400'
-          : 'bg-primary text-black hover:bg-primary/80'
+          ? 'bg-neutral-500 text-white hover:bg-neutral-400 '
+          : 'bg-primary dark:text-black text-white hover:bg-primary/80'
       )}
     >
       {following ? (

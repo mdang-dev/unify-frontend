@@ -265,6 +265,8 @@
         "UpdateStreamTitleThumbnail": "Update your stream title and thumbnail",
         "StreamTitle": "Stream Title",
         "EnterStreamTitle": "Enter stream title",
+        "StreamDescription": "Stream Description",
+        "EnterStreamDescription": "Enter stream description...",
         "ThumbnailImage": "Thumbnail Image",
         "ClickToUpload": "Click to upload",
         "DragAndDrop": "or drag and drop",

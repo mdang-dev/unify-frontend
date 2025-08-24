@@ -22,7 +22,7 @@ export default function ChatInfo({ isDelayed, isFollowersOnly }) {
   if (!isDelayed && !isFollowersOnly) return null;
 
   return (
-    <div className="flex w-full items-center gap-x-2 rounded-t-md border border-white/10 bg-white/5 p-2 text-muted-foreground">
+    <div className="flex w-full text-xs items-center gap-x-2 rounded-t-md border border-white/10 bg-white/5 p-2 text-muted-foreground">
       <Hint label={hint}>
         <Info className="h-4 w-4" />
       </Hint>

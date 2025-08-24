@@ -27,6 +27,7 @@ export default function EditStreamModal({
   onClose,
   currentTitle = '',
   currentThumbnailUrl = '',
+  currentDescription = '',
   userId,
 }) {
   const t = useTranslations('Streams');
@@ -45,6 +46,7 @@ export default function EditStreamModal({
   const [localData, setLocalData] = useState({
     title: currentTitle,
     thumbnailUrl: currentThumbnailUrl,
+    description: currentDescription,
   });
 
   // File upload state
@@ -58,14 +60,16 @@ export default function EditStreamModal({
       setLocalData({
         title: streamDetails.title || currentTitle,
         thumbnailUrl: streamDetails.thumbnailUrl || currentThumbnailUrl,
+        description: streamDetails.description || currentDescription,
       });
     } else {
       setLocalData({
         title: currentTitle,
         thumbnailUrl: currentThumbnailUrl,
+        description: currentDescription,
       });
     }
-  }, [streamDetails, currentTitle, currentThumbnailUrl]);
+  }, [streamDetails, currentTitle, currentThumbnailUrl, currentDescription]);
 
   // Update stream details mutation
   const { mutate: updateStreamDetails, isPending } = useMutation({
@@ -131,11 +135,13 @@ export default function EditStreamModal({
       setLocalData({
         title: streamDetails.title || currentTitle,
         thumbnailUrl: streamDetails.thumbnailUrl || currentThumbnailUrl,
+        description: streamDetails.description || currentDescription,
       });
     } else {
       setLocalData({
         title: currentTitle,
         thumbnailUrl: currentThumbnailUrl,
+        description: currentDescription,
       });
     }
     setSelectedFile(null);
@@ -207,6 +213,12 @@ export default function EditStreamModal({
               <Skeleton className="h-10 w-full" />
             </div>
 
+            {/* Description Input Skeleton */}
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-20 w-full" />
+            </div>
+
             {/* Thumbnail Upload Skeleton */}
             <div className="space-y-2">
               <Skeleton className="h-5 w-32" />
@@ -258,18 +270,44 @@ export default function EditStreamModal({
             />
           </div>
 
+          {/* Description Input */}
+          <div className="space-y-2">
+            <Label htmlFor="description">{t('StreamDescription')}</Label>
+            <textarea
+              id="description"
+              value={localData.description}
+              onChange={(e) => handleInputChange('description', e.target.value)}
+              placeholder={t('EnterStreamDescription')}
+              disabled={isDisabled}
+              rows={3}
+              className="w-full px-3 py-2 border border-input bg-background text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 rounded-md resize-none"
+            />
+          </div>
+
           {/* Thumbnail Upload */}
           <div className="space-y-2">
             <Label>{t('ThumbnailImage')}</Label>
             
             {/* Current thumbnail preview */}
-            {localData.thumbnailUrl && (
+            {localData.thumbnailUrl && localData.thumbnailUrl.trim() !== '' ? (
               <div className="relative w-full h-32 rounded-lg overflow-hidden border border-border">
                 <img
                   src={localData.thumbnailUrl}
                   alt="Current thumbnail"
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    console.error('Thumbnail image failed to load:', localData.thumbnailUrl);
+                    // If image fails to load, hide the preview
+                    e.target.style.display = 'none';
+                  }}
                 />
+              </div>
+            ) : (
+              <div className="w-full h-32 rounded-lg border border-border bg-muted flex items-center justify-center">
+                <div className="text-center text-muted-foreground">
+                  <ImageIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No thumbnail set</p>
+                </div>
               </div>
             )}
 
@@ -296,10 +334,10 @@ export default function EditStreamModal({
               <div className="flex flex-col items-center gap-2">
                 <Upload className="h-8 w-8 text-muted-foreground" />
                 <div className="text-sm">
-                  <span className="font-medium text-primary">{t('ClickToUpload')}</span> {t('DragAndDrop')}
+                  <span className="font-medium text-primary">Click to upload</span> or drag and drop
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {t('ImageFormats')}
+                  PNG, JPG, GIF up to 10MB
                 </div>
               </div>
             </div>

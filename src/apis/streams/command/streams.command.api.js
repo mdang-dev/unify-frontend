@@ -43,6 +43,11 @@ export const streamsCommandApi = {
     return res.data;
   },
 
+  getChatSettings: async (userId) => {
+    const res = await httpClient.get(`${url}/user/${userId}/chat-settings`);
+    return res.data;
+  },
+
   updateChatSettings: async (userId, chatSettings) => {
     const res = await httpClient.put(`${url}/user/${userId}/chat-settings`, chatSettings);
     return res.data;

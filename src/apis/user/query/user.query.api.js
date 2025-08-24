@@ -7,6 +7,10 @@ export const userQueryApi = {
     const res = await httpClient(`${url}/username/${username}`);
     return res.data;
   },
+  getInfoWithStreamByUsername: async (username) => {
+    const res = await httpClient(`${url}/user-stream/${username}`);
+    return res.data;
+  },
   getAllUsers: async () => {
     const res = await httpClient(url);
     return res.data;

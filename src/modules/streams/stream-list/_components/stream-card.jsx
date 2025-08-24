@@ -4,65 +4,131 @@ import { useRouter } from 'next/navigation';
 import { Card } from '@/src/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/src/components/ui/avatar';
 import { Badge } from '@/src/components/ui/badge';
-import { Video, Eye } from 'lucide-react';
+import { Video, User } from 'lucide-react';
 
 export default function StreamCard({ stream }) {
   const router = useRouter();
 
-  const handleJoinStream = () => {};
+  const handleJoinStream = () => {
+    if (stream?.user?.username) {
+      router.push(`/streams/${stream.user.username}`);
+    }
+  };
+
+  // Generate fallback thumbnail with user initials
+  const getFallbackThumbnail = () => {
+    const username = stream.user?.username || 'user';
+    const charCode = username.charCodeAt(0);
+    
+    // Generate black and white gradients based on username character code for consistency
+    const colors = [
+      'from-black to-gray-800',
+      'from-gray-900 to-black',
+      'from-black to-gray-700',
+      'from-gray-800 to-black',
+      'from-gray-700 to-gray-900',
+      'from-black to-gray-600',
+      'from-gray-800 to-gray-700',
+      'from-gray-600 to-black',
+      'from-black to-gray-500',
+      'from-gray-900 to-gray-700',
+    ];
+    
+    const colorIndex = charCode % colors.length;
+    return colors[colorIndex];
+  };
+
+  const isFallbackThumbnail = !stream.thumbnailUrl;
 
   return (
     <Card
       onClick={handleJoinStream}
-      className="group cursor-pointer overflow-hidden rounded-xl border bg-card shadow-sm transition-transform hover:scale-[1.015] hover:shadow-lg"
+      className="group cursor-pointer overflow-hidden rounded-lg border-0 bg-transparent shadow-none transition-all duration-200 hover:scale-[1.02]"
     >
-      {/* Thumbnail */}
-      <div className="relative aspect-video w-full overflow-hidden bg-muted">
-        {stream.thumbnailUrl ? (
+      {/* Thumbnail Container */}
+      <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-muted">
+        {!isFallbackThumbnail ? (
+          // Real thumbnail
           <img
             src={stream.thumbnailUrl}
-            alt="Stream thumbnail"
+            alt={`${stream.user?.username}'s stream`}
             className="h-full w-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-105"
           />
         ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-muted-foreground">
-            <Video className="h-8 w-8" />
-            <span className="text-sm font-medium">No Thumbnail</span>
+          // Fallback thumbnail with gradient and user initial
+          <div className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${getFallbackThumbnail()} transition-all duration-300 group-hover:scale-105 relative overflow-hidden`}>
+            {/* Blurred background using user's avatar */}
+            {stream.user?.avatar?.url && (
+              <div className="absolute inset-0 w-full h-full">
+                <img 
+                  src={stream.user?.avatar?.url} 
+                  alt=""
+                  className="w-full h-full object-cover blur-md scale-110 opacity-30"
+                />
+              </div>
+            )}
+            
+            {/* Avatar in the middle */}
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm border-2 border-white/40 shadow-lg z-10">
+              {stream.user?.avatar?.url ? (
+                <img 
+                  src={stream.user?.avatar?.url} 
+                  alt={stream.user?.username}
+                  className="object-cover object-center w-full h-full rounded-full"
+                />
+              ) : (
+                <span className="text-2xl font-bold text-white">
+                  {stream.user?.username?.[0]?.toUpperCase() || 'U'}
+                </span>
+              )}
+            </div>
           </div>
         )}
 
-        {/* Gradient overlay bottom */}
-        <div className="absolute bottom-0 left-0 flex w-full items-center gap-2 bg-gradient-to-t from-black/60 to-transparent px-3 py-2">
-          <Avatar className="h-8 w-8 ring-2 ring-white">
-            <AvatarImage src={stream.avatarUrl || ''} />
-            <AvatarFallback>{stream.streamerName[0]}</AvatarFallback>
-          </Avatar>
-          <p className="truncate text-sm font-medium text-white">{stream.streamerName}</p>
-        </div>
-
-        {/* LIVE Badge */}
-        {stream.status === 'LIVE' && (
-          <Badge className="absolute left-2 top-2 rounded-full bg-red-600 px-2 py-[2px] text-xs font-bold text-white">
+        {/* LIVE Badge - Top Left */}
+        {stream.isLive && (
+          <Badge className="absolute left-2 top-2 rounded-full bg-red-600 px-2 py-1 text-xs font-bold text-white shadow-lg">
             LIVE
           </Badge>
         )}
 
-        {/* Viewer Count */}
-        {stream.status === 'LIVE' && (
-          <div className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-black/70 px-2 py-[2px] text-xs text-white">
-            <Eye className="h-4 w-4" />
-            {stream.viewerCount ?? 0}
-          </div>
-        )}
+        {/* Gradient overlay for text readability */}
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent h-16" />
       </div>
 
-      {/* Stream Info */}
-      <div className="space-y-1 p-4">
-        <h3 className="line-clamp-1 text-base font-semibold">{stream.title}</h3>
-        <p className="line-clamp-2 text-sm text-muted-foreground">{stream.description}</p>
-        <p className="text-xs text-muted-foreground">
-          {new Date(stream.startTime).toLocaleString()}
-        </p>
+      {/* Stream Info - Below Thumbnail */}
+      <div className="mt-3 flex gap-3">
+        {/* User Avatar */}
+        <div className="flex-shrink-0">
+          <Avatar className="h-10 w-10 ring-2 ring-background overflow-hidden">
+            {stream.user?.avatar?.url ? (
+              <AvatarImage 
+                src={stream.user?.avatar?.url} 
+                alt={stream.user?.username}
+                className="object-cover object-center w-full h-full"
+              />
+            ) : (
+              <AvatarFallback className="bg-gradient-to-br from-black to-gray-800 text-white border border-gray-600">
+                {stream.user?.username?.[0]?.toUpperCase() || 'U'}
+              </AvatarFallback>
+            )}
+          </Avatar>
+        </div>
+
+        {/* Stream Details */}
+        <div className="flex-1 min-w-0">
+          <h3 className="line-clamp-2 text-sm font-semibold text-foreground leading-tight group-hover:text-primary transition-colors">
+            {stream.title || 'Untitled Stream'}
+          </h3>
+          <p className="mt-1 text-sm text-muted-foreground font-medium">
+            {stream.user?.username || 'Unknown User'}
+          </p>
+          {stream.description && (
+            <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
+              {stream.description}
+            </p>
+          )}
+        </div>
       </div>
     </Card>
   );
