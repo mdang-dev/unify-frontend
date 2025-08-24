@@ -246,7 +246,9 @@ const AdminDashboard = () => {
               ) : (
                 <>
                   <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.totalUsers?.toLocaleString() || 0}</p>
-                  <p className="text-xs text-green-600 dark:text-green-400">+{stats?.userGrowthPercent?.toFixed(1) || 0}% from last month</p>
+                  <p className="text-xs text-green-600 dark:text-green-400">
+                    +{stats?.userGrowthPercent?.toFixed(1) || 0}% ({stats?.userDifference || 0} more users)
+                  </p>
                 </>
               )}
             </div>
@@ -273,7 +275,9 @@ const AdminDashboard = () => {
               ) : (
                 <>
                   <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.totalPosts?.toLocaleString() || 0}</p>
-                  <p className="text-xs text-green-600 dark:text-green-400">+{stats?.postGrowthPercent?.toFixed(1) || 0}% from last month</p>
+                  <p className="text-xs text-green-600 dark:text-green-400">
+                    +{stats?.postGrowthPercent?.toFixed(1) || 0}% ({stats?.postDifference || 0} more posts)
+                  </p>
                 </>
               )}
             </div>
@@ -327,7 +331,9 @@ const AdminDashboard = () => {
               ) : (
                 <>
                   <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.activeUsers?.toLocaleString() || 0}</p>
-                  <p className="text-xs text-green-600 dark:text-green-400">+{stats?.activeUserGrowthPercent?.toFixed(1) || 0}% from last month</p>
+                  <p className="text-xs text-green-600 dark:text-green-400">
+                    +{stats?.activeUserGrowthPercent?.toFixed(1) || 0}% ({stats?.activeUserDifference || 0} more users)
+                  </p>
                 </>
               )}
             </div>
