@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/src/stores/auth.store';
@@ -23,7 +24,6 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from '@/src/components/ui/sidebar';
-import { Avatar, User } from '@heroui/react';
 import UnifyLogo from '../full-unify-logo';
 
 const AdminSidebar = () => {
@@ -128,14 +128,27 @@ const AdminSidebar = () => {
         <SidebarGroup>
           <SidebarGroupContent>
             <div className="flex items-center gap-2 p-2">
-              <User
-                avatarProps={{
-                  src: `${user?.avatar?.url}` || defaultAvatar,
-                }}
-                description="Admin"
-                name={`${user?.firstName || ''} ${user?.lastName || ''}`}
-                className="flex-1 group-data-[collapsible=icon]:hidden"
-              />
+              <div className="flex items-center gap-3 flex-1 group-data-[collapsible=icon]:hidden">
+                <div className='w-10 h-10'>
+                <Image
+                  src={user?.avatar?.url || defaultAvatar}
+                  alt="User Avatar"
+                  width={60}
+                  height={60}
+                  className="rounded-full object-cover w-full h-full"
+                  onError={(e) => {
+                    e.target.src = defaultAvatar;
+                  }}
+                />
+                </div>
+                
+                <div className="flex flex-col min-w-0">
+                  <span className="text-sm font-medium text-sidebar-foreground truncate">
+                    {`${user?.firstName || ''} ${user?.lastName || ''}`}
+                  </span>
+                  <span className="text-xs text-sidebar-foreground/70">Admin</span>
+                </div>
+              </div>
               <button
                 onClick={logoutUser}
                 className="flex h-8 w-8 items-center justify-center rounded-md text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
