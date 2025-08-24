@@ -60,8 +60,8 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
   const searchButtonRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  // Track dropdown position for dragging - Start at top-right below search icon
-  const [dropdownPosition, setDropdownPosition] = useState({ x: 500, y: 60 });
+  // Track dropdown position for dragging - Will be calculated dynamically when opened
+  const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
   const [messageSearchQuery, setMessageSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
@@ -96,18 +96,75 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
     chatPartner
   );
   
-  // Function to reset dropdown position to below search button
+  // Helper function to calculate dropdown position with smart boundary checking
+  const calculateDropdownPosition = useCallback((buttonRect, offsetY = 10) => {
+    // Get the chat container element to calculate relative positioning
+    const chatContainer = document.querySelector('.chat-container') || document.body;
+    const containerRect = chatContainer.getBoundingClientRect();
+    
+    // Dropdown dimensions
+    const dropdownWidth = 287; // w-64 = 16rem = 256px
+    const dropdownHeight = 200; // Approximate height
+    
+    // Calculate position relative to viewport for fixed positioning
+    let dropdownX = buttonRect.left - (dropdownWidth / 2) + (buttonRect.width / 2);
+    let dropdownY = buttonRect.bottom + offsetY;
+    
+    // Use viewport boundaries for more freedom in positioning
+    // This allows dropdown to be positioned more freely across the screen
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    // Allow dropdown to move more freely within the viewport
+    // Ensure dropdown doesn't go past left boundary (but allow more space)
+    if (dropdownX < 10) {
+      dropdownX = 10;
+    }
+    
+    // Ensure dropdown doesn't go past right boundary (but allow more space)
+    if (dropdownX + dropdownWidth > viewportWidth - 10) {
+      dropdownX = viewportWidth - dropdownWidth - 10;
+    }
+    
+    // Ensure dropdown doesn't go past top boundary (but allow more space)
+    if (dropdownY < 10) {
+      dropdownY = 10;
+    }
+    
+    // Ensure dropdown doesn't go past bottom boundary (but allow more space)
+    if (dropdownY + dropdownHeight > viewportHeight - 10) {
+      dropdownY = viewportHeight - dropdownHeight - 10;
+    }
+    
+    return { x: dropdownX, y: dropdownY };
+  }, []);
+
+  // Function to reset dropdown position to below search button with smart boundary checking
   const resetDropdownPosition = useCallback(() => {
     if (searchButtonRef.current) {
       const rect = searchButtonRef.current.getBoundingClientRect();
-      const dropdownX = rect.left - 200; // Center dropdown on button
-      const dropdownY = rect.bottom + 10; // 10px below button
-      setDropdownPosition({ x: dropdownX, y: dropdownY });
+      const position = calculateDropdownPosition(rect, 10);
+      setDropdownPosition(position);
     } else {
       // Fallback to default position if button not found
-      setDropdownPosition({ x: 500, y: 60 });
+      setDropdownPosition({ x: 400, y: 100 });
     }
-  }, []);
+  }, [calculateDropdownPosition]);
+
+  // Handle window resize to keep dropdown in bounds
+  useEffect(() => {
+    const handleResize = () => {
+      if (showSearchDropdown && searchButtonRef.current) {
+        // Reposition dropdown when window resizes to keep it in bounds
+        const rect = searchButtonRef.current.getBoundingClientRect();
+        const position = calculateDropdownPosition(rect, 20);
+        setDropdownPosition(position);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [showSearchDropdown, calculateDropdownPosition]);
 
   // Function to close search dropdown with delay
   const closeSearchDropdown = useCallback(() => {
@@ -573,16 +630,12 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
         // The dropdown can be dragged within the viewport with smart left-sidebar protection
         // This prevents going off-screen while allowing natural movement
         
-        // Smart viewport boundaries: Keep dropdown visible and respect sidebar
-        const sidebarWidth = 80; // Approximate width of left sidebar
-    // Approximate width of chat list panel
-        const leftBoundary = sidebarWidth + 20; // Don't go past chat list
-        
-        // Viewport boundaries with smart left protection
-        const minX = leftBoundary; // Don't go past chat list (respect sidebar)
-        const maxX = viewportWidth - dropdownWidth - 20; // Keep visible on right
-        const minY = 20; // Keep visible on top
-        const maxY = viewportHeight - dropdownHeight - 20; // Keep visible on bottom
+        // Use viewport boundaries for maximum freedom in dragging
+        // This allows dropdown to move freely across the entire screen
+        const minX = 10; // Keep visible on left (more space)
+        const maxX = viewportWidth - dropdownWidth - 10; // Keep visible on right (more space)
+        const minY = 10; // Keep visible on top (more space)
+        const maxY = viewportHeight - dropdownHeight - 10; // Keep visible on bottom (more space)
         
         // Apply smart boundaries
         const boundedX = Math.max(minX, Math.min(maxX, newX));
@@ -647,9 +700,8 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
           // Get search button position and position dropdown below it
           if (searchButtonRef.current) {
             const rect = searchButtonRef.current.getBoundingClientRect();
-            const dropdownX = rect.left - 200; // Center dropdown on button
-            const dropdownY = rect.bottom + 10; // 10px below button
-            setDropdownPosition({ x: dropdownX, y: dropdownY });
+            const position = calculateDropdownPosition(rect, 10);
+            setDropdownPosition(position);
           }
         }
         setShowSearchDropdown(!showSearchDropdown);
@@ -1048,7 +1100,7 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
         </div>
 
         {/* Chat Window - Better proportions and spacing */}
-        <div className="flex-1 flex flex-col min-w-0 h-screen max-w-full">
+                      <div className="flex-1 flex flex-col min-w-0 h-screen max-w-full chat-container">
           {!opChat?.userId ? (
             <div className="h-full w-full">
               <div className="flex h-full items-center justify-center">
@@ -1059,19 +1111,19 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
             </div>
           ) : (
             <>
-              {/* Chat Header - Smaller for large devices */}
-              <div className="flex w-full p-2 border-b border-gray-200 dark:border-neutral-700 max-w-full sm:p-2 md:p-3 lg:p-3 lg:pl-7">
+              {/* Chat Header - Compact size */}
+              <div className="flex w-full p-1.5 border-b border-gray-200 dark:border-neutral-700 max-w-full sm:p-1.5 md:p-2 lg:p-2 lg:pl-4">
                 <div className="flex grow min-w-0 max-w-full items-center">
                   <div className="relative flex-shrink-0">
                     <Link href={`/others-profile/${opChat?.username}`} className="hover:opacity-80 transition-opacity">
                       <img
                         src={opChat?.avatar || AvatarDefault.src}
                         alt="Avatar user"
-                        className="h-8 w-8 rounded-full border-2 border-gray-500 dark:border-neutral-700 cursor-pointer sm:h-9 sm:w-9 md:h-10 md:w-10 lg:h-11 lg:w-11 xl:h-12 xl:w-12"
+                        className="h-8 w-8 rounded-full border-2 border-gray-500 dark:border-neutral-700 cursor-pointer sm:h-8 sm:w-8 md:h-9 md:w-9 lg:h-10 lg:w-10 xl:h-11 xl:w-11"
                       />
                     </Link>
-                    {/* Active Status Indicator - Smaller for large devices */}
-                    <div className={`absolute top-[70%] right-[12%] transform translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 border-white dark:border-gray-800 sm:top-[75%] sm:w-2.5 sm:h-2.5 md:w-2.5 md:h-2.5 lg:w-3 lg:h-3 xl:w-3.5 xl:h-3.5 ${
+                    {/* Active Status Indicator - Compact size */}
+                    <div className={`absolute top-[70%] right-[12%] transform translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full border-2 border-white dark:border-gray-800 sm:top-[75%] sm:w-2 sm:h-2 md:w-2 md:h-2 lg:w-2.5 lg:h-2.5 xl:w-3 xl:h-3 ${
                       (() => {
                         const userStatus = getUserStatus(opChat?.userId);
                         if (userStatus.active) {
@@ -1089,17 +1141,17 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                       })()
                     }`}></div>
                   </div>
-                  <div className="ml-2 min-w-0 flex-1 sm:ml-3 md:ml-3 lg:ml-4 max-w-full">
-                    <h4 className="truncate text-sm font-medium dark:text-white max-w-full sm:text-base md:text-base lg:text-lg">
+                  <div className="ml-1.5 min-w-0 flex-1 sm:ml-2 md:ml-2.5 lg:ml-3 max-w-full">
+                    <h4 className="truncate text-sm font-medium dark:text-white max-w-full sm:text-sm md:text-sm lg:text-base">
                       {opChat?.fullname || t('Fullname')}
                     </h4>
-                    <div className="flex flex-col gap-0.5 sm:gap-1 max-w-full mt-0.5 sm:mt-1">
-                      <p className="truncate text-xs text-gray-500 dark:text-neutral-400 max-w-full sm:text-sm md:text-sm lg:text-base">
+                    <div className="flex flex-col gap-0.5 sm:gap-0.5 max-w-full mt-0.5 sm:mt-0.5">
+                      <p className="truncate text-xs text-gray-500 dark:text-neutral-400 max-w-full sm:text-xs md:text-xs lg:text-sm">
                         {opChat?.username || t('Username')}
                       </p>
-                      {/* Status and Last Seen - Smaller for large devices */}
-                      <div className="flex items-center gap-1.5 sm:gap-2">
-                        <div className={`w-1.5 h-1.5 rounded-full sm:w-2 sm:h-2 md:w-2 md:h-2 lg:w-2.5 lg:h-2.5 ${
+                      {/* Status and Last Seen - Compact size */}
+                      <div className="flex items-center gap-1 sm:gap-1.5">
+                        <div className={`w-1.5 h-1.5 rounded-full sm:w-1.5 sm:h-1.5 md:w-2 md:h-2 lg:w-2 lg:h-2 xl:w-2.5 xl:h-2.5 ${
                           (() => {
                             const userStatus = getUserStatus(opChat?.userId);
                             if (userStatus.active) {
@@ -1151,10 +1203,10 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                     </div>
                   </div>
                 </div>
-                {/* Action Buttons - Smaller for large devices */}
-                <div className="flex items-center justify-end gap-1 sm:gap-1.5 md:gap-2 text-base sm:text-lg md:text-lg lg:text-xl ml-2 sm:ml-3">
+                {/* Action Buttons - Compact size */}
+                <div className="flex items-center justify-end gap-1 sm:gap-1 md:gap-1.5 text-sm sm:text-base md:text-base lg:text-lg ml-1.5 sm:ml-2">
                   {isUploading && (
-                    <div className="mr-1 flex items-center text-xs text-gray-600 dark:text-gray-400 sm:mr-2 md:mr-2 md:text-sm">
+                    <div className="mr-1 flex items-center text-xs text-gray-600 dark:text-gray-400 sm:mr-1.5 md:mr-1.5 md:text-xs">
                       <span className="hidden sm:inline">⏳ Processing files...</span>
                       <span className="sm:hidden">⏳</span>
                     </div>
@@ -1183,9 +1235,8 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                         if (!showSearchDropdown) {
                           if (searchButtonRef.current) {
                             const rect = searchButtonRef.current.getBoundingClientRect();
-                            const dropdownX = rect.left - 200;
-                            const dropdownY = rect.bottom + 20;
-                            setDropdownPosition({ x: dropdownX, y: dropdownY });
+                            const position = calculateDropdownPosition(rect, 20);
+                            setDropdownPosition(position);
                           }
                         }
                         setShowSearchDropdown(!showSearchDropdown);
@@ -1195,152 +1246,157 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                       <i className="fa-solid fa-magnifying-glass dark:text-zinc-100 text-sm sm:text-base md:text-base lg:text-lg"></i>
                     </button>
                     
-                    {/* Search Dropdown - Better responsive positioning */}
-                    {showSearchDropdown && (
-                      <div 
-                        ref={dropdownRef}
-                        className="search-dropdown fixed top-12 w-64 sm:w-72 bg-white dark:bg-black rounded-xl shadow-2xl border border-gray-200 dark:border-gray-800 z-50"
-                        style={{
-                          left: `${dropdownPosition.x}px`,
-                          top: `${dropdownPosition.y}px`
-                        }}
-                      >
-                        {/* Drag Handle - Better responsive styling */}
-                        <div 
-                          className={`drag-handle p-3 sm:p-4 border-b border-gray-200 dark:border-gray-800 cursor-move bg-gray-50 dark:bg-gray-900 rounded-t-xl transition-all duration-200 select-none ${
-                            isDragging 
-                              ? 'bg-gray-100 dark:bg-gray-800 shadow-lg ring-2 ring-gray-300 dark:ring-gray-600' 
-                              : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                          }`}
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            
-                            setIsStartingDrag(true);
-                            
-                            if (dropdownRef.current) {
-                              const offsetX = e.clientX - dropdownPosition.x;
-                              const offsetY = e.clientY - dropdownPosition.y;
-                              
-                              setDragOffset({
-                                x: offsetX,
-                                y: offsetY
-                              });
-                              
-                              setIsDragging(true);
-                            }
-                          }}
-                          onMouseEnter={() => {
-                            if (isStartingDrag) {
-                              return;
-                            }
-                          }}
-                          title="Drag to move search dropdown"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5 sm:gap-2">
-                              <div className={`w-1.5 h-1.5 rounded-full transition-colors sm:w-2 sm:h-2 ${
-                                isDragging ? 'bg-gray-600 dark:bg-gray-400' : 'bg-gray-400 dark:bg-gray-600'
-                              }`}></div>
-                              <div className={`w-1.5 h-1.5 rounded-full transition-colors sm:w-2 sm:h-2 ${
-                                isDragging ? 'bg-gray-600 dark:bg-gray-400' : 'bg-gray-400 dark:bg-gray-600'
-                              }`}></div>
-                              <div className={`w-1.5 h-1.5 rounded-full transition-colors sm:w-2 sm:h-2 ${
-                                isDragging ? 'bg-gray-600 dark:bg-gray-400' : 'bg-gray-400 dark:bg-gray-600'
-                              }`}></div>
-                            </div>
-                            <div className="flex-1 ml-3 sm:ml-4">
-                              <h3 className="text-sm font-semibold text-gray-900 dark:text-white sm:text-base">Search Messages</h3>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
-                                Search in your chat with {opChat?.fullname || 'this user'}
-                              </p>
-                            </div>
-                            <button
-                              onClick={handleDropdownClose}
-                              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 ml-2 sm:ml-3 transition-colors"
-                            >
-                              <X className="w-4 h-4 sm:w-5 sm:h-5" />
-                            </button>
-                          </div>
-                        </div>
+                  </div>
+                </div>
+              </div>
+              
+
+              {/* Search Dropdown - Enhanced positioning with full viewport freedom */}
+              {showSearchDropdown && (
+                <div 
+                  ref={dropdownRef}
+                  className="search-dropdown fixed w-64 sm:w-72 bg-white dark:bg-black rounded-xl shadow-2xl border border-gray-200 dark:border-gray-800 z-50"
+                  style={{
+                    left: `${dropdownPosition.x}px`,
+                    top: `${dropdownPosition.y}px`
+                  }}
+                >
+                  {/* Drag Handle - Better responsive styling */}
+                  <div 
+                    className={`drag-handle p-3 sm:p-4 border-b border-gray-200 dark:border-gray-800 cursor-move bg-gray-50 dark:bg-gray-900 rounded-t-xl transition-all duration-200 select-none ${
+                      isDragging 
+                        ? 'bg-gray-100 dark:bg-gray-800 shadow-lg ring-2 ring-gray-300 dark:ring-gray-600' 
+                        : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                    }`}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      
+                      setIsStartingDrag(true);
+                      
+                      if (dropdownRef.current) {
+                        const offsetX = e.clientX - dropdownPosition.x;
+                        const offsetY = e.clientY - dropdownPosition.y;
                         
-                        <div className="p-3 sm:p-4">
-                          <div className="relative">
-                            <Search className="absolute left-2.5 sm:left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 dark:text-gray-400" />
-                            <input
-                              ref={searchInputRef}
-                              type="text"
-                              placeholder="Search in this conversation..."
-                              value={messageSearchQuery}
-                              onChange={(e) => setMessageSearchQuery(e.target.value)}
-                              className="w-full pl-8 sm:pl-10 pr-3 py-2 sm:py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500 focus:border-gray-400 dark:focus:border-gray-500 transition-all duration-200"
-                              autoFocus
-                            />
-                            {messageSearchQuery && (
-                              <button
-                                onClick={() => setMessageSearchQuery('')}
-                                className="absolute right-2.5 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
-                              >
-                                <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                              </button>
-                            )}
-                          </div>
-                          
-                          {/* Search Results Counter and Navigation - Better responsive layout */}
-                          {messageSearchQuery.trim() && searchResults.length > 0 && (
-                            <div className="mt-3 sm:mt-4 flex items-center justify-between">
-                              <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                                {selectedResultIndex + 1} of {searchResults.length} matches
-                              </div>
-                              <div className="flex items-center gap-1.5 sm:gap-2">
-                                <button
-                                  onClick={() => handleSearchNavigation('up')}
-                                  className="p-1 sm:p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
-                                  title="Previous result"
-                                >
-                                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 group-hover:text-gray-800 dark:text-gray-400 dark:group-hover:text-gray-200 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                                  </svg>
-                                </button>
-                                <button
-                                  onClick={() => handleSearchNavigation('down')}
-                                  className="p-1 sm:p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
-                                  title="Next result"
-                                >
-                                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 group-hover:text-gray-800 dark:text-gray-400 dark:group-hover:text-gray-200 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                  </svg>
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* Status Messages - Better responsive spacing */}
-                          {messageSearchQuery.trim() && searchResults.length === 0 && !isSearching && (
-                            <div className="mt-3 sm:mt-4 text-center text-gray-500 dark:text-gray-400">
-                              <Search className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 sm:mb-3 text-gray-300 dark:text-gray-600" />
-                              <p className="text-xs sm:text-sm">No messages found</p>
-                              <p className="text-xs mt-0.5 sm:mt-1">Try different keywords</p>
-                            </div>
-                          )}
-                          
-                          {/* Loading State - Better responsive spacing */}
-                          {isSearching && (
-                            <div className="mt-3 sm:mt-4 text-center text-gray-500 dark:text-gray-400">
-                              <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-gray-600 dark:border-gray-400 mx-auto mb-1.5 sm:mb-2"></div>
-                              <p className="text-xs sm:text-sm">Searching messages...</p>
-                            </div>
-                          )}
+                        setDragOffset({
+                          x: offsetX,
+                          y: offsetY
+                        });
+                        
+                        setIsDragging(true);
+                      }
+                    }}
+                    onMouseEnter={() => {
+                      if (isStartingDrag) {
+                        return;
+                      }
+                    }}
+                    title="Drag to move search dropdown"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <div className={`w-1.5 h-1.5 rounded-full transition-colors sm:w-2 sm:h-2 ${
+                          isDragging ? 'bg-gray-600 dark:bg-gray-400' : 'bg-gray-400 dark:bg-gray-600'
+                        }`}></div>
+                        <div className={`w-1.5 h-1.5 rounded-full transition-colors sm:w-2 sm:h-2 ${
+                          isDragging ? 'bg-gray-600 dark:bg-gray-400' : 'bg-gray-400 dark:bg-gray-600'
+                        }`}></div>
+                        <div className={`w-1.5 h-1.5 rounded-full transition-colors sm:w-2 sm:h-2 ${
+                          isDragging ? 'bg-gray-600 dark:bg-gray-400' : 'bg-gray-400 dark:bg-gray-600'
+                        }`}></div>
+                      </div>
+                      <div className="flex-1 ml-3 sm:ml-4">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white sm:text-base">Search Messages</h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Search in your chat with {opChat?.fullname || 'this user'}
+                        </p>
+                      </div>
+                      <button
+                        onClick={handleDropdownClose}
+                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 ml-2 sm:ml-3 transition-colors"
+                      >
+                        <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="p-3 sm:p-4">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 sm:left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 dark:text-gray-400" />
+                      <input
+                        ref={searchInputRef}
+                        type="text"
+                        placeholder="Search in this conversation..."
+                        value={messageSearchQuery}
+                        onChange={(e) => setMessageSearchQuery(e.target.value)}
+                        className="w-full pl-8 sm:pl-10 pr-3 py-2 sm:py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500 focus:border-gray-400 dark:focus:border-gray-500 transition-all duration-200"
+                        autoFocus
+                      />
+                      {messageSearchQuery && (
+                        <button
+                          onClick={() => setMessageSearchQuery('')}
+                          className="absolute right-2.5 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        </button>
+                      )}
+                    </div>
+                    
+                    {/* Search Results Counter and Navigation - Better responsive layout */}
+                    {messageSearchQuery.trim() && searchResults.length > 0 && (
+                      <div className="mt-3 sm:mt-4 flex items-center justify-between">
+                        <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                          {selectedResultIndex + 1} of {searchResults.length} matches
                         </div>
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <button
+                            onClick={() => handleSearchNavigation('up')}
+                            disabled={selectedResultIndex === 0}
+                            className="p-1 sm:p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Previous result"
+                          >
+                            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 group-hover:text-gray-800 dark:text-gray-400 dark:group-hover:text-gray-200 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleSearchNavigation('down')}
+                            disabled={selectedResultIndex === searchResults.length - 1}
+                            className="p-1 sm:p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Next result"
+                          >
+                            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 group-hover:text-gray-800 dark:text-gray-400 dark:group-hover:text-gray-200 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Status Messages - Better responsive spacing */}
+                    {messageSearchQuery.trim() && searchResults.length === 0 && !isSearching && (
+                      <div className="mt-3 sm:mt-4 text-center text-gray-500 dark:text-gray-400">
+                        <Search className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 sm:mb-3 text-gray-300 dark:text-gray-600" />
+                        <p className="text-xs sm:text-sm">No messages found</p>
+                        <p className="text-xs mt-0.5 sm:mt-1">Try different keywords</p>
+                      </div>
+                    )}
+                    
+                    {/* Loading State - Better responsive spacing */}
+                    {isSearching && (
+                      <div className="mt-3 sm:mt-4 text-center text-gray-500 dark:text-gray-400">
+                        <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-gray-600 dark:border-gray-400 mx-auto mb-1.5 sm:mb-2"></div>
+                        <p className="text-xs sm:text-sm">Searching messages...</p>
                       </div>
                     )}
                   </div>
                 </div>
-              </div>
+              )}
+              
               <hr className="dark:border-neutral-700" />
 
               {/* Messages Area - Smaller for large devices */}
-              <div className="flex-1 overflow-y-scroll scrollbar-hide px-2 py-1 sm:px-3 sm:py-2 md:px-4 md:py-2 lg:px-5 lg:py-3">
+              <div className="flex-1 overflow-y-scroll scrollbar-hide px-2 sm:px-3 md:px-4 lg:px-5">
                 {!chatPartner ? (
                   <div className="flex h-full items-center justify-center">
                     <div className="text-center px-4">
