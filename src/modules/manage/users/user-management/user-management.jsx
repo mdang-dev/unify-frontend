@@ -60,32 +60,72 @@ const UserManagement = () => {
     getCachedState,
   } = useUserManagementStore();
 
+  // Initialize with default status filter (Normal = 0)
+  const defaultFilters = {
+    email: '',
+    status: '0', // Default to Normal status
+    username: '',
+    firstName: '',
+    lastName: '',
+  };
+
   // Local state for immediate UI updates
   const [localFilters, setLocalFilters] = useState(filters);
   const [localCurrentPage, setLocalCurrentPage] = useState(currentPage);
   const [localItemsPerPage, setLocalItemsPerPage] = useState(itemsPerPage);
   const [showFilters, setShowFilters] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Initialize local state from store on mount
+  // Initialize local state from store on mount and set default filters
   useEffect(() => {
-    setLocalFilters(filters);
-    setLocalCurrentPage(currentPage);
-    setLocalItemsPerPage(itemsPerPage);
-  }, [filters, currentPage, itemsPerPage]);
+    console.log('Initialization effect running:', { isInitialized, appliedFilters });
+    
+    if (!isInitialized) {
+      // Always set default filters on first load
+      console.log('Setting default filters');
+      setLocalFilters(defaultFilters);
+      setFilters(defaultFilters);
+      setAppliedFilters(defaultFilters);
+      setPagination(1, itemsPerPage);
+      setLocalCurrentPage(1);
+      setIsInitialized(true);
+    } else {
+      // Update local state when store changes
+      setLocalFilters(filters);
+      setLocalCurrentPage(currentPage);
+      setLocalItemsPerPage(itemsPerPage);
+    }
+  }, [filters, currentPage, itemsPerPage, appliedFilters, isInitialized, setFilters, setAppliedFilters, setPagination, itemsPerPage]);
+
+  // Debug logging to track initialization and query state
+  useEffect(() => {
+    console.log('UserManagement Debug:', {
+      isInitialized,
+      appliedFilters,
+      currentPage,
+      itemsPerPage,
+      queryEnabled: appliedFilters !== null && isInitialized,
+      localFilters
+    });
+  }, [isInitialized, appliedFilters, currentPage, itemsPerPage, localFilters]);
 
   // API call with pagination and filters
   const { data: userResponse, isLoading: loading, error, refetch, isFetching } = useQuery({
     queryKey: [QUERY_KEYS.USERS, appliedFilters, currentPage, itemsPerPage],
-    queryFn: () => userQueryApi.manageUsers({
-      ...appliedFilters,
-      page: currentPage - 1, // API expects 0-based indexing
-      size: itemsPerPage,
-    }),
-    enabled: appliedFilters !== null, // Only fetch when filters are applied
+    queryFn: () => {
+      console.log('Query function called with:', { appliedFilters, currentPage, itemsPerPage });
+      return userQueryApi.manageUsers({
+        ...appliedFilters,
+        page: currentPage - 1, // API expects 0-based indexing
+        size: itemsPerPage,
+      });
+    },
+    enabled: appliedFilters !== null && isInitialized, // Only fetch when filters are applied and component is initialized
     placeholderData: keepPreviousData, // Keep previous data while fetching new data
     refetchOnWindowFocus: false, // Don't refetch when window regains focus
-    refetchOnMount: false, // Don't refetch when component mounts if data exists
-    refetchOnReconnect: false, // Don't refetch when reconnecting to network
+    refetchOnMount: true, // Refetch when component mounts to ensure fresh data
+    refetchOnReconnect: true, // Refetch when reconnecting to network
+    staleTime: 0, // Always consider data stale to force refetch
   });
 
   // Cache the response data
@@ -94,6 +134,14 @@ const UserManagement = () => {
       setCachedData(userResponse);
     }
   }, [userResponse, appliedFilters, setCachedData]);
+
+  // Force refetch when component initializes with default filters
+  useEffect(() => {
+    if (isInitialized && appliedFilters && appliedFilters.status === '0') {
+      console.log('Forcing refetch with default filters');
+      refetch();
+    }
+  }, [isInitialized, appliedFilters, refetch]);
 
   // Extract data from response or cache
   const users = userResponse?.users || cachedUsers || [];
@@ -110,19 +158,24 @@ const UserManagement = () => {
   };
 
   const handleClearFilters = () => {
-    const emptyFilters = {
-      email: '',
-      status: '',
-      username: '',
-      firstName: '',
-      lastName: '',
-    };
-    setLocalFilters(emptyFilters);
-    setFilters(emptyFilters);
-    setAppliedFilters(null);
+    // Reset to default filters instead of empty filters
+    console.log('Resetting to default filters');
+    setLocalFilters(defaultFilters);
+    setFilters(defaultFilters);
+    setAppliedFilters(defaultFilters);
     setPagination(1, localItemsPerPage);
     setLocalCurrentPage(1);
-    clearCache();
+    
+    // Invalidate and refetch the query
+    queryClient.invalidateQueries({
+      queryKey: [QUERY_KEYS.USERS]
+    });
+    
+    // Force a refetch with the default filters
+    setTimeout(() => {
+      console.log('Forcing refetch after reset');
+      refetch();
+    }, 100);
   };
 
   const handleFilterChange = (field, value) => {
@@ -160,9 +213,15 @@ const UserManagement = () => {
     });
   };
 
-  // Check if at least one filter is applied
+  // Check if at least one filter is applied (excluding default status filter)
   const hasActiveFilters = useMemo(() => {
-    return Object.values(localFilters).some(value => value !== '' && value !== null && value !== undefined);
+    return Object.entries(localFilters).some(([key, value]) => {
+      if (key === 'status') {
+        // Consider status filter active only if it's not the default '0'
+        return value !== '0' && value !== '' && value !== null && value !== undefined;
+      }
+      return value !== '' && value !== null && value !== undefined;
+    });
   }, [localFilters]);
 
   const handleAction = (action, user) => {
@@ -291,7 +350,6 @@ const UserManagement = () => {
                 color="primary"
                 onClick={handleApplyFilters}
                 className="px-6"
-                disabled={!hasActiveFilters}
               >
                 Apply Filters
               </Button>
@@ -300,7 +358,7 @@ const UserManagement = () => {
                 onClick={handleClearFilters}
                 className="px-6"
               >
-                Clear Filters
+                Reset to Default
               </Button>
             </div>
           </div>
@@ -312,6 +370,13 @@ const UserManagement = () => {
             <div className="flex items-center gap-4">
               <p className="text-sm text-muted-foreground">
                 Showing {users.length} of {totalElements} users
+                {appliedFilters.status && (
+                  <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                    Status: {appliedFilters.status === '0' ? 'Normal' : 
+                             appliedFilters.status === '1' ? 'Temporarily Banned' : 
+                             appliedFilters.status === '2' ? 'Permanently Banned' : 'All'}
+                  </span>
+                )}
               </p>
               {/* Cache Status Indicator */}
               <div className="flex items-center gap-1">
@@ -367,11 +432,8 @@ const UserManagement = () => {
           ) : !appliedFilters ? (
             <div className="flex h-64 items-center justify-center">
               <div className="text-center">
-                <i className="fa-solid fa-filter text-4xl text-muted-foreground mb-4"></i>
-                <h3 className="text-lg font-semibold text-muted-foreground">No Data Displayed</h3>
-                <p className="text-sm text-muted-foreground">
-                  Apply filters to view user data
-                </p>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Loading user data...</p>
               </div>
             </div>
           ) : users.length === 0 ? (
