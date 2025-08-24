@@ -209,18 +209,7 @@ export default function LoginPage() {
 
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <input
-                id="remember-me"
-                name="remember-me"
-                type="checkbox"
-                className="h-4 w-4 rounded border-neutral-300 text-black focus:ring-black dark:border-neutral-600 dark:bg-neutral-900"
-              />
-              <label
-                htmlFor="remember-me"
-                className="ml-2 block text-sm text-neutral-900 dark:text-neutral-300"
-              >
-                Remember me
-              </label>
+            
             </div>
 
             <div className="text-sm">
