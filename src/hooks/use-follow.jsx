@@ -36,6 +36,7 @@ export const useFollow = (userId, followingId) => {
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: [QUERY_KEYS.IS_FOLLOWING, userId, followingId] });
       await queryClient.cancelQueries({ queryKey: [QUERY_KEYS.COUNT_FOLLOWERS, followingId] });
+      await queryClient.cancelQueries({ queryKey: [QUERY_KEYS.COUNT_FRIENDS, followingId] });
 
       const previousIsFollowing = queryClient.getQueryData([
         QUERY_KEYS.IS_FOLLOWING,
@@ -43,6 +44,7 @@ export const useFollow = (userId, followingId) => {
         followingId,
       ]);
       const previousCount = queryClient.getQueryData([QUERY_KEYS.COUNT_FOLLOWERS, followingId]);
+      const previousFriendsCount = queryClient.getQueryData([QUERY_KEYS.COUNT_FRIENDS, followingId]);
 
       const optimisticStatus = !previousIsFollowing;
 
@@ -52,8 +54,11 @@ export const useFollow = (userId, followingId) => {
         [QUERY_KEYS.COUNT_FOLLOWERS, followingId],
         (old) => (old || 0) + (optimisticStatus ? 1 : -1)
       );
+      
+      // Note: Friend count update is complex and depends on mutual follow status
+      // We'll let the server handle this and invalidate the query
 
-      return { previousIsFollowing, previousCount };
+      return { previousIsFollowing, previousCount, previousFriendsCount };
     },
 
     onError: (err, _, context) => {
@@ -69,6 +74,9 @@ export const useFollow = (userId, followingId) => {
       if (context?.previousCount !== undefined) {
         queryClient.setQueryData([QUERY_KEYS.COUNT_FOLLOWERS, followingId], context.previousCount);
       }
+      if (context?.previousFriendsCount !== undefined) {
+        queryClient.setQueryData([QUERY_KEYS.COUNT_FRIENDS, followingId], context.previousFriendsCount);
+      }
       
       // Show user-friendly error message
       if (err.message.includes('not authenticated')) {
@@ -80,6 +88,11 @@ export const useFollow = (userId, followingId) => {
       queryClient.invalidateQueries([QUERY_KEYS.IS_FOLLOWING, userId, followingId]);
       queryClient.invalidateQueries([QUERY_KEYS.COUNT_FOLLOWERS, followingId]);
       queryClient.invalidateQueries([QUERY_KEYS.COUNT_FOLLOWING, followingId]);
+      queryClient.invalidateQueries([QUERY_KEYS.COUNT_FRIENDS, followingId]);
+      // Also invalidate friend count for the current user since friendship status might change
+      if (userId) {
+        queryClient.invalidateQueries([QUERY_KEYS.COUNT_FRIENDS, userId]);
+      }
     },
   });
 
@@ -95,9 +108,16 @@ export const useFollow = (userId, followingId) => {
     enabled: !!followingId,
   });
 
+  const { data: friendsCount = 0, isLoading: isLoadingFriends } = useQuery({
+    queryKey: [QUERY_KEYS.COUNT_FRIENDS, followingId],
+    queryFn: () => followQueryApi.countFriends(followingId),
+    enabled: !!followingId,
+  });
+
   return {
     isFollowing,
-    toggleFollow: () => {
+    toggleFollowMutation,
+    toggleFollow: (newStatus) => {
       // Add validation
       if (!userId || !followingId) {
         if (process.env.NODE_ENV === 'development') {
@@ -106,18 +126,21 @@ export const useFollow = (userId, followingId) => {
         return;
       }
       
-      // Ensure isFollowing is boolean
-      const currentStatus = Boolean(isFollowing);
+      // If newStatus is provided, use it; otherwise toggle the current status
+      const targetStatus = newStatus !== undefined ? newStatus : !Boolean(isFollowing);
+      
       if (process.env.NODE_ENV === 'development') {
-        console.log('Toggling follow:', { userId, followingId, currentStatus, newStatus: !currentStatus });
+        console.log('Toggling follow:', { userId, followingId, currentStatus: isFollowing, newStatus: targetStatus });
       }
       
-      toggleFollowMutation.mutate(!currentStatus);
+      toggleFollowMutation.mutate(targetStatus);
     },
     isToggleLoading: toggleFollowMutation.isPending,
     followersCount,
     followingCount,
-    isLoadingFollowing,
+    friendsCount,
     isLoadingFollowers,
+    isLoadingFollowing,
+    isLoadingFriends,
   };
 };
