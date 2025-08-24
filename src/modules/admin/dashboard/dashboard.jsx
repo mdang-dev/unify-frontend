@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Card, CardBody, CardHeader, Button, Select, SelectItem } from '@heroui/react';
 import { useRouter } from 'next/navigation';
 import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Bar, BarChart } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
 import { dashboardQueryApi } from '@/src/apis/dashboard';
+import { exportDashboardPDF } from '@/src/utils/pdf-export.util';
+import { toast } from 'sonner';
 import { 
   Users, 
   FileText, 
@@ -24,8 +26,10 @@ import {
 
 const AdminDashboard = () => {
   const router = useRouter();
-  const [chartPeriod, setChartPeriod] = useState('7days');
+  const [chartPeriod, setChartPeriod] = useState('This Week');
   const [chartType, setChartType] = useState('area');
+  const [isExporting, setIsExporting] = useState(false);
+  const chartRef = useRef(null);
 
   // Fetch dashboard statistics from API
   const { data: stats, isLoading: statsLoading, error: statsError } = useQuery({
@@ -37,7 +41,16 @@ const AdminDashboard = () => {
   // Fetch analytics data from API
   const { data: analyticsData, isLoading: analyticsLoading, error: analyticsError } = useQuery({
     queryKey: ['dashboard-analytics', chartPeriod],
-    queryFn: () => dashboardQueryApi.getAnalytics(chartPeriod),
+    queryFn: () => {
+      // Convert display period to API format
+      const periodMap = {
+        'This Week': '7days',
+        'This Month': '30days',
+        '12 Months': '12months'
+      };
+      const apiPeriod = periodMap[chartPeriod] || '7days';
+      return dashboardQueryApi.getAnalytics(apiPeriod);
+    },
     refetchInterval: 30000, // Refetch every 30 seconds
   });
 
@@ -71,7 +84,7 @@ const AdminDashboard = () => {
 
   // Get chart data from API response
   const currentData = analyticsData?.data || [];
-  const dataKey = chartPeriod === '12months' ? 'month' : 'day';
+  const dataKey = chartPeriod === '12 Months' ? 'month' : 'day';
 
   // Get reports data from API responses
   const reportedPosts = reportedPostsData?.data || [];
@@ -84,6 +97,40 @@ const AdminDashboard = () => {
       month: 'short',
       day: 'numeric',
     });
+  };
+
+  // Handle PDF export
+  const handleExportPDF = async () => {
+    if (!chartRef.current || !currentData.length) {
+      toast.error('No chart data available for export');
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      // Convert display period to API format for PDF filename
+      const periodMap = {
+        'This Week': '7days',
+        'This Month': '30days',
+        '12 Months': '12months'
+      };
+      const apiPeriod = periodMap[chartPeriod] || '7days';
+      
+      await exportDashboardPDF({
+        chartElement: chartRef.current,
+        chartData: currentData,
+        period: apiPeriod,
+        chartType: chartType,
+        stats: stats
+      });
+      
+      toast.success('PDF exported successfully!');
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Failed to export PDF. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
 
@@ -214,11 +261,11 @@ const AdminDashboard = () => {
                 variant="bordered"
                 selectedKeys={[chartPeriod]}
                 onSelectionChange={(keys) => setChartPeriod(Array.from(keys)[0])}
-                className="w-32"
+                className="w-36"
               >
-                <SelectItem key="7days" value="7days">7 Days</SelectItem>
-                <SelectItem key="30days" value="30days">30 Days</SelectItem>
-                <SelectItem key="12months" value="12months">12 Months</SelectItem>
+                <SelectItem key="This Week" value="This Week">This Week</SelectItem>
+                 <SelectItem key="This Month" value="This Month">This Month</SelectItem>
+                 <SelectItem key="12 Months" value="12 Months">12 Months</SelectItem>
               </Select>
               <Select
                 size="sm"
@@ -227,13 +274,13 @@ const AdminDashboard = () => {
                 onSelectionChange={(keys) => setChartType(Array.from(keys)[0])}
                 className="w-24"
               >
-                <SelectItem key="area" value="area">
+                <SelectItem key="area" value="Area">
                   <div className="flex items-center gap-2">
                     <Area className="h-3 w-3" />
                     <span>Area</span>
                   </div>
                 </SelectItem>
-                <SelectItem key="bar" value="bar">
+                <SelectItem key="bar" value="Bar">
                   <div className="flex items-center gap-2">
                     <BarChart3 className="h-3 w-3" />
                     <span>Bar</span>
@@ -243,9 +290,11 @@ const AdminDashboard = () => {
               <Button
                 size="sm"
                 variant="light"
-                startContent={<Download className="h-4 w-4" />}
+                startContent={isExporting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                onPress={handleExportPDF}
+                isDisabled={isExporting || !currentData.length}
               >
-                Export
+                {isExporting ? 'Exporting...' : 'Export'}
               </Button>
             </div>
           </CardHeader>
@@ -265,7 +314,8 @@ const AdminDashboard = () => {
                 </div>
               </div>
             ) : (
-            <ResponsiveContainer width="100%" height={350}>
+            <div ref={chartRef}>
+              <ResponsiveContainer width="100%" height={350}>
               {chartType === 'area' ? (
                 <AreaChart data={currentData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -337,7 +387,8 @@ const AdminDashboard = () => {
                   <Bar dataKey="activeUsers" fill="#10b981" name="Active Users" radius={[4, 4, 0, 0]} />
                 </BarChart>
               )}
-            </ResponsiveContainer>
+              </ResponsiveContainer>
+            </div>
             )}
           </CardBody>
         </Card>
