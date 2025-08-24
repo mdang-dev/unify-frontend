@@ -16,6 +16,14 @@ export const dashboardQueryApi = {
     },
     getAnalytics: async (period) => {
         try {
+            // Validate period parameter
+            const validPeriods = ['7days', '30days', '12months'];
+            if (!validPeriods.includes(period)) {
+                console.error('Invalid period provided to getAnalytics:', period);
+                // Fallback to default period
+                period = '7days';
+            }
+
             const res = await httpClient(`${url}/analytics?period=${period}`);
             return res.data;
         } catch (error) {

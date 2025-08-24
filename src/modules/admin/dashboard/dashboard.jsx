@@ -49,6 +49,7 @@ const AdminDashboard = () => {
         '12 Months': '12months'
       };
       const apiPeriod = periodMap[chartPeriod] || '7days';
+      
       return dashboardQueryApi.getAnalytics(apiPeriod);
     },
     refetchInterval: 30000, // Refetch every 30 seconds
@@ -260,7 +261,16 @@ const AdminDashboard = () => {
                 size="sm"
                 variant="bordered"
                 selectedKeys={[chartPeriod]}
-                onSelectionChange={(keys) => setChartPeriod(Array.from(keys)[0])}
+                onSelectionChange={(keys) => {
+                  const selectedKey = Array.from(keys)[0];
+                  // Only set valid period values
+                  if (selectedKey && ['This Week', 'This Month', '12 Months'].includes(selectedKey)) {
+                    setChartPeriod(selectedKey);
+                  } else {
+                    // Fallback to default if invalid selection
+                    setChartPeriod('This Week');
+                  }
+                }}
                 className="w-36"
               >
                 <SelectItem key="This Week" value="This Week">This Week</SelectItem>
