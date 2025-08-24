@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl';
 import ProfileTabs from '../_components/profile-tab';
 import { addToast, ToastProvider } from '@heroui/toast';
 import { useFollow } from '@/src/hooks/use-follow';
+import { useFriendCount } from '@/src/hooks/use-friend-count';
 import AvatarDefault from '@/public/images/unify_icon_2.png';
 import ReportUserModal from '../_components/report-user-modal';
 import { FollowButton } from '@/src/components/button';
@@ -45,6 +46,7 @@ const OthersProfile = () => {
   });
 
   const { followersCount = 0, followingCount = 0 } = useFollow(user?.id, userInfo?.id);
+  const { friendsCount = 0 } = useFriendCount(userInfo?.id);
 
   const handleReportUser = useCallback(
     async (data, reason, urls = []) => {

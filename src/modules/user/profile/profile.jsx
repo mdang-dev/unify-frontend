@@ -8,6 +8,7 @@ import FollowingModal from './_components/following-modal';
 import ProfileTabs from '../_components/profile-tab';
 import People from './_components/people';
 import { useFollow } from '@/src/hooks/use-follow';
+import { useFriendCount } from '@/src/hooks/use-friend-count';
 import { useAuthStore } from '@/src/stores/auth.store';
 import ProfileHeaderSkeleton from './_components/profile-header-skeleton';
 import ProfileHeader from './_components/profile-header';
@@ -32,7 +33,9 @@ const Profile = () => {
     followingCount,
     isLoadingFollowers,
     isLoadingFollowing,
-  } = useFollow(0, user?.id);
+  } = useFollow(user?.id, user?.id);
+
+  const { friendsCount, isLoading: isLoadingFriends } = useFriendCount(user?.id);
 
   useEffect(() => {
     setIsClient(true);
@@ -44,7 +47,7 @@ const Profile = () => {
   const handleClickEdit = () => router.push('/settings/edit-profile');
 
   const stats = {
-    friendsCount: user?.friends?.length || 0,
+    friendsCount,
     followerCount,
     followingCount,
     onToggleFriend: () => setIsFriendOpen(!isFriendOpen),
@@ -52,7 +55,7 @@ const Profile = () => {
     onToggleFollowing: () => setIsFollowingOpen(!isFollowingOpen),
   };
 
-  const isLoading = isLoadingFollowers || isLoadingFollowing || !user;
+  const isLoading = isLoadingFollowers || isLoadingFollowing || isLoadingFriends || !user;
 
   return (
     <div className="mx-auto max-w-4xl py-6">

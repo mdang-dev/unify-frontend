@@ -37,8 +37,8 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
     notifications, 
     unreadCount, 
     markAllAsRead, 
-    markAllAsReadSilently,
     markAsRead, 
+    markAsReadOnModalClose,
     isFetching,
     setModalOpen,
     isWebSocketConnected,
@@ -49,6 +49,7 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
   const [postModalOpen, setPostModalOpen] = useState(false);
   const [selectedPostId, setSelectedPostId] = useState(null);
   const [selectedCommentId, setSelectedCommentId] = useState(null);
+  const [wasModalOpen, setWasModalOpen] = useState(false); // Track previous modal state
 
   // Reset error state when modal opens
   useEffect(() => {
@@ -79,17 +80,19 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
 
   useEffect(() => {
     if (isNotificationOpen) {
-      if (unreadCount > 0) {
-        markAllAsReadSilently();
-        setModalOpen(true);
-      }
+      // ✅ FIX: Don't mark notifications as read when modal opens
+      // Only set the modal state to open
+      setModalOpen(true);
+      setWasModalOpen(true); // ✅ NEW: Mark that modal was open
     } else {
       setModalOpen(false);
-      if (unreadCount > 0) {
-        markAllAsRead();
+      // ✅ FIX: Only mark notifications as read when modal transitions from open to closed
+      if (wasModalOpen && unreadCount > 0) {
+        markAsReadOnModalClose();
       }
+      setWasModalOpen(false); // ✅ NEW: Reset the flag
     }
-  }, [isNotificationOpen, unreadCount, markAllAsReadSilently, markAllAsRead, setModalOpen]);
+  }, [isNotificationOpen, unreadCount, markAsReadOnModalClose, setModalOpen, wasModalOpen]);
 
   // const handleRequestDesktopNotifications = useCallback(async () => {
   //   const granted = await requestPermission();
@@ -241,21 +244,14 @@ const NotificationModal = ({ isNotificationOpen, modalRef, userId }) => {
     try {
       if (!notification) return;
 
-      // ✅ DEBUG: Log notification click
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[NotificationModal] Notification clicked:', {
-          id: notification.id,
-          type: notification.type,
-          data: notification.data
-        });
-      }
-
-      markAsRead({ notificationId: notification.id });
+      // ✅ FIX: Don't mark as read immediately - only when modal closes
+      // markAsRead({ notificationId: notification.id });
+      
       openFromNotification(notification);
     } catch (error) {
       console.error('Error handling notification click:', error);
     }
-  }, [markAsRead, openFromNotification]);
+  }, [openFromNotification]);
 
   const isValidNotification = useCallback((notification) => {
     try {

@@ -15,4 +15,8 @@ export const followQueryApi = {
     const res = await httpClient.get(`${url}/following/${userId}`);
     return res.data;
   },
+  countFriends: async (userId) => {
+    const res = await httpClient.get(`${url}/friends/${userId}`);
+    return res.data;
+  },
 };

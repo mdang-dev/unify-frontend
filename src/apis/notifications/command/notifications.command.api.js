@@ -25,6 +25,12 @@ export const notificationsCommandApi = {
     return res.data;
   },
 
+  // ✅ NEW: Mark notifications as read when modal closes
+  markAsReadOnModalClose: async (userId) => {
+    const res = await httpClient.post(`${url}/mark-as-read-on-modal-close`, { userId });
+    return res.data;
+  },
+
   deleteNotification: async (notificationId) => {
     const res = await httpClient.delete(`${url}/${notificationId}`);
     return res.data;
