@@ -18,7 +18,7 @@ import {
 } from '@/src/components/ui/select';
 import { Input } from '@/src/components/ui/input';
 import { Label } from '@/src/components/ui/label';
-import { Eye, EyeOff, Copy, Check } from 'lucide-react';
+import { Eye, EyeOff, Copy, Check, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { QUERY_KEYS } from '@/src/constants/query-keys.constant';
@@ -50,8 +50,11 @@ export default function StreamKeysModal({ isOpen, onClose }) {
         inputType: ingressType,
       },
       {
-        onSuccess: () => refetch(),
-        onError: () => toast.error('Eror when create connection !'),
+        onSuccess: () => {
+          toast.success('Stream connection generated successfully!');
+          refetch();
+        },
+        onError: () => toast.error('Error when creating connection!'),
       }
     );
   };
@@ -154,7 +157,7 @@ export default function StreamKeysModal({ isOpen, onClose }) {
           <ButtonCommon disabled={isPending} onClick={handleCreateConnection}>
             {isPending ? (
               <>
-                <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Generating...
               </>
             ) : (

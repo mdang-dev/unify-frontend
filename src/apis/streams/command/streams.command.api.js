@@ -32,12 +32,29 @@ export const streamsCommandApi = {
     const res = await httpClient.post(`${url}/${roomId}/broadcast`, userData);
     return res.data;
   },
+  
   generateConnection: async (userId) => {
     const res = await httpClient.post(`${url}/generate-connection`, { userId });
     return res.data;
   },
+  
   createConnection: async (data) => {
     const res = await httpClient.post(`${url}/create-connection`, data);
+    return res.data;
+  },
+
+  getChatSettings: async (userId) => {
+    const res = await httpClient.get(`${url}/user/${userId}/chat-settings`);
+    return res.data;
+  },
+
+  updateChatSettings: async (userId, chatSettings) => {
+    const res = await httpClient.put(`${url}/user/${userId}/chat-settings`, chatSettings);
+    return res.data;
+  },
+
+  updateStreamDetails: async (userId, streamDetails) => {
+    const res = await httpClient.put(`${url}/user/${userId}/details`, streamDetails);
     return res.data;
   },
 };

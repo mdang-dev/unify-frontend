@@ -15,8 +15,13 @@ export const followQueryApi = {
     const res = await httpClient.get(`${url}/following/${userId}`);
     return res.data;
   },
-  countFriends: async (userId) => {
+    countFriends: async (userId) => {
     const res = await httpClient.get(`${url}/friends/${userId}`);
+    return res.data;
+  },
+  // New endpoint to get followers with live status
+  getFollowersWithLiveStatus: async (userId) => {
+    const res = await httpClient.get(`${url}/followers/${userId}/with-live-status`);
     return res.data;
   },
 };

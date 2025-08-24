@@ -34,7 +34,7 @@ export default function ChatMessage({ data }) {
             minute: '2-digit',
           })}</span>
         </div>
-        <p className="break-words text-sm leading-snug text-white">{message}</p>
+        <p className="break-words text-sm leading-snug dark:text-white text-black">{message}</p>
       </div>
     </div>
   );
