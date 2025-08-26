@@ -114,38 +114,41 @@ export const useChat = (user, chatPartner) => {
       return [];
     }
     
-    // ✅ FIXED: Improved deduplication to prevent file message duplicates
+    // ✅ FIXED: STRICT deduplication to prevent production duplicates
     const allMessages = [...serverMessages, ...optimistic];
     
-    // ✅ FIXED: Better duplicate removal logic for file messages
+    // ✅ FIXED: More aggressive duplicate removal for production
     const uniqueMessages = allMessages.reduce((acc, current) => {
       const isDuplicate = acc.some(msg => {
-        // Check by ID first (most reliable)
+        // ✅ PRIMARY: Check by ID first (most reliable)
         if (msg.id === current.id) return true;
         
-        // For optimistic messages, check content and time more strictly
+        // ✅ SECONDARY: Check for optimistic message duplicates
         if (current.isOptimistic && msg.isOptimistic) {
-          // Only remove if it's the exact same optimistic message (same timestamp)
           if (msg.content === current.content && 
               msg.sender === current.sender &&
-              Math.abs(new Date(msg.timestamp).getTime() - new Date(current.timestamp).getTime()) < 100) { // Very strict: only 100ms
-            return true;
+              msg.receiver === current.receiver) {
+            const timeDiff = Math.abs(new Date(msg.timestamp).getTime() - new Date(current.timestamp).getTime());
+            // Very strict: only 50ms for optimistic duplicates
+            return timeDiff < 50;
           }
         }
         
-        // For file messages, check content, sender, and time more carefully
+        // ✅ TERTIARY: Check for content-based duplicates (fallback)
         if (msg.content === current.content && 
             msg.sender === current.sender &&
             msg.receiver === current.receiver) {
           const timeDiff = Math.abs(new Date(msg.timestamp).getTime() - new Date(current.timestamp).getTime());
-          // For file messages, use a wider time window to catch duplicates
-          if (timeDiff < 2000) { // 2 seconds for file uploads
-            // Additional check: if both have fileUrls, they're likely duplicates
-            if (msg.fileUrls && current.fileUrls && 
-                msg.fileUrls.length > 0 && current.fileUrls.length > 0) {
-              return true;
-            }
+          
+          // For file messages, use very strict time window
+          if (msg.fileUrls && current.fileUrls && 
+              msg.fileUrls.length > 0 && current.fileUrls.length > 0) {
+            // If both have fileUrls, they're likely duplicates within 500ms
+            return timeDiff < 500;
           }
+          
+          // For text messages, use very strict time window
+          return timeDiff < 300;
         }
         
         return false;
@@ -158,7 +161,7 @@ export const useChat = (user, chatPartner) => {
       return acc;
     }, []);
     
-    // ✅ IMPROVED: Validate timestamps before sorting, but be very lenient
+    // ✅ IMPROVED: Validate timestamps before sorting
     const validMessages = uniqueMessages.filter(msg => {
       if (!msg.timestamp) {
         console.warn('Message missing timestamp:', msg);
@@ -196,14 +199,14 @@ export const useChat = (user, chatPartner) => {
       // ✅ OPTIMIZED: Faster filtering with early return
       if (existing.length === 0) return prev;
       
-      // ✅ FIXED: Very lenient optimistic message removal to preserve real-time functionality
+      // ✅ FIXED: STRICT optimistic message removal to prevent duplicates
       const filtered = existing.filter(msg => {
         if (!msg.isOptimistic) return true;
         
-        // ✅ FIXED: Only remove if it's the exact same message (same timestamp)
+        // ✅ STRICT: Only remove if it's the exact same message
         const timeDiff = Math.abs(new Date(msg.timestamp).getTime() - new Date(timestamp).getTime());
         const contentMatch = msg.content === content;
-        const timeMatch = timeDiff < 100; // Very strict: only 100ms for exact duplicates
+        const timeMatch = timeDiff < 50; // Very strict: only 50ms for exact duplicates
         
         // Only remove optimistic message if content and time match exactly
         return !(contentMatch && timeMatch);
@@ -245,14 +248,14 @@ export const useChat = (user, chatPartner) => {
               const newMap = new Map(prev);
               const existing = newMap.get(receivedMessage.receiver) || [];
               
-              // ✅ IMPROVED: More precise optimistic message removal
+              // ✅ IMPROVED: STRICT optimistic message removal for production
               const filtered = existing.filter(msg => {
                 if (!msg.isOptimistic) return true;
                 
                 // For file messages, match by content and approximate time
                 const contentMatch = msg.content === receivedMessage.content;
                 const timeDiff = Math.abs(new Date(msg.timestamp).getTime() - new Date(receivedMessage.timestamp).getTime());
-                const timeMatch = timeDiff < 2000; // 2 second window for file uploads
+                const timeMatch = timeDiff < 500; // 500ms window for file uploads in production
                 
                 // Remove if it matches the confirmed message
                 return !(contentMatch && timeMatch);
@@ -270,18 +273,18 @@ export const useChat = (user, chatPartner) => {
             const newMap = new Map(prev);
             const existing = newMap.get(conversationPartner) || [];
             
-            // ✅ FIXED: Strict duplicate checking to prevent any duplicates
+            // ✅ FIXED: STRICT duplicate checking to prevent production duplicates
             const messageExists = existing.some(msg => {
-              // Check by ID first (most reliable)
+              // ✅ PRIMARY: Check by ID first (most reliable)
               if (msg.id === receivedMessage.id) return true;
               
-              // For messages without ID (shouldn't happen but safety check)
+              // ✅ SECONDARY: Check for content-based duplicates with strict time window
               if (msg.content === receivedMessage.content && 
                   msg.sender === receivedMessage.sender &&
                   msg.receiver === receivedMessage.receiver) {
                 const timeDiff = Math.abs(new Date(msg.timestamp).getTime() - new Date(receivedMessage.timestamp).getTime());
-                // Very strict time window to prevent false positives
-                return timeDiff < 500; // 500ms window
+                // Very strict time window to prevent false positives in production
+                return timeDiff < 200; // 200ms window for production
               }
               
               return false;
@@ -361,25 +364,25 @@ export const useChat = (user, chatPartner) => {
         
         if (existing.length === 0) return prev;
         
-        // ✅ FIXED: Better duplicate removal for file messages
+        // ✅ FIXED: STRICT duplicate removal for production
         const uniqueMessages = existing.reduce((acc, current) => {
           const isDuplicate = acc.some(msg => {
-            // Check by ID first (most reliable)
+            // ✅ PRIMARY: Check by ID first (most reliable)
             if (msg.id === current.id) return true;
             
-            // For content duplicates, check more carefully for file messages
+            // ✅ SECONDARY: Check for content duplicates with strict time window
             if (msg.content === current.content && msg.sender === current.sender) {
               const timeDiff = Math.abs(new Date(msg.timestamp).getTime() - new Date(current.timestamp).getTime());
               
-              // For file messages, use wider time window
+              // For file messages, use strict time window
               if (msg.fileUrls && current.fileUrls && 
                   msg.fileUrls.length > 0 && current.fileUrls.length > 0) {
-                // If both have fileUrls, they're likely duplicates within 3 seconds
-                return timeDiff < 3000;
+                // If both have fileUrls, they're likely duplicates within 500ms
+                return timeDiff < 500;
               }
               
-              // For text messages, use stricter time window
-              return timeDiff < 1000;
+              // For text messages, use very strict time window
+              return timeDiff < 200;
             }
             
             return false;
@@ -408,18 +411,18 @@ export const useChat = (user, chatPartner) => {
         
         if (existing.length === 0) return prev;
         
-        // ✅ FIXED: Remove duplicate optimistic messages
+        // ✅ FIXED: STRICT duplicate optimistic message removal for production
         const uniqueOptimistic = existing.reduce((acc, current) => {
           const isDuplicate = acc.some(msg => {
             if (!msg.isOptimistic || !current.isOptimistic) return false;
             
-            // For optimistic messages, check content and time more strictly
+            // For optimistic messages, check content and time very strictly
             if (msg.content === current.content && 
                 msg.sender === current.sender &&
                 msg.receiver === current.receiver) {
               const timeDiff = Math.abs(new Date(msg.timestamp).getTime() - new Date(current.timestamp).getTime());
-              // Very strict time window for optimistic messages
-              return timeDiff < 500; // 500ms window
+              // Very strict time window for optimistic messages in production
+              return timeDiff < 100; // 100ms window
             }
             
             return false;
@@ -509,13 +512,13 @@ export const useChat = (user, chatPartner) => {
         const mergedMessages = [...existing];
         
         validServerMessages.forEach(serverMsg => {
-          // Check if this server message already exists
+          // ✅ STRICT: Check if this server message already exists with tighter time window
           const exists = existing.some(existingMsg => 
             existingMsg.id === serverMsg.id || // Check by ID first
             (existingMsg.content === serverMsg.content && 
              existingMsg.sender === serverMsg.sender &&
              existingMsg.receiver === serverMsg.receiver &&
-             Math.abs(new Date(existingMsg.timestamp).getTime() - new Date(serverMsg.timestamp).getTime()) < 1000) // 1 second window
+             Math.abs(new Date(existingMsg.timestamp).getTime() - new Date(serverMsg.timestamp).getTime()) < 300) // 300ms window for production
           );
           
           if (!exists) {
@@ -621,13 +624,13 @@ export const useChat = (user, chatPartner) => {
         const newMap = new Map(prev);
         const existing = newMap.get(receiver) || [];
         
-        // ✅ IMPROVED: Check for duplicate optimistic messages before adding
+        // ✅ IMPROVED: STRICT check for duplicate optimistic messages before adding
         const isDuplicate = existing.some(msg => 
           msg.isOptimistic && 
           msg.content === optimisticMessage.content &&
           msg.sender === optimisticMessage.sender &&
           msg.receiver === optimisticMessage.receiver &&
-          Math.abs(new Date(msg.timestamp).getTime() - new Date(optimisticMessage.timestamp).getTime()) < 1000
+          Math.abs(new Date(msg.timestamp).getTime() - new Date(optimisticMessage.timestamp).getTime()) < 200 // 200ms window for production
         );
         
         if (!isDuplicate) {
