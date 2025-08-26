@@ -1032,7 +1032,7 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                           );
                         })()}
                       </div>
-                      {/* Status and Last Seen - Smaller for large devices */}
+                      {/* Status and Last Seen - Smaller for large devices
                       {(() => {
                         const userStatus = getUserStatus(chat?.userId);
                         if (userStatus.active) {
@@ -1076,7 +1076,7 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                           );
                         }
                         return null;
-                      })()}
+                      })()} */}
                     </div>
                   </div>
                   <span className="text-xs text-gray-400 flex-shrink-0 ml-2 sm:ml-3 md:ml-3">
@@ -1122,7 +1122,7 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                         className="h-8 w-8 rounded-full border-2 border-gray-500 dark:border-neutral-700 cursor-pointer sm:h-8 sm:w-8 md:h-9 md:w-9 lg:h-10 lg:w-10 xl:h-11 xl:w-11"
                       />
                     </Link>
-                    {/* Active Status Indicator - Compact size */}
+                    {/* Active Status Indicator - Compact size
                     <div className={`absolute top-[70%] right-[12%] transform translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full border-2 border-white dark:border-gray-800 sm:top-[75%] sm:w-2 sm:h-2 md:w-2 md:h-2 lg:w-2.5 lg:h-2.5 xl:w-3 xl:h-3 ${
                       (() => {
                         const userStatus = getUserStatus(opChat?.userId);
@@ -1139,16 +1139,13 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                         }
                         return 'bg-gray-400';
                       })()
-                    }`}></div>
+                    }`}></div> */}
                   </div>
-                  <div className="ml-1.5 min-w-0 flex-1 sm:ml-2 md:ml-2.5 lg:ml-3 max-w-full">
+                  <div className="ml-1.5 space-y-1 min-w-0 sm:ml-2 md:ml-2.5 lg:ml-3 max-w-full">
                     <h4 className="truncate text-sm font-medium dark:text-white max-w-full sm:text-sm md:text-sm lg:text-base">
                       {opChat?.fullname || t('Fullname')}
                     </h4>
-                    <div className="flex flex-col gap-0.5 sm:gap-0.5 max-w-full mt-0.5 sm:mt-0.5">
-                      <p className="truncate text-xs text-gray-500 dark:text-neutral-400 max-w-full sm:text-xs md:text-xs lg:text-sm">
-                        {opChat?.username || t('Username')}
-                      </p>
+                    {/* <div className="flex flex-col gap-0.5 sm:gap-0.5 max-w-full"> */}
                       {/* Status and Last Seen - Compact size */}
                       <div className="flex items-center gap-1 sm:gap-1.5">
                         <div className={`w-1.5 h-1.5 rounded-full sm:w-1.5 sm:h-1.5 md:w-2 md:h-2 lg:w-2 lg:h-2 xl:w-2.5 xl:h-2.5 ${
@@ -1200,7 +1197,7 @@ import TypingMessageEffect, { InlineTypingEffect } from '@/src/components/ui/typ
                           })()}
                         </span>
                       </div>
-                    </div>
+                    {/* </div> */}
                   </div>
                 </div>
                 {/* Action Buttons - Compact size */}
