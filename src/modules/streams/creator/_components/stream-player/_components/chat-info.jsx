@@ -2,24 +2,36 @@ import { useMemo } from 'react';
 import { Info } from 'lucide-react';
 import { Hint } from '@/src/components/base';
 
-export default function ChatInfo({ isDelayed, isFollowersOnly }) {
+export default function ChatInfo({isHost, isDelayed, isFollowersOnly }) {
   const hint = useMemo(() => {
-    if (isFollowersOnly && !isDelayed) {
-      return 'Only followers can chat';
+    // --- Host messages ---
+    if (isHost) {
+      if (isFollowersOnly && isDelayed) {
+        return "You’re the host — but viewers must be followers, and their messages are delayed 3s.";
+      }
+      if (isFollowersOnly) {
+        return "You’re the host — but only followers can chat.";
+      }
+      if (isDelayed) {
+        return "You’re the host — but viewers’ messages are delayed 3s.";
+      }
     }
 
-    if (isDelayed && !isFollowersOnly) {
-      return 'Messages are delayed for 3 seconds';
+    // --- Viewer messages ---
+    if (isFollowersOnly && isDelayed) {
+      return "Only followers can chat. Messages are delayed for 3 seconds.";
+    }
+    if (isFollowersOnly) {
+      return "Only followers can chat.";
+    }
+    if (isDelayed) {
+      return "Messages are delayed for 3 seconds.";
     }
 
-    if (isDelayed && isFollowersOnly) {
-      return 'Only followers can chat. Messages are delayed for 3 seconds';
-    }
+    return null;
+  }, [isHost, isDelayed, isFollowersOnly]);
 
-    return '';
-  }, [isDelayed, isFollowersOnly]);
-
-  if (!isDelayed && !isFollowersOnly) return null;
+  if (!hint) return null;
 
   return (
     <div className="flex w-full text-xs items-center gap-x-2 rounded-t-md border border-white/10 bg-white/5 p-2 text-muted-foreground">

@@ -29,7 +29,7 @@ export default function ChatMessage({ data }) {
           <span className="text-sm" style={{ color: color }} title={from?.name}>
             {username}
           </span>
-          <span className="text-xs text-white/40">{new Date(timestamp).toLocaleTimeString('vi-VN', {
+          <span className="text-xs text-black dark:text-white/40">{new Date(timestamp).toLocaleTimeString('vi-VN', {
             hour: '2-digit',
             minute: '2-digit',
           })}</span>
