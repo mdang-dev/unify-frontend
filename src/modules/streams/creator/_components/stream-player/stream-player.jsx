@@ -250,6 +250,7 @@ export default function StreamPlayer({ externalUser, user, stream, currentUserId
                   hostName={user?.username}
                   hostIdentity={user?.id}
                   stream={stream}
+                  viewerIdentity={identity}
                   isChatEnabled={streamSettings.isChatEnabled ?? stream?.isChatEnabled}
                   isChatDelayed={streamSettings.isChatDelayed ?? stream?.isChatDelayed}
                   isChatFollowersOnly={streamSettings.isChatFollowersOnly ?? stream?.isChatFollowersOnly}

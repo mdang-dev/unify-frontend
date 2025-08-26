@@ -13,6 +13,7 @@ export default function Chat({
   viewerName,
   hostName,
   hostIdentity,
+  viewerIdentity,
   stream,
   isFollowing,
   isChatEnabled,
@@ -22,6 +23,8 @@ export default function Chat({
   const { variant } = useChatSidebarStore((state) => state);
   const connectionState = useConnectionState();
   const participant = useRemoteParticipant(hostIdentity);
+  const hostAsViewer = `host-${hostIdentity}`;
+  const isHost = viewerIdentity === hostAsViewer;
   
   // Real-time chat settings - use streamId for WebSocket subscription
   const { getChatSettings } = useRealtimeChatSettings(stream?.id || hostIdentity);
@@ -63,6 +66,7 @@ export default function Chat({
     setValue(value);
   };
 
+
   return (
     <div className="flex h-full w-full max-w-sm flex-col border-l-[0.5px] border-neutral-700 bg-background pt-0">
             <ChatHeader />
@@ -73,6 +77,7 @@ export default function Chat({
                 onSubmit={handleSubmit}
                 value={value}
                 isHidden={isHidden}
+                isHost={isHost}
                 onChange={onChange}
                 isFollowersOnly={chatSettings.isChatFollowersOnly}
                 isDelayed={chatSettings.isChatDelayed}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
 import {
@@ -35,6 +35,7 @@ export default function ChatSettingsModal({
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   
+
   // Local state for form values with fallback defaults
   const [localSettings, setLocalSettings] = useState({
     isChatEnabled: enabled ?? true,
@@ -68,7 +69,7 @@ export default function ChatSettingsModal({
       
       // Invalidate related queries
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.STREAM_CHAT_SETTINGS, user?.id] });
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.LIVE_STREAMS] });
+      queryClient.invalidateQueries({queryKey: [QUERY_KEYS.STREAM_BY_USERNAME, user?.username]})
       
       onClose();
     },
@@ -84,7 +85,9 @@ export default function ChatSettingsModal({
       return;
     }
 
-    updateChatSettings(localSettings);
+    updateChatSettings(localSettings)
+
+
   };
 
   const handleCancel = () => {
@@ -157,29 +160,36 @@ export default function ChatSettingsModal({
         </DialogHeader>
         
         <div className="space-y-4 py-4">
-          <div className="flex items-center justify-between rounded-md bg-[#2a2a2a] px-4 py-3">
-            <Label className="text-base font-medium">{t('EnableChat')}</Label>
-            <Switch 
-              checked={localSettings.isChatEnabled} 
-              onCheckedChange={(value) => handleSettingChange('isChatEnabled', value)} 
-            />
-          </div>
+          <div className="flex items-center justify-between rounded-md bg-gray-100 dark:bg-[#2a2a2a] px-4 py-3">
+  <Label className="text-base font-medium text-gray-900 dark:text-gray-100">
+    {t('EnableChat')}
+  </Label>
+  <Switch 
+    checked={localSettings.isChatEnabled} 
+    onCheckedChange={(value) => handleSettingChange('isChatEnabled', value)} 
+  />
+</div>
 
-          <div className="flex items-center justify-between rounded-md bg-[#2a2a2a] px-4 py-3">
-            <Label className="text-base font-medium">{t('DelayChat')}</Label>
-            <Switch 
-              checked={localSettings.isChatDelayed} 
-              onCheckedChange={(value) => handleSettingChange('isChatDelayed', value)} 
-            />
-          </div>
+<div className="flex items-center justify-between rounded-md bg-gray-100 dark:bg-[#2a2a2a] px-4 py-3">
+  <Label className="text-base font-medium text-gray-900 dark:text-gray-100">
+    {t('DelayChat')}
+  </Label>
+  <Switch 
+    checked={localSettings.isChatDelayed} 
+    onCheckedChange={(value) => handleSettingChange('isChatDelayed', value)} 
+  />
+</div>
 
-          <div className="flex items-center justify-between rounded-md bg-[#2a2a2a] px-4 py-3">
-            <Label className="text-base font-medium">{t('FollowersOnlyChat')}</Label>
-            <Switch 
-              checked={localSettings.isChatFollowersOnly} 
-              onCheckedChange={(value) => handleSettingChange('isChatFollowersOnly', value)} 
-            />
-          </div>
+<div className="flex items-center justify-between rounded-md bg-gray-100 dark:bg-[#2a2a2a] px-4 py-3">
+  <Label className="text-base font-medium text-gray-900 dark:text-gray-100">
+    {t('FollowersOnlyChat')}
+  </Label>
+  <Switch 
+    checked={localSettings.isChatFollowersOnly} 
+    onCheckedChange={(value) => handleSettingChange('isChatFollowersOnly', value)} 
+  />
+</div>
+
         </div>
 
         <div className="flex justify-end space-x-2 pt-4">

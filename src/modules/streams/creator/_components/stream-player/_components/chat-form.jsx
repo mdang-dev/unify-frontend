@@ -18,6 +18,7 @@ export default function ChatForm({
   isFollowersOnly,
   isDelayed,
   isFollowing,
+  isHost
 }) {
   const [isDelayedBlocked, setIsDelayedBlocked] = useState(false);
   const [delayedMessage, setDelayedMessage] = useState('');
@@ -25,8 +26,7 @@ export default function ChatForm({
   const [isSending, setIsSending] = useState(false);
   const countdownRef = useRef(null);
   const isFollowersOnlyAndNotFollowing = isFollowersOnly && !isFollowing;
-  // Only disable if hidden or followers-only restriction, not during delay
-  const isDisabled = isHidden || isFollowersOnlyAndNotFollowing;
+  const isDisabled = isHidden || (!isHost && isFollowersOnlyAndNotFollowing);
   
   // Handle delayed message sending
   useEffect(() => {
@@ -49,38 +49,44 @@ export default function ChatForm({
     };
   }, []);
   
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
 
-    if (!value || isDisabled) return;
+const handleSubmit = (e) => {
+  e.preventDefault();
+  e.stopPropagation();
 
-    if (isDelayed && !isDelayedBlocked) {
-      // Store the message and block for 3 seconds
-      setDelayedMessage(value);
-      setIsDelayedBlocked(true);
-      setCountdown(3);
-      
-      // Clear the input immediately to prevent duplicate
-      onChange('');
-      
-      // Countdown timer
-      countdownRef.current = setInterval(() => {
-        setCountdown(prev => {
-          if (prev <= 1) {
-            clearInterval(countdownRef.current);
-            countdownRef.current = null;
-            return 0; // useEffect will handle sending when countdown reaches 0
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
-      // Send immediately if not delayed
-      onSubmit(value);
-      onChange(''); // Clear input after sending
-    }
-  };
+  if (!value || isDisabled) return;
+
+  // Host: always send immediately, even if delayed
+  if (isHost) {
+    onSubmit(value);
+    onChange('');
+    return;
+  }
+
+  // Viewers: apply delay logic
+  if (isDelayed && !isDelayedBlocked) {
+    setDelayedMessage(value);
+    setIsDelayedBlocked(true);
+    setCountdown(3);
+    onChange('');
+
+    countdownRef.current = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(countdownRef.current);
+          countdownRef.current = null;
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  } else {
+    // Viewer with no delay
+    onSubmit(value);
+    onChange('');
+  }
+};
+
 
   if (isHidden) {
     return null;
@@ -89,7 +95,7 @@ export default function ChatForm({
   return (
     <form className="flex flex-col items-center gap-y-4 p-3" onSubmit={handleSubmit}>
       <div className="w-full">
-        <ChatInfo isDelayed={isDelayed} isFollowersOnly={isFollowersOnly} />
+        <ChatInfo isDelayed={isDelayed} isFollowersOnly={isFollowersOnly} isHost={isHost}/>
         
         {/* Show delay status when message is being delayed */}
         {isDelayedBlocked && (
@@ -112,7 +118,7 @@ export default function ChatForm({
             value={value}
             disabled={isDisabled}
             placeholder={isDelayedBlocked ? "Type another message..." : "Send a message"}
-            className={cn('dark:border-white/10 ring-0 border-black/10', isFollowersOnly && 'rounded-t-none border-t-0')}
+            className={cn('dark:border-white/10 ring-0 border-black/10', (isFollowersOnly && !isHost) && 'rounded-t-none border-t-0')}
           />
           <ButtonCommon 
             type="submit" 
